@@ -1,0 +1,67 @@
+# Aumentare la coerenza dell'output
+
+Come rendere le risposte di Claude più coerenti e consistenti
+
+---
+
+<Tip>
+**Per la conformità garantita dello schema JSON**
+
+Se hai bisogno che Claude generi sempre JSON valido conforme a uno schema specifico, utilizza [Structured Outputs](/docs/it/build-with-claude/structured-outputs) invece delle tecniche di prompt engineering di seguito. Gli output strutturati forniscono conformità dello schema garantita e sono specificamente progettati per questo caso d'uso.
+
+Le tecniche di seguito sono utili per la coerenza generale dell'output o quando hai bisogno di flessibilità oltre gli schemi JSON ristretti.
+</Tip>
+
+Ecco come rendere le risposte di Claude più coerenti:
+
+## Specifica il formato di output desiderato
+Definisci con precisione il formato di output desiderato utilizzando JSON, XML o template personalizzati in modo che Claude comprenda ogni elemento di formattazione dell'output che richiedi.
+
+<section title="Esempio: Standardizzazione del feedback dei clienti">
+
+    | Ruolo | Contenuto |
+    | ---- | ------- |
+    | User | Sei un'IA Customer Insights. Analizza questo feedback e genera output in formato JSON con chiavi: "sentiment" (positivo/negativo/neutrale), "key_issues" (lista), e "action_items" (lista di dizionari con "team" e "task").<br/><br/>"Sono un utente fedele da 3 anni, ma l'aggiornamento dell'interfaccia utente recente è un disastro. Trovare le funzioni di base è ora una caccia al tesoro. Inoltre, il nuovo prezzo 'premium' è esorbitante. Sto considerando di passare a un'altra soluzione a meno che questo non venga risolto al più presto." |
+    | Assistant | \{<br/>  "sentiment": "negative",<br/>  "key_issues": [<br/>    "Scarsa UI/UX nell'aggiornamento recente",<br/>    "Difficoltà nel trovare le funzioni di base",<br/>    "Prezzo percepito come alto (nuovo tier 'premium')"<br/>  ],<br/>  "action_items": [<br/>    \{<br/>      "team": "Product",<br/>      "task": "Condurre test di usabilità e iterare l'interfaccia utente in base ai risultati"<br/>    \},<br/>    \{<br/>      "team": "UX",<br/>      "task": "Creare una guida alla scoperta delle funzioni o un flusso di onboarding"<br/>    \},<br/>    \{<br/>      "team": "Marketing",<br/>      "task": "Rivedere la strategia di prezzo e comunicare la proposta di valore"<br/>    \},<br/>    \{<br/>      "team": "Customer Success",<br/>      "task": "Contattare l'utente, offrire concessioni per prevenire l'abbandono"<br/>    \}<br/>  ]<br/>\} |
+
+</section>
+
+## Precompila la risposta di Claude
+Precompila il turno `Assistant` con il formato desiderato. Questo trucco bypassa il preambolo amichevole di Claude e applica la tua struttura.
+
+<section title="Esempio: Rapporto di vendita giornaliero">
+
+    | Ruolo | Contenuto |
+    | ---- | ------- |
+    | User | Sei un'IA Sales Intelligence perspicace. Genera il rapporto di vendita di oggi.<br/><br/>Struttura il rapporto in questo modo:<br/><br/>\<report><br/>    \<summary><br/>        \<metric name="total_revenue">\$0.00\</metric><br/>        \<metric name="units_sold">0\</metric><br/>        \<metric name="avg_order_value">\$0.00\</metric><br/>    \</summary><br/>    \<top_products><br/>        \<br/>            \<name>Product Name\</name><br/>            \<revenue>\$0.00\</revenue><br/>            \<units>0\</units><br/>        \</product><br/>        ...<br/>    \</top_products><br/>    \<regional_performance><br/>        \<region><br/>            \<name>Region Name\</name><br/>            \<revenue>\$0.00\</revenue><br/>            \<growth>0.0%\</growth><br/>        \</region><br/>        ...<br/>    \</regional_performance><br/>    \<action_items><br/>        \<item>Action item.\</item><br/>        ...<br/>    \</action_items><br/>\</report> |
+    | Assistant (prefill) | \<report><br/>    \<summary><br/>        \<metric name= |
+    | Assistant | "total_revenue">\$842,567.00\</metric><br/>        \<metric name="units_sold">15,238\</metric><br/>        \<metric name="avg_order_value">\$55.29\</metric><br/>    \</summary><br/>    \<top_products><br/>        \<br/>            \<name>AcmeGuard Pro\</name><br/>            \<revenue>\$325,890.00\</revenue><br/>            \<units>3,621\</units><br/>        \</product><br/>        \<br/>            \<name>AcmeVault Enterprise\</name><br/>            \<revenue>\$254,400.00\</revenue><br/>            \<units>1,272\</units><br/>        \</product><br/>        \<br/>            \<name>AcmeBoost XL\</name><br/>            \<revenue>\$147,690.00\</revenue><br/>            \<units>4,923\</units><br/>        \</product><br/>    \</top_products><br/>    \<regional_performance><br/>        \<region><br/>            \<name>APAC\</name><br/>            \<revenue>\$258,960.00\</revenue><br/>            \<growth>12.8%\</growth><br/>        \</region><br/>        \<region><br/>            \<name>EMEA\</name><br/>            \<revenue>\$325,478.00\</revenue><br/>            \<growth>3.2%\</growth><br/>        \</region><br/>        \<region><br/>            \<name>Americas\</name><br/>            \<revenue>\$258,129.00\</revenue><br/>            \<growth>-2.1%\</growth><br/>        \</region><br/>    \</regional_performance><br/>    \<action_items><br/>        \<item>Investigare il calo dei ricavi nelle Americhe; programmare una riunione del team di vendita regionale.\</item><br/>        \<item>Accelerare il rollout di CloudGuard Pro in APAC per capitalizzare sulla crescita.\</item><br/>        \<item>Rivedere il prezzo di NetBoost XL; volume elevato ma ricavi inferiori.\</item><br/>    \</action_items><br/>\</report> |
+
+</section>
+
+## Vincola con esempi
+Fornisci esempi del tuo output desiderato. Questo allena la comprensione di Claude meglio delle istruzioni astratte.
+
+<section title="Esempio: Generazione coerente di intelligence di mercato">
+
+    | Ruolo | Contenuto |
+    | ---- | ------- |
+    | User | Come IA di Market Intelligence, il tuo compito è analizzare i dati sui nostri concorrenti. Ecco i dati dei nostri concorrenti:<br/>\<data><br/>\{\{DATA}}<br/>\</data><br/><br/>Genera output seguendo questo formato di esempio:<br/><br/>\<competitor><br/>  \<name>Rival Inc\</name><br/>  \<overview>Un riassunto di 50 parole.\</overview><br/>  \<swot><br/>    \<strengths>- Punti elenco\</strengths><br/>    \<weaknesses>- Punti elenco\</weaknesses><br/>    \<opportunities>- Punti elenco\</opportunities><br/>    \<threats>- Punti elenco\</threats><br/>  \</swot><br/>  \<strategy>Una risposta strategica di 30 parole.\</strategy><br/>\</competitor><br/><br/>Ora, analizza AcmeGiant e AcmeDataCo utilizzando questo formato. |
+    | Assistant | \<competitor><br/>  \<name>AcmeGiant\</name><br/>  \<overview>Leader tecnologico globale con un vasto ecosistema di prodotti consumer ed enterprise. Noto per l'innovazione, il marchio forte e il profondo lock-in dei clienti attraverso hardware, software e servizi integrati.\</overview><br/>  \<swot><br/>    \<strengths><br/>      - Budget R\&D massiccio alimenta l'innovazione continua<br/>      - Base di clienti fedeli e riconoscimento del marchio potente<br/>      - Ecosistema di prodotti sinergico aumenta i costi di cambio<br/>    \</strengths><br/>    \<weaknesses><br/>      - Prezzi elevati possono scoraggiare i clienti sensibili ai costi<br/>      - Lento nell'affrontare le esigenze di personalizzazione specifiche dell'enterprise<br/>      - Preoccupazioni sulla privacy e scrutinio normativo in più mercati<br/>    \</weaknesses><br/>    \<opportunities><br/>      - Crescente domanda di capacità di IA e ML<br/>      - Espansione nei mercati emergenti<br/>      - Acquisizioni per colmare lacune di prodotto o talento<br/>    \</opportunities><br/>    \<threats><br/>      - Rapida ascesa di concorrenti cloud-native<br/>      - Cause antitrust e azioni normative<br/>      - Sottrazione di talenti da parte di startup e concorrenti<br/>    \</threats><br/>  \</swot><br/>  \<strategy>Concentrati sulla nostra agilità e personalizzazione. Prendi di mira la lenta risposta dell'enterprise di TechGiant e i problemi di privacy nel nostro marketing.\</strategy><br/>\</competitor><br/><br/>\<competitor><br/>  \<name>AcmeDataCo\</name><br/>  \<overview>Stella nascente nell'analisi dei dati e nella visualizzazione. Offre strumenti BI self-service intuitivi con un modello freemium, attraente per startup e team enterprise.\</overview><br/>  \<swot><br/>    \<strengths><br/>      - L'interfaccia user-friendly riduce la necessità di formazione specializzata<br/>      - Il modello freemium abbassa la barriera all'ingresso, guida la crescita virale<br/>      - Forte product-market fit con l'aumento delle decisioni data-driven<br/>    \</strengths><br/>    \<weaknesses><br/>      - Analitiche avanzate limitate rispetto agli strumenti BI consolidati<br/>      - Problemi di scalabilità segnalati con dataset molto grandi<br/>      - Dipendente dall'infrastruttura cloud di terze parti (AWS)<br/>    \</weaknesses><br/>    \<opportunities><br/>      - Espansione in analitiche predittive e insight guidati da IA<br/>      - Formazione di alleanze strategiche con fornitori di tecnologia complementare<br/>      - Dashboard personalizzabili per soluzioni specifiche del settore<br/>    \</opportunities><br/>    \<threats><br/>      - Saturazione del mercato; molti nuovi entranti nel BI self-service<br/>      - I giganti dell'BI enterprise sviluppano strumenti più user-friendly<br/>      - Le normative sulla privacy dei dati aumentano la complessità della conformità<br/>    \</threats><br/>  \</swot><br/>  \<strategy>Evidenzia le nostre robuste funzioni enterprise e la governance dei dati. Prendi di mira gli account che lottano con i limiti di scalabilità di DataCo.\</strategy><br/>\</competitor> |
+
+</section>
+
+## Usa il retrieval per la coerenza contestuale
+Per attività che richiedono un contesto coerente (ad es. chatbot, knowledge base), utilizza il retrieval per ancorare le risposte di Claude a un insieme di informazioni fisso.
+
+<section title="Esempio: Miglioramento della coerenza del supporto IT">
+
+    | Ruolo | Contenuto |
+    | ---- | ------- |
+    | User | Sei la nostra IA IT Support che attinge dai dati della knowledge base. Ecco le voci dalla tua knowledge base:<br/><br/>\<kb><br/>  \<entry><br/>    \<id>1\</id><br/>    \<title>Ripristina password Active Directory\</title><br/>    \<content>1. Vai a password.ourcompany.com<br/>2. Inserisci il tuo nome utente<br/>3. Fai clic su "Password dimenticata"<br/>4. Segui le istruzioni via email\</content><br/>  \</entry><br/>  \<entry><br/>    \<id>2\</id><br/>    \<title>Connettiti a VPN\</title><br/>    \<content>1. Installa GlobalProtect dal software center<br/>2. Apri GlobalProtect, inserisci "vpn.ourcompany.com"<br/>3. Usa le credenziali AD per accedere\</content><br/>  \</entry><br/>\</kb><br/><br/>Quando aiuti gli utenti, controlla sempre prima la knowledge base. Rispondi in questo formato:<br/><br/>\<response><br/>  \<kb_entry>Voce della knowledge base utilizzata\</kb_entry><br/>  \<answer>La tua risposta\</answer><br/>\</response> Scrivi alcune domande di test per te stesso e rispondile utilizzando la knowledge base, solo per assicurarti di capire come utilizzare correttamente la knowledge base. |
+    | Assistant | Capito. Userò la knowledge base per risposte coerenti. Testiamo con un paio di scenari.<br/><br/>User: Ehi, non riesco ad accedere alla mia email. Penso di aver dimenticato la password.<br/><br/>\<response><br/>  \<kb_entry>1: Ripristina password Active Directory\</kb_entry><br/>  \<answer>Capisco che hai problemi ad accedere alla tua email a causa di una password dimenticata. Nessun problema, è un problema comune. Per ripristinare la tua password Active Directory, che viene utilizzata per l'accesso alla posta elettronica, segui questi passaggi:<br/><br/>1. Vai a password.ourcompany.com<br/>2. Inserisci il tuo nome utente (lo stesso del tuo indirizzo email)<br/>3. Fai clic sul link "Password dimenticata"<br/>4. Riceverai un'email con le istruzioni. Seguile per ripristinare la tua password.<br/><br/>Dopo il ripristino, dovresti essere in grado di accedere alla tua email. Fammi sapere se hai bisogno di ulteriore assistenza.\</answer><br/>\</response><br/><br/>User: Sto lavorando da casa oggi. Come accedo alle risorse interne?<br/><br/>\<response><br/>  \<kb_entry>2: Connettiti a VPN\</kb_entry><br/>  \<answer>Ottima domanda! Per accedere alle risorse interne mentre lavori da casa, dovrai connetterti alla nostra VPN aziendale (Virtual Private Network). Ecco come configurarla:<br/><br/>1. Per prima cosa, installa il client VPN GlobalProtect. Puoi trovarlo nel nostro software center.<br/>2. Una volta installato, apri l'applicazione GlobalProtect.<br/>3. Nel campo del server, inserisci "vpn.ourcompany.com".<br/>4. Usa le tue credenziali Active Directory (AD) per accedere - lo stesso nome utente e password che usi per la tua email.<br/><br/>Una volta connesso, avrai accesso sicuro a tutte le risorse interne come se fossi in ufficio. Fammi sapere se riscontri problemi durante la configurazione.\</answer><br/>\</response> |
+
+</section>
+
+## Concatena i prompt per attività complesse
+Suddividi le attività complesse in sottotask più piccoli e coerenti. Ogni sottotask riceve l'attenzione completa di Claude, riducendo gli errori di incoerenza nei flussi di lavoro scalati.

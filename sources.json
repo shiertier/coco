@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "defaults": {
+    "allowed_extensions": [".md", ".mdx"],
+    "user_agent": "docs-crawler/0.1",
+    "timeout_seconds": 30,
+    "max_workers": 8
+  },
+  "sources": [
+    {
+      "id": "pydantic-ai",
+      "description": "Pydantic AI documentation (via llms.txt)",
+      "output_dir": "docs/pydantic-ai",
+      "default_language": "en",
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://ai.pydantic.dev/llms.txt"
+        }
+      ]
+    },
+    {
+      "id": "shadcn-ui",
+      "description": "shadcn/ui documentation (via llms.txt)",
+      "output_dir": "docs/shadcn-ui",
+      "default_language": "en",
+      "allowed_extensions": ["*"],
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://ui.shadcn.com/llms.txt"
+        }
+      ]
+    },
+    {
+      "id": "google-adk",
+      "description": "Google Agent Development Kit documentation (via llms.txt)",
+      "output_dir": "docs/google-adk",
+      "default_language": "en",
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://google.github.io/adk-docs/llms.txt"
+        }
+      ]
+    },
+    {
+      "id": "claude-platform",
+      "description": "Claude developer platform docs (via llms.txt + language variants)",
+      "output_dir": "docs/claude-platform",
+      "default_language": "en",
+      "max_workers": 64,
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://platform.claude.com/llms.txt",
+          "language": "en",
+          "language_variants": [
+            "de",
+            "es",
+            "fr",
+            "it",
+            "ja",
+            "ko",
+            "pt-BR",
+            "ru",
+            "zh-CN",
+            "zh-TW",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "openai-agents-js",
+      "description": "OpenAI Agents JS documentation (via GitHub tree)",
+      "output_dir": "docs/openai-agents-js",
+      "default_language": "en",
+      "max_workers": 1,
+      "entrypoints": [
+        {
+          "type": "github_tree",
+          "repo": "openai/openai-agents-js",
+          "ref": "main",
+          "path": "docs/src/content/docs",
+          "languages": ["en", "zh", "ja", "ko"],
+          "language": "en"
+        }
+      ]
+    },
+    {
+      "id": "react-spectrum",
+      "description": "React Spectrum documentation (via llms.txt)",
+      "output_dir": "docs/react-spectrum",
+      "default_language": "en",
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://react-spectrum.adobe.com/llms.txt"
+        }
+      ]
+    },
+    {
+      "id": "react-aria",
+      "description": "React Aria / React Aria Components documentation (via llms.txt)",
+      "output_dir": "docs/react-aria",
+      "default_language": "en",
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://react-aria.adobe.com/llms.txt"
+        }
+      ]
+    },
+    {
+      "id": "heroui",
+      "description": "HeroUI documentation (via GitHub tree)",
+      "output_dir": "docs/heroui",
+      "default_language": "en",
+      "max_workers": 1,
+      "entrypoints": [
+        {
+          "type": "github_tree",
+          "repo": "heroui-inc/heroui",
+          "ref": "canary",
+          "path": "apps/docs/content/docs",
+          "language": "en"
+        }
+      ]
+    },
+    {
+      "id": "animate-ui",
+      "description": "Animate UI documentation (via GitHub tree)",
+      "output_dir": "docs/animate-ui",
+      "default_language": "en",
+      "max_workers": 1,
+      "entrypoints": [
+        {
+          "type": "github_tree",
+          "repo": "imskyleen/animate-ui",
+          "ref": "main",
+          "path": "apps/www/content/docs",
+          "language": "en"
+        }
+      ]
+    }
+  ]
+}
