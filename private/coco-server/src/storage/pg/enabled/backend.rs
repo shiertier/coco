@@ -205,7 +205,7 @@ impl PgBackend {
             DatabaseBackend::Postgres,
             "SELECT extversion FROM pg_extension WHERE extname = 'vector'".to_string(),
         );
-        let row = self.db.query_one_raw(stmt).await.map_err(map_storage_err)?;
+        let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Ok(None);
         };
@@ -220,7 +220,7 @@ impl PgBackend {
             DatabaseBackend::Postgres,
             "CREATE EXTENSION IF NOT EXISTS vector".to_string(),
         );
-        self.db.execute_raw(stmt).await.map_err(map_storage_err)?;
+        self.db.execute(stmt).await.map_err(map_storage_err)?;
         Ok(())
     }
 
@@ -241,11 +241,11 @@ impl PgBackend {
         );
         let fts_sql = build_fts_index_sql(&fts_index, config_id);
         self.db
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, vector_sql))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, vector_sql))
             .await
             .map_err(map_storage_err)?;
         self.db
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, fts_sql))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, fts_sql))
             .await
             .map_err(map_storage_err)?;
         Ok(())
@@ -270,7 +270,7 @@ impl PgBackend {
              AND {COL_ID} = {project_placeholder}"
         );
         let stmt = Statement::from_sql_and_values(DatabaseBackend::Postgres, sql, values);
-        let row = self.db.query_one_raw(stmt).await.map_err(map_storage_err)?;
+        let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Err(CocoError::user("project not found for tenant"));
         };
@@ -307,7 +307,7 @@ impl PgBackend {
              AND {COL_ID} = {project_placeholder}"
         );
         let stmt = Statement::from_sql_and_values(DatabaseBackend::Postgres, sql, values);
-        let row = self.db.query_one_raw(stmt).await.map_err(map_storage_err)?;
+        let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Err(CocoError::user("project not found for tenant"));
         };
@@ -353,7 +353,7 @@ impl PgBackend {
         );
         let rows = self
             .db
-            .query_all_raw(Statement::from_sql_and_values(
+            .query_all(Statement::from_sql_and_values(
                 DatabaseBackend::Postgres,
                 sql,
                 values,
@@ -402,7 +402,7 @@ impl PgBackend {
         );
         let rows = self
             .db
-            .query_all_raw(Statement::from_sql_and_values(
+            .query_all(Statement::from_sql_and_values(
                 DatabaseBackend::Postgres,
                 sql,
                 values,

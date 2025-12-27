@@ -29,10 +29,11 @@ qdrant-client = { workspace = true }
 sea-orm = { workspace = true, features = ["runtime-tokio-rustls", "sqlx-postgres"], optional = true }
 sea-orm-migration = { workspace = true, features = ["runtime-tokio-rustls", "sqlx-postgres"], optional = true }
 tonic = { workspace = true, features = ["transport"] }
+tonic-prost.workspace = true
 
 [build-dependencies]
 protoc-bin-vendored.workspace = true
-tonic-build.workspace = true
+tonic-prost-build.workspace = true
 
 [features]
 default = []

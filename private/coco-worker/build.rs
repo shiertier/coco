@@ -24,12 +24,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("protoc failed".into());
     }
 
-    tonic_build::configure()
+    tonic_prost_build::configure()
         .file_descriptor_set_path(&descriptor_path)
         .skip_protoc_run()
         .build_client(false)
         .build_server(true)
-        .compile(&[proto_file], &[proto_dir])?;
+        .compile_protos(&[proto_file], &[proto_dir])?;
 
     Ok(())
 }

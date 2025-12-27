@@ -460,7 +460,7 @@ impl MigrationTrait for AddServerConfigIdColumn {
         );
         manager
             .get_connection()
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, backfill))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, backfill))
             .await?;
 
         Ok(())
@@ -536,7 +536,7 @@ impl MigrationTrait for AddServerConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, backfill))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, backfill))
             .await?;
 
         let backfill = format!(
@@ -548,7 +548,7 @@ impl MigrationTrait for AddServerConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, backfill))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, backfill))
             .await?;
 
         let backfill = format!(
@@ -560,7 +560,7 @@ impl MigrationTrait for AddServerConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute_raw(Statement::from_string(DatabaseBackend::Postgres, backfill))
+            .execute(Statement::from_string(DatabaseBackend::Postgres, backfill))
             .await?;
 
         manager
@@ -791,7 +791,7 @@ impl MigrationTrait for AddUserIdColumns {
         let conn = manager.get_connection();
         let table_name = OrgDailyUsage::Table.to_string();
         let drop_pk = format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
-        conn.execute_raw(Statement::from_string(backend, drop_pk))
+        conn.execute(Statement::from_string(backend, drop_pk))
             .await?;
         let add_pk = format!(
             "ALTER TABLE {table_name} ADD PRIMARY KEY ({}, {}, {})",
@@ -799,7 +799,7 @@ impl MigrationTrait for AddUserIdColumns {
             OrgDailyUsage::UserId.to_string(),
             OrgDailyUsage::Day.to_string()
         );
-        conn.execute_raw(Statement::from_string(backend, add_pk))
+        conn.execute(Statement::from_string(backend, add_pk))
             .await?;
 
         Ok(())
@@ -810,14 +810,14 @@ impl MigrationTrait for AddUserIdColumns {
         let conn = manager.get_connection();
         let table_name = OrgDailyUsage::Table.to_string();
         let drop_pk = format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
-        conn.execute_raw(Statement::from_string(backend, drop_pk))
+        conn.execute(Statement::from_string(backend, drop_pk))
             .await?;
         let add_pk = format!(
             "ALTER TABLE {table_name} ADD PRIMARY KEY ({}, {})",
             OrgDailyUsage::OrgId.to_string(),
             OrgDailyUsage::Day.to_string()
         );
-        conn.execute_raw(Statement::from_string(backend, add_pk))
+        conn.execute(Statement::from_string(backend, add_pk))
             .await?;
 
         manager
@@ -887,9 +887,9 @@ async fn enable_rls<T: Iden + Copy>(
          USING ({column_name} = current_setting('coco.org_id', true))"
     );
     let conn = manager.get_connection();
-    conn.execute_raw(Statement::from_string(backend, enable_sql))
+    conn.execute(Statement::from_string(backend, enable_sql))
         .await?;
-    conn.execute_raw(Statement::from_string(backend, policy_sql))
+    conn.execute(Statement::from_string(backend, policy_sql))
         .await?;
     Ok(())
 }

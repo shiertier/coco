@@ -21,7 +21,7 @@ use super::super::state::AppState;
 use super::super::stream::stream_results;
 use super::super::types::{
     ApiResult, IndexRequest, IndexResponse, IngestBatchRequest, IngestBatchResponse,
-    MemoQueryRequest, MemoQueryResponseEnvelope, QueryRequest, QueryResponse,
+    MemoQueryRequest, MemoQueryResponseEnvelope, QueryRequest, QueryResponse, QueryResponseEnvelope,
 };
 use super::super::vector_backend::{build_vector_backend, VectorBackendRequest};
 use super::super::worker::submit_ingest_ipc;

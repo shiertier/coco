@@ -48,7 +48,7 @@ impl PgExecutor {
                     backend.vector_operator(),
                 )?;
                 let rows = db
-                    .query_all_raw(Statement::from_sql_and_values(
+                    .query_all(Statement::from_sql_and_values(
                         DatabaseBackend::Postgres,
                         sql,
                         values,
@@ -70,7 +70,7 @@ impl PgExecutor {
                     top_k,
                 )?;
                 let rows = db
-                    .query_all_raw(Statement::from_sql_and_values(
+                    .query_all(Statement::from_sql_and_values(
                         DatabaseBackend::Postgres,
                         sql,
                         values,
@@ -98,7 +98,7 @@ impl PgExecutor {
                     operator: backend.vector_operator(),
                 })?;
                 let rows = db
-                    .query_all_raw(Statement::from_sql_and_values(
+                    .query_all(Statement::from_sql_and_values(
                         DatabaseBackend::Postgres,
                         sql,
                         values,

@@ -16,7 +16,7 @@ use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, Paragraph};
 use ratatui::Terminal;
-use sysinfo::{Pid, System};
+use sysinfo::{Pid, ProcessesToUpdate, System};
 
 use crate::embedder::{DownloadProgress, ModelPool};
 use crate::metrics::LocalMetrics;
@@ -37,7 +37,7 @@ pub fn run_dashboard(metrics: Arc<LocalMetrics>, host: String, port: u16) -> Coc
 
         terminal
             .draw(|frame| {
-                let size = frame.size();
+                let size = frame.area();
                 let layout = Layout::default()
                     .direction(Direction::Vertical)
                     .margin(1)
@@ -140,7 +140,7 @@ pub fn run_model_download(
 
         terminal
             .draw(|frame| {
-                let size = frame.size();
+                let size = frame.area();
                 let layout = Layout::default()
                     .direction(Direction::Vertical)
                     .margin(2)
@@ -191,7 +191,7 @@ fn setup_terminal() -> CocoResult<Terminal<CrosstermBackend<Stdout>>> {
 
 fn memory_usage_mb(system: &mut System, pid: Option<Pid>) -> Option<f64> {
     let pid = pid?;
-    system.refresh_process(pid);
+    system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
     system
         .process(pid)
         .map(|process| process.memory() as f64 / 1024.0)

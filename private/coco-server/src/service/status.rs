@@ -40,7 +40,7 @@ async fn postgres_queue_status(state: &AppState) -> QueueStatusResponse {
     let ping = state
         .meta
         .connection()
-        .execute_raw(Statement::from_string(
+        .execute(Statement::from_string(
             DatabaseBackend::Postgres,
             "SELECT 1".to_string(),
         ))
