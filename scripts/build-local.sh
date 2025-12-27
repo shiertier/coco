@@ -4,13 +4,29 @@ set -euo pipefail
 crate="coco-local"
 features="local-storage"
 
-cargo fetch -p protoc-bin-vendored >/dev/null
-
 proto_bin=""
-if command -v rg >/dev/null 2>&1; then
-  proto_bin="$(rg --files -g 'protoc' "${HOME}/.cargo/registry/src" | rg 'protoc-bin-vendored-.*/bin/protoc$' | head -n 1 || true)"
-else
-  proto_bin="$(find "${HOME}/.cargo/registry/src" -type f -name protoc -path '*protoc-bin-vendored*/bin/protoc' | head -n 1 || true)"
+if command -v protoc >/dev/null 2>&1; then
+  proto_bin="$(command -v protoc)"
+fi
+
+if [[ -z "${proto_bin}" ]]; then
+  if [[ -d "${HOME}/.cargo/registry/src" ]]; then
+    if command -v rg >/dev/null 2>&1; then
+      proto_bin="$(rg --files -g 'protoc' "${HOME}/.cargo/registry/src" | rg 'protoc-bin-vendored-.*/bin/protoc$' | head -n 1 || true)"
+    else
+      proto_bin="$(find "${HOME}/.cargo/registry/src" -type f -name protoc -path '*protoc-bin-vendored*/bin/protoc' | head -n 1 || true)"
+    fi
+  fi
+fi
+
+if [[ -z "${proto_bin}" && -z "${CARGO_NET_OFFLINE:-}" ]]; then
+  echo "protoc not found; fetching vendored protoc via cargo..." >&2
+  cargo fetch >/dev/null 2>&1 || true
+  if command -v rg >/dev/null 2>&1; then
+    proto_bin="$(rg --files -g 'protoc' "${HOME}/.cargo/registry/src" | rg 'protoc-bin-vendored-.*/bin/protoc$' | head -n 1 || true)"
+  else
+    proto_bin="$(find "${HOME}/.cargo/registry/src" -type f -name protoc -path '*protoc-bin-vendored*/bin/protoc' | head -n 1 || true)"
+  fi
 fi
 
 if [[ -z "${proto_bin}" ]]; then
