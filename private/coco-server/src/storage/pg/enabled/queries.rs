@@ -186,7 +186,7 @@ fn apply_filter(
     clauses: &mut Vec<String>,
     values: &mut Vec<Value>,
 ) -> CocoResult<()> {
-    let column = filter_column(&filter.field)
+    let column = filter_column(filter.field.as_str())
         .ok_or_else(|| CocoError::user("unsupported filter field"))?;
     match column.kind {
         FilterKind::Text => apply_text_filter(filter, column.name, clauses, values),
@@ -239,10 +239,9 @@ fn apply_text_filter(
                         )),
                     })
                     .collect::<CocoResult<Vec<_>>>()?,
-                FilterValue::String(value) => split_list(value)?,
                 _ => {
                     return Err(CocoError::user(
-                        "text filter requires a string or list value",
+                        "text filter requires a list value",
                     ))
                 }
             };
@@ -311,16 +310,9 @@ fn apply_number_filter(
                         )),
                     })
                     .collect::<CocoResult<Vec<_>>>()?,
-                FilterValue::String(value) => split_list(value)?
-                    .into_iter()
-                    .map(|item| {
-                        item.parse::<i64>()
-                            .map_err(|_| CocoError::user("numeric filter requires integer value"))
-                    })
-                    .collect::<CocoResult<Vec<_>>>()?,
                 _ => {
                     return Err(CocoError::user(
-                        "numeric filter requires integer value",
+                        "numeric filter requires list value",
                     ))
                 }
             };
@@ -336,19 +328,6 @@ fn apply_number_filter(
         }
         _ => Err(CocoError::user("unsupported filter op for numeric field")),
     }
-}
-
-fn split_list(value: &str) -> CocoResult<Vec<String>> {
-    let items: Vec<String> = value
-        .split(',')
-        .map(|item| item.trim())
-        .filter(|item| !item.is_empty())
-        .map(|item| item.to_string())
-        .collect();
-    if items.is_empty() {
-        return Err(CocoError::user("filter list must not be empty"));
-    }
-    Ok(items)
 }
 
 fn filter_column(field: &str) -> Option<FilterColumn> {

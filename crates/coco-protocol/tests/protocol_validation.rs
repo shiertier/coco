@@ -94,6 +94,13 @@ fn validate_search_intent_rejects_missing_query_embedding_for_vector() {
 }
 
 #[test]
+fn validate_search_intent_rejects_empty_query_embedding() {
+    let mut intent = sample_intent(RetrievalMode::Vector);
+    intent.query_embedding = Some(Vec::new());
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
 fn validate_search_intent_rejects_missing_query_text_for_fts() {
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.query_text = None;
@@ -193,6 +200,17 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
     };
     let intent = SearchIntent::try_from(intent).expect("validated intent");
     assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+
+    let intent = SearchIntentInput {
+        filters: vec![Filter {
+            field: FilterField::new("path").expect("filter field"),
+            op: FilterOp::In,
+            value: FilterValue::String("docs".to_string()),
+        }],
+        ..sample_intent(RetrievalMode::Fts)
+    };
+    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 }
 
 #[test]
@@ -278,6 +296,19 @@ fn config_id_length_enforced() {
     let too_long = "a".repeat(64);
     assert!(coco_protocol::normalize_config_id(&ok).is_ok());
     assert!(coco_protocol::normalize_config_id(&too_long).is_err());
+}
+
+#[test]
+fn text_span_rejects_inverted_range() {
+    assert!(TextSpan::new(5, 3).is_err());
+    let json = serde_json::json!({ "start": 5, "end": 3 });
+    let decoded = serde_json::from_value::<TextSpan>(json);
+    assert!(decoded.is_err());
+}
+
+#[test]
+fn filter_field_rejects_blank() {
+    assert!(FilterField::new(" ").is_err());
 }
 
 #[test]

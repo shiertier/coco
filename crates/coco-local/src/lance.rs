@@ -739,10 +739,10 @@ mod enabled {
             version_ids.push(version_id);
             doc_ids.push(chunk.doc_id.as_str());
             contents.push(chunk.content.as_str());
-            starts.push(u32::try_from(chunk.span.start).map_err(|_| {
+            starts.push(u32::try_from(chunk.span.start()).map_err(|_| {
                 CocoError::user("chunk start offset exceeds u32 range")
             })?);
-            ends.push(u32::try_from(chunk.span.end).map_err(|_| {
+            ends.push(u32::try_from(chunk.span.end()).map_err(|_| {
                 CocoError::user("chunk end offset exceeds u32 range")
             })?);
 
@@ -829,15 +829,14 @@ mod enabled {
             let content = value_string(&contents, idx, COL_CONTENT)?;
             let start = value_u32(&starts, idx, COL_START)?;
             let end = value_u32(&ends, idx, COL_END)?;
+            let span = coco_protocol::TextSpan::new(start as usize, end as usize)
+                .map_err(|_| CocoError::storage("invalid span range for TextSpan"))?;
             chunks.push(Chunk {
                 id: id.into(),
                 doc_id: doc_id.into(),
                 content,
                 embedding: None,
-                span: coco_protocol::TextSpan {
-                    start: start as usize,
-                    end: end as usize,
-                },
+                span,
                 quality_score: None,
                 verified: None,
             });

@@ -84,7 +84,7 @@ async fn register_import_query_roundtrip() -> coco_protocol::CocoResult<()> {
         doc_id: doc_id.clone().into(),
         content: "hello".to_string(),
         embedding: Some(vec![1.0, 0.0, 0.0]),
-        span: TextSpan { start: 0, end: 5 },
+        span: TextSpan::new(0, 5).expect("span"),
         quality_score: None,
         verified: None,
     };

@@ -446,10 +446,7 @@ async fn process_payload(
                 doc_id: document.doc_id.clone().into(),
                 content: chunk.content,
                 embedding: Some(chunk.embedding),
-                span: TextSpan {
-                    start: chunk.start,
-                    end: chunk.end,
-                },
+                span: TextSpan::new(chunk.start, chunk.end)?,
                 quality_score: chunk.quality_score,
                 verified: chunk.verified,
             });

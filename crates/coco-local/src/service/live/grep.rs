@@ -132,10 +132,7 @@ fn build_live_grep_hit(
         format!("{doc_id}:{}", entry.line_number).as_bytes(),
     );
     let content = entry.line.trim_end().to_string();
-    let span = TextSpan {
-        start: 0,
-        end: content.len(),
-    };
+    let span = TextSpan::new(0, content.len()).ok()?;
     Some(SearchHit {
         meta: coco_protocol::SearchHitMeta {
             score: 0.0,

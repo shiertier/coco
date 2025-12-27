@@ -34,12 +34,12 @@ pub(super) fn chunk_from_row(row: &QueryResult) -> CocoResult<Chunk> {
     let end_line: i64 = row.try_get("", COL_END_LINE).map_err(map_storage_err)?;
     let quality_score: Option<f32> = row.try_get("", COL_QUALITY_SCORE).map_err(map_storage_err)?;
     let verified: bool = row.try_get("", COL_VERIFIED).map_err(map_storage_err)?;
-    let span = TextSpan {
-        start: usize::try_from(start_line)
-            .map_err(|_| CocoError::storage("start_line out of range for TextSpan"))?,
-        end: usize::try_from(end_line)
-            .map_err(|_| CocoError::storage("end_line out of range for TextSpan"))?,
-    };
+    let start = usize::try_from(start_line)
+        .map_err(|_| CocoError::storage("start_line out of range for TextSpan"))?;
+    let end = usize::try_from(end_line)
+        .map_err(|_| CocoError::storage("end_line out of range for TextSpan"))?;
+    let span = TextSpan::new(start, end)
+        .map_err(|_| CocoError::storage("invalid span range for TextSpan"))?;
     Ok(Chunk {
         id: chunk_id.into(),
         doc_id: doc_id.into(),

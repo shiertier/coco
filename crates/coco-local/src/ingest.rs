@@ -320,7 +320,7 @@ fn build_chunks(
     let mut chunk_texts = Vec::with_capacity(spans.len());
     for span in spans {
         let slice = content
-            .get(span.start..span.end)
+            .get(span.start()..span.end())
             .ok_or_else(|| CocoError::compute("invalid chunk boundaries"))?;
         chunk_texts.push(slice.to_string());
     }
@@ -336,7 +336,7 @@ fn build_chunks(
     for (index, span) in spans.iter().enumerate() {
         let chunk_id = generate_id(
             "chunk",
-            format!("{doc_id}:{}:{}", span.start, span.end).as_bytes(),
+            format!("{doc_id}:{}:{}", span.start(), span.end()).as_bytes(),
         );
         chunks.push(Chunk {
             id: chunk_id.into(),
@@ -395,8 +395,8 @@ fn span_line_range(line_starts: &[usize], span: TextSpan) -> CocoResult<(i32, i3
     if line_starts.is_empty() {
         return Ok((1, 1));
     }
-    let start_line = line_for_offset(line_starts, span.start)?;
-    let end_offset = span.end.saturating_sub(1);
+    let start_line = line_for_offset(line_starts, span.start())?;
+    let end_offset = span.end().saturating_sub(1);
     let end_line = line_for_offset(line_starts, end_offset)?;
     Ok((start_line, end_line))
 }

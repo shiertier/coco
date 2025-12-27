@@ -13,7 +13,7 @@ fn make_hit(id: &str) -> SearchHit {
             doc_id: DocumentId::new("doc"),
             content: "content".to_string(),
             embedding: None,
-            span: TextSpan { start: 0, end: 1 },
+            span: TextSpan::new(0, 1).expect("span"),
             quality_score: None,
             verified: None,
         },

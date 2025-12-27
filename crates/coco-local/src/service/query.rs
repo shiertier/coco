@@ -1,7 +1,7 @@
 use coco_protocol::{
     normalize_config_id, validate_retrieval_config, validate_search_intent, CocoError, CocoResult,
-    EmbeddingModel, FilterOp, IndexingConfig, RetrievalConfig, SearchIntent, SearchIntentInput,
-    ValidationContext,
+    EmbeddingModel, FilterField, FilterOp, IndexingConfig, RetrievalConfig, SearchIntent,
+    SearchIntentInput, ValidationContext,
 };
 
 use crate::embedder::LocalEmbedder;
@@ -87,9 +87,9 @@ pub(crate) fn validate_local_search_intent(
     config: &IndexingConfigRecord,
 ) -> CocoResult<()> {
     let allowed_fields = vec![
-        "doc_id".to_string(),
-        "chunk_id".to_string(),
-        "content".to_string(),
+        FilterField::new("doc_id")?,
+        FilterField::new("chunk_id")?,
+        FilterField::new("content")?,
     ];
     let context = ValidationContext {
         embedding_dimensions: config.embedding.dimensions.map(|dim| dim as usize),

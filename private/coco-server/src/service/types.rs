@@ -2,8 +2,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use coco_protocol::{
-    CocoError, CocoErrorKind, ErrorResponse, FilterValue, IndexingConfig, IndexingPlan,
-    ResponseMeta, SearchHit, SearchIntentInput, VectorBackendKind,
+    CocoError, CocoErrorKind, CocoResult, ErrorResponse, FilterField, FilterValue, IndexingConfig,
+    IndexingPlan, ResponseMeta, SearchHit, SearchIntentInput, VectorBackendKind,
 };
 use tracing::warn;
 use utoipa::ToSchema;
@@ -156,13 +156,15 @@ pub(crate) struct PublicFilter {
     pub(crate) value: String,
 }
 
-impl From<PublicFilter> for coco_protocol::Filter {
-    fn from(value: PublicFilter) -> Self {
-        coco_protocol::Filter {
-            field: value.field,
+impl TryFrom<PublicFilter> for coco_protocol::Filter {
+    type Error = CocoError;
+
+    fn try_from(value: PublicFilter) -> CocoResult<Self> {
+        Ok(coco_protocol::Filter {
+            field: FilterField::new(value.field)?,
             op: value.op,
             value: FilterValue::String(value.value),
-        }
+        })
     }
 }
 
@@ -187,18 +189,25 @@ pub(crate) struct PublicSearchIntent {
     pub(crate) reranker: Option<coco_protocol::RerankerConfig>,
 }
 
-impl From<PublicSearchIntent> for SearchIntentInput {
-    fn from(value: PublicSearchIntent) -> Self {
-        SearchIntentInput {
+impl TryFrom<PublicSearchIntent> for SearchIntentInput {
+    type Error = CocoError;
+
+    fn try_from(value: PublicSearchIntent) -> CocoResult<Self> {
+        let filters = value
+            .filters
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(SearchIntentInput {
             query_text: value.query_text,
             query_embedding: value.query_embedding,
             retrieval_mode: value.retrieval_mode,
             indexing_config_id: value.indexing_config_id,
             top_k: value.top_k,
             hybrid_alpha: value.hybrid_alpha,
-            filters: value.filters.into_iter().map(Into::into).collect(),
+            filters,
             reranker: value.reranker,
-        }
+        })
     }
 }
 

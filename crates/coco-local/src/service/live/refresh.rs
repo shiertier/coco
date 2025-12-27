@@ -145,7 +145,7 @@ fn refresh_hit_from_content(
     }
     let original_span = hit.chunk.span;
     if let Some(span) = locate_span(content, needle, original_span, window_bytes) {
-        if let Some(slice) = content.get(span.start..span.end) {
+        if let Some(slice) = content.get(span.start()..span.end()) {
             hit.chunk.content = slice.to_string();
             hit.chunk.span = span;
             return (hit, true);
@@ -161,35 +161,33 @@ fn locate_span(
     window_bytes: usize,
 ) -> Option<TextSpan> {
     let len = needle.len();
-    if original.end <= content.len() {
-        if let Some(slice) = content.get(original.start..original.end) {
+    if original.end() <= content.len() {
+        if let Some(slice) = content.get(original.start()..original.end()) {
             if slice == needle {
                 return Some(original);
             }
         }
     }
     let window = search_window(content.len(), original, window_bytes);
-    if let Some(start) = find_best_match(content, needle, window, original.start) {
-        return Some(TextSpan {
-            start,
-            end: start + len,
-        });
+    if let Some(start) = find_best_match(content, needle, window, original.start()) {
+        if let Some(end) = start.checked_add(len) {
+            return TextSpan::new(start, end).ok();
+        }
     }
     let snippet = prefix_snippet(needle, 64)?;
     let snippet_len = snippet.len();
-    if let Some(start) = find_best_match(content, &snippet, window, original.start) {
-        return Some(TextSpan {
-            start,
-            end: start + snippet_len,
-        });
+    if let Some(start) = find_best_match(content, &snippet, window, original.start()) {
+        if let Some(end) = start.checked_add(snippet_len) {
+            return TextSpan::new(start, end).ok();
+        }
     }
     None
 }
 
 fn search_window(content_len: usize, original: TextSpan, window_bytes: usize) -> (usize, usize) {
     let radius = window_bytes.max(1);
-    let start = original.start.saturating_sub(radius);
-    let end = original.end.saturating_add(radius).min(content_len);
+    let start = original.start().saturating_sub(radius);
+    let end = original.end().saturating_add(radius).min(content_len);
     (start, end)
 }
 

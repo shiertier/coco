@@ -127,7 +127,7 @@ async fn ingest_and_query_roundtrip() -> coco_protocol::CocoResult<()> {
         doc_id: doc_id.clone().into(),
         content: "hello".to_string(),
         embedding: Some(make_embedding(1.0)),
-        span: TextSpan { start: 0, end: 5 },
+        span: TextSpan::new(0, 5).expect("span"),
         quality_score: None,
         verified: Some(false),
     };
@@ -285,7 +285,7 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         doc_id: DocumentId::new("doc-a"),
         content: "alpha".to_string(),
         embedding: Some(make_embedding(1.0)),
-        span: TextSpan { start: 0, end: 5 },
+        span: TextSpan::new(0, 5).expect("span"),
         quality_score: None,
         verified: Some(false),
     };
@@ -294,7 +294,7 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         doc_id: DocumentId::new("doc-b"),
         content: "beta".to_string(),
         embedding: Some(make_embedding(2.0)),
-        span: TextSpan { start: 0, end: 4 },
+        span: TextSpan::new(0, 4).expect("span"),
         quality_score: None,
         verified: Some(false),
     };
