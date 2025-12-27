@@ -1,35 +1,34 @@
 # Context Core (CoCo) v0.0.1
 
-CoCo is a semantic retrieval engine for code and knowledge bases. The repository
-follows Physical Separation and No-DI (static dispatch) across local and server
-products.
+CoCo 是一个面向代码与知识库的语义检索引擎。本仓库遵循 Physical Separation 与 No-DI（静态分发）设计，在 local 与 server 产品之间严格隔离。
 
-## Repository layout
+## 仓库结构
 
-- `crates/` (open source)
-  - `coco-protocol`: DTOs, traits, error types
-  - `coco-core`: parsing, chunking, text utilities (no I/O)
-  - `coco-local`: local service (SQLite + LanceDB + ONNX Runtime)
-- `private/` (closed source)
-  - `coco-server`: API service (Postgres + pgvector)
-  - `coco-worker`: ingest worker
-- `docs/`: product documentation
-- `scrapy_docs/`: scraped reference docs (docs-crawler output)
+- `crates/`（开源）
+  - `coco-protocol`: DTO、Trait 接口、错误类型
+  - `coco-core`: 解析、分块、文本工具（无 I/O）
+  - `coco-local`: 本地服务（SQLite + LanceDB + ONNX Runtime）
+  - `docs-crawler`: 文档抓取与预处理工具
+- `private/`（闭源）
+  - `coco-server`: API 服务（Postgres + pgvector）
+  - `coco-worker`: 异步 Worker
+- `docs/`: 产品文档
+- `scrapy_docs/`: docs-crawler 输出的抓取结果
 
-## Quick start (local mode)
+## 快速开始（本地模式）
 
 ```bash
 export COCO_EMBEDDER_MODE=stub
 cargo run -p coco-local --features local-storage -- start --headless
 ```
 
-In another terminal:
+另起一个终端：
 
 ```bash
 cargo run -p coco-local --features local-storage -- import /path/to/project --recursive
 ```
 
-Query:
+查询：
 
 ```bash
 curl -s \
@@ -47,23 +46,37 @@ curl -s \
   http://127.0.0.1:3456/v1/docs/query
 ```
 
-## Server mode (Docker)
+## 开发者安装（本地）
+
+一键构建（自动使用 vendored `protoc`）：
+
+```bash
+./scripts/build-local.sh
+```
+
+产物：`target/release/coco-local`。
+
+手动构建：
+
+```bash
+cargo build -p coco-local --release --features local-storage
+```
+
+## 服务端模式（Docker）
 
 ```bash
 docker compose up -d
 ```
 
-Set `COCO_OPENAI_API_KEY` if you want the server to generate embeddings.
+如果需要服务端生成向量，设置 `COCO_OPENAI_API_KEY`。
 
-To use the `coco-api` image alias, set `COCO_API_IMAGE=coco-api` before running
-Docker Compose.
+如需使用 `coco-api` 镜像别名，在运行 Docker Compose 之前设置 `COCO_API_IMAGE=coco-api`。
 
-## Documentation
+## 文档
 
-See `docs/README.md`.
+见 `docs/README.md`。
 
-## Notes
+## 备注
 
-`src/docs_crawler/` is a future reference tool and not part of the CoCo build.
-docs-crawler writes to `scrapy_docs/` by default; set `COCO_SCRAPY_DOCS_DIR` to override
-(user `scrapy` defaults to `~/.cache/coco/scrapy_docs`).
+docs-crawler 默认写入 `scrapy_docs/`；可通过 `COCO_SCRAPY_DOCS_DIR` 覆盖。
+`scrapy` 用户默认目录为 `~/.cache/coco/scrapy_docs`。
