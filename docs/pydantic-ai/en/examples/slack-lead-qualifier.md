@@ -63,20 +63,18 @@ You need to have a Slack workspace and the necessary permissions to create apps.
 
 ## Usage
 
-1. Make sure you have the [dependencies installed](../setup/#usage).
+1. Make sure you have the [dependencies installed](https://ai.pydantic.dev/examples/setup/#usage).
 
 1. Authenticate with Modal:
 
    ```bash
    python/uv-run -m modal setup
-
    ```
 
 1. Run the example as an [ephemeral Modal app](https://modal.com/docs/guide/apps#ephemeral-apps), meaning it will only run until you quit it using Ctrl+C:
 
    ```bash
    python/uv-run -m modal serve -m pydantic_ai_examples.slack_lead_qualifier.modal
-
    ```
 
 1. Note down the URL after `Created web function web_app =>`, this is your webhook endpoint URL.
@@ -106,7 +104,6 @@ curl -X POST <webhook endpoint URL> \
         }
     }
 }'
-
 ```
 
 Deploying to production
@@ -115,7 +112,6 @@ If you'd like to deploy this app into your Modal workspace in a persistent fashi
 
 ```bash
 python/uv-run -m modal deploy -m pydantic_ai_examples.slack_lead_qualifier.modal
-
 ```
 
 You'll likely want to [download the code](https://github.com/pydantic/pydantic-ai/tree/main/examples/pydantic_ai_examples/slack_lead_qualifier) first, put it in a new repo, and then do [continuous deployment](https://modal.com/docs/guide/continuous-deployment#github-actions) using GitHub Actions.
@@ -144,7 +140,6 @@ class Profile(BaseModel):
     email: str
 
 ...
-
 ```
 
 We also define a `Profile.as_prompt()` helper method that uses format_as_xml to turn the profile into a string that can be sent to the model.
@@ -166,7 +161,6 @@ class Profile(BaseModel):
         return format_as_xml(self, root_tag='profile')
 
 ...
-
 ```
 
 #### `Analysis`
@@ -189,7 +183,6 @@ class Analysis(BaseModel):
     """One-sentence welcome note summarising who they are and how we might help"""
 
 ...
-
 ```
 
 We also define a `Analysis.as_slack_blocks()` helper method that turns the analysis into some [Slack blocks](https://api.slack.com/reference/block-kit/blocks) that can be sent to the Slack API to post a new message.
@@ -216,18 +209,17 @@ class Analysis(BaseModel):
                 'text': self.summary,
             },
         ]
-
 ```
 
 ### Agent
 
 Now it's time to get into Pydantic AI and define the agent that will do the actual analysis!
 
-We specify the model we'll use (`openai:gpt-5`), provide [instructions](../../agents/#instructions), give the agent access to the [DuckDuckGo search tool](../../common-tools/#duckduckgo-search-tool), and tell it to output either an `Analysis` or `None` using the [Native Output](../../output/#native-output) structured output mode.
+We specify the model we'll use (`openai:gpt-5`), provide [instructions](https://ai.pydantic.dev/agents/#instructions), give the agent access to the [DuckDuckGo search tool](https://ai.pydantic.dev/common-tools/#duckduckgo-search-tool), and tell it to output either an `Analysis` or `None` using the [Native Output](https://ai.pydantic.dev/output/#native-output) structured output mode.
 
 The real meat of the app is in the instructions that tell the agent how to evaluate each new Slack member. If you plan to use this app yourself, you'll of course want to modify them to your own situation.
 
-[Learn about Gateway](../../gateway) [slack_lead_qualifier/agent.py (L7-L40)](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/slack_lead_qualifier/agent.py#L7-L40)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [slack_lead_qualifier/agent.py (L7-L40)](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/slack_lead_qualifier/agent.py#L7-L40)
 
 ```python
 ...
@@ -267,7 +259,6 @@ agent = Agent(
 )
 
 ...
-
 ```
 
 [slack_lead_qualifier/agent.py (L7-L40)](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/slack_lead_qualifier/agent.py#L7-L40)
@@ -310,12 +301,11 @@ agent = Agent(
 )
 
 ...
-
 ```
 
 #### `analyze_profile`
 
-We also define a `analyze_profile` helper function that takes a `Profile`, runs the agent, and returns an `Analysis` (or `None`), and instrument it using [Logfire](../../logfire/).
+We also define a `analyze_profile` helper function that takes a `Profile`, runs the agent, and returns an `Analysis` (or `None`), and instrument it using [Logfire](https://ai.pydantic.dev/logfire/index.md).
 
 [slack_lead_qualifier/agent.py (L44-L47)](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/slack_lead_qualifier/agent.py#L44-L47)
 
@@ -326,7 +316,6 @@ We also define a `analyze_profile` helper function that takes a `Profile`, runs 
 async def analyze_profile(profile: Profile) -> Analysis | None:
     result = await agent.run(profile.as_prompt())
     return result.output
-
 ```
 
 ### Analysis store
@@ -368,7 +357,6 @@ class AnalysisStore:
     @classmethod
     def _get_store(cls) -> modal.Dict:
         return modal.Dict.from_name('analyses', create_if_missing=True)  # type: ignore
-
 ```
 
 Note
@@ -407,7 +395,6 @@ async def send_slack_message(channel: str, blocks: list[dict[str, Any]]):
     if not result.get('ok', False):
         error = result.get('error', 'Unknown error')
         raise Exception(f'Failed to send to Slack: {error}')
-
 ```
 
 ### Features
@@ -463,7 +450,6 @@ async def process_slack_member(profile: Profile):
     )
 
 ...
-
 ```
 
 #### `send_daily_summary`
@@ -521,7 +507,6 @@ async def send_daily_summary():
     )
 
     await AnalysisStore().clear()
-
 ```
 
 ### Web app
@@ -552,7 +537,6 @@ async def process_webhook(payload: dict[str, Any]) -> dict[str, Any]:
         return {'status': 'OK'}
 
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
 ```
 
 #### `process_slack_member` with Modal
@@ -578,7 +562,6 @@ def process_slack_member(profile: Profile):
     )
 
 ...
-
 ```
 
 ### Modal app
@@ -614,7 +597,6 @@ app = modal.App(
 )
 
 ...
-
 ```
 
 #### Set up Logfire
@@ -636,7 +618,6 @@ def setup_logfire():
     logfire.instrument_httpx(capture_all=True)
 
 ...
-
 ```
 
 #### Web app
@@ -662,7 +643,6 @@ def web_app():
     return _app
 
 ...
-
 ```
 
 Note
@@ -685,7 +665,6 @@ async def send_daily_summary():
     from .functions import send_daily_summary as _send_daily_summary
 
     await _send_daily_summary()
-
 ```
 
 #### Backgrounded `process_slack_member`
@@ -713,7 +692,6 @@ async def process_slack_member(profile_raw: dict[str, Any], logfire_ctx: Any):
         await _process_slack_member(profile)
 
 ...
-
 ```
 
 ## Conclusion

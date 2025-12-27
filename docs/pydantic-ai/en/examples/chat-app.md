@@ -4,9 +4,9 @@ Simple chat app example build with FastAPI.
 
 Demonstrates:
 
-- [reusing chat history](../../message-history/)
-- [serializing messages](../../message-history/#accessing-messages-from-results)
-- [streaming responses](../../output/#streamed-results)
+- [reusing chat history](https://ai.pydantic.dev/message-history/index.md)
+- [serializing messages](https://ai.pydantic.dev/message-history/#accessing-messages-from-results)
+- [streaming responses](https://ai.pydantic.dev/output/#streamed-results)
 
 This demonstrates storing chat history between requests and using it to give the model context for new responses.
 
@@ -14,16 +14,14 @@ Most of the complex logic here is between `chat_app.py` which streams the respon
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.chat_app
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.chat_app
-
 ```
 
 Then open the app at [localhost:8000](http://localhost:8000).
@@ -32,7 +30,7 @@ Then open the app at [localhost:8000](http://localhost:8000).
 
 Python code that runs the chat app:
 
-[Learn about Gateway](../../gateway) [chat_app.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/chat_app.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [chat_app.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/chat_app.py)
 
 ```python
 """Simple chat app example build with FastAPI.
@@ -262,7 +260,6 @@ if __name__ == '__main__':
     uvicorn.run(
         'pydantic_ai_examples.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
     )
-
 ```
 
 [chat_app.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/chat_app.py)
@@ -495,7 +492,6 @@ if __name__ == '__main__':
     uvicorn.run(
         'pydantic_ai_examples.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
     )
-
 ```
 
 Simple HTML page to render the app:
@@ -584,7 +580,6 @@ Simple HTML page to render the app:
     document.getElementById('spinner').classList.remove('active');
   });
 </script>
-
 ```
 
 TypeScript to handle rendering the messages, to keep this simple (and at the risk of offending frontend developers) the typescript code is passed to the browser as plain text and transpiled in the browser.
@@ -682,5 +677,4 @@ document.querySelector('form').addEventListener('submit', (e) => onSubmit(e).cat
 
 // load messages on page load
 fetch('/chat/').then(onFetchResponse).catch(onError)
-
 ```

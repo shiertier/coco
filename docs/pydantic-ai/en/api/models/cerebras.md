@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Cerebras](../../../models/cerebras/).
+For details on how to set up authentication with this model, see [model configuration for Cerebras](https://ai.pydantic.dev/models/cerebras/index.md).
 
 Cerebras model implementation using OpenAI-compatible API.
 
@@ -10,7 +10,6 @@ Cerebras model implementation using OpenAI-compatible API.
 
 ```python
 CerebrasModelName = str | LatestCerebrasModelNames
-
 ```
 
 Possible Cerebras model names.
@@ -43,14 +42,12 @@ class CerebrasModelSettings(ModelSettings, total=False):
 
     See [the Cerebras docs](https://inference-docs.cerebras.ai/resources/openai#passing-non-standard-parameters) for more details.
     """
-
 ```
 
 #### cerebras_disable_reasoning
 
 ```python
 cerebras_disable_reasoning: bool
-
 ```
 
 Disable reasoning for the model.
@@ -108,7 +105,6 @@ class CerebrasModel(OpenAIChatModel):
         merged_settings, customized_parameters = super().prepare_request(model_settings, model_request_parameters)
         new_settings = _cerebras_settings_to_openai_settings(cast(CerebrasModelSettings, merged_settings or {}))
         return new_settings, customized_parameters
-
 ```
 
 #### __init__
@@ -123,14 +119,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: CerebrasModelSettings | None = None
 )
-
 ```
 
 Initialize a Cerebras model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `CerebrasModelName` | The name of the Cerebras model to use. | *required* | | `provider` | `Literal['cerebras'] | Provider[AsyncOpenAI]` | The provider to use. Defaults to 'cerebras'. | `'cerebras'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile based on the model name. | `None` | | `settings` | `CerebrasModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                    | Description                            | Default                                                                  |
+| ------------ | ----------------------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| `model_name` | `CerebrasModelName`     | The name of the Cerebras model to use. | *required*                                                               |
+| `provider`   | \`Literal['cerebras']   | Provider[AsyncOpenAI]\`                | The provider to use. Defaults to 'cerebras'.                             |
+| `profile`    | \`ModelProfileSpec      | None\`                                 | The model profile to use. Defaults to a profile based on the model name. |
+| `settings`   | \`CerebrasModelSettings | None\`                                 | Model-specific settings that will be used as defaults for this model.    |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/cerebras.py`
 
@@ -152,5 +152,4 @@ def __init__(
         settings: Model-specific settings that will be used as defaults for this model.
     """
     super().__init__(model_name, provider=provider, profile=profile, settings=settings)
-
 ```

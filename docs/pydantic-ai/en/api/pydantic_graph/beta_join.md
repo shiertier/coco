@@ -18,7 +18,6 @@ class JoinState:
     current: Any
     downstream_fork_stack: ForkStack
     cancelled_sibling_tasks: bool = False
-
 ```
 
 ### ReducerContext
@@ -31,7 +30,10 @@ The reducer context provides access to the current graph state and dependencies.
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* |
+| Name     | Bound or Constraints | Description                  | Default    |
+| -------- | -------------------- | ---------------------------- | ---------- |
+| `StateT` |                      | The type of the graph state  | *required* |
+| `DepsT`  |                      | The type of the dependencies | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 
@@ -75,14 +77,12 @@ class ReducerContext(Generic[StateT, DepsT]):
         You can call this if you want your join to have early-stopping behavior.
         """
         self._join_state.cancelled_sibling_tasks = True
-
 ```
 
 #### state
 
 ```python
 state: StateT
-
 ```
 
 The state of the graph run.
@@ -91,7 +91,6 @@ The state of the graph run.
 
 ```python
 deps: DepsT
-
 ```
 
 The deps for the graph run.
@@ -100,7 +99,6 @@ The deps for the graph run.
 
 ```python
 cancel_sibling_tasks()
-
 ```
 
 Cancel all sibling tasks created from the same fork.
@@ -116,7 +114,6 @@ def cancel_sibling_tasks(self):
     You can call this if you want your join to have early-stopping behavior.
     """
     self._join_state.cancelled_sibling_tasks = True
-
 ```
 
 ### ReducerFunction
@@ -128,7 +125,6 @@ ReducerFunction = TypeAliasType(
     | PlainReducerFunction[InputT, OutputT],
     type_params=(StateT, DepsT, InputT, OutputT),
 )
-
 ```
 
 A function used for reducing inputs to a join node.
@@ -137,7 +133,6 @@ A function used for reducing inputs to a join node.
 
 ```python
 reduce_null(current: None, inputs: Any) -> None
-
 ```
 
 A reducer that discards all input data and returns None.
@@ -148,7 +143,6 @@ Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 def reduce_null(current: None, inputs: Any) -> None:
     """A reducer that discards all input data and returns None."""
     return None
-
 ```
 
 ### reduce_list_append
@@ -157,7 +151,6 @@ def reduce_null(current: None, inputs: Any) -> None:
 reduce_list_append(
     current: list[T], inputs: T
 ) -> list[T]
-
 ```
 
 A reducer that appends to a list.
@@ -169,7 +162,6 @@ def reduce_list_append(current: list[T], inputs: T) -> list[T]:
     """A reducer that appends to a list."""
     current.append(inputs)
     return current
-
 ```
 
 ### reduce_list_extend
@@ -178,7 +170,6 @@ def reduce_list_append(current: list[T], inputs: T) -> list[T]:
 reduce_list_extend(
     current: list[T], inputs: Iterable[T]
 ) -> list[T]
-
 ```
 
 A reducer that extends a list.
@@ -190,7 +181,6 @@ def reduce_list_extend(current: list[T], inputs: Iterable[T]) -> list[T]:
     """A reducer that extends a list."""
     current.extend(inputs)
     return current
-
 ```
 
 ### reduce_dict_update
@@ -199,7 +189,6 @@ def reduce_list_extend(current: list[T], inputs: Iterable[T]) -> list[T]:
 reduce_dict_update(
     current: dict[K, V], inputs: Mapping[K, V]
 ) -> dict[K, V]
-
 ```
 
 A reducer that updates a dict.
@@ -211,7 +200,6 @@ def reduce_dict_update(current: dict[K, V], inputs: Mapping[K, V]) -> dict[K, V]
     """A reducer that updates a dict."""
     current.update(inputs)
     return current
-
 ```
 
 ### SupportsSum
@@ -229,14 +217,12 @@ class SupportsSum(Protocol):
     @abstractmethod
     def __add__(self, other: Self, /) -> Self:
         pass
-
 ```
 
 ### reduce_sum
 
 ```python
 reduce_sum(current: NumericT, inputs: NumericT) -> NumericT
-
 ```
 
 A reducer that sums numbers.
@@ -247,7 +233,6 @@ Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 def reduce_sum(current: NumericT, inputs: NumericT) -> NumericT:
     """A reducer that sums numbers."""
     return current + inputs
-
 ```
 
 ### ReduceFirstValue
@@ -267,7 +252,6 @@ class ReduceFirstValue(Generic[T]):
         """The reducer function."""
         ctx.cancel_sibling_tasks()
         return inputs
-
 ```
 
 #### __call__
@@ -278,7 +262,6 @@ __call__(
     current: T,
     inputs: T,
 ) -> T
-
 ```
 
 The reducer function.
@@ -290,7 +273,6 @@ def __call__(self, ctx: ReducerContext[object, object], current: T, inputs: T) -
     """The reducer function."""
     ctx.cancel_sibling_tasks()
     return inputs
-
 ```
 
 ### Join
@@ -303,7 +285,12 @@ A join defines how to combine outputs from multiple parallel execution paths usi
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of input data to join | *required* | | `OutputT` | | The type of the final joined output | *required* |
+| Name      | Bound or Constraints | Description                         | Default    |
+| --------- | -------------------- | ----------------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state         | *required* |
+| `DepsT`   |                      | The type of the dependencies        | *required* |
+| `InputT`  |                      | The type of input data to join      | *required* |
+| `OutputT` |                      | The type of the final joined output | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 
@@ -375,37 +362,37 @@ class Join(Generic[StateT, DepsT, InputT, OutputT]):
             A [`StepNode`][pydantic_graph.beta.step.StepNode] with this step and the bound inputs
         """
         return JoinNode(self, inputs)
-
 ```
 
 #### as_node
 
 ```python
 as_node(inputs: None = None) -> JoinNode[StateT, DepsT]
-
 ```
 
 ```python
 as_node(inputs: InputT) -> JoinNode[StateT, DepsT]
-
 ```
 
 ```python
 as_node(
     inputs: InputT | None = None,
 ) -> JoinNode[StateT, DepsT]
-
 ```
 
 Create a step node with bound inputs.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `inputs` | `InputT | None` | The input data to bind to this step, or None | `None` |
+| Name     | Type     | Description | Default                                      |
+| -------- | -------- | ----------- | -------------------------------------------- |
+| `inputs` | \`InputT | None\`      | The input data to bind to this step, or None |
 
 Returns:
 
-| Type | Description | | --- | --- | | `JoinNode[StateT, DepsT]` | A StepNode with this step and the bound inputs |
+| Type                      | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `JoinNode[StateT, DepsT]` | A StepNode with this step and the bound inputs |
 
 Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 
@@ -420,7 +407,6 @@ def as_node(self, inputs: InputT | None = None) -> JoinNode[StateT, DepsT]:
         A [`StepNode`][pydantic_graph.beta.step.StepNode] with this step and the bound inputs
     """
     return JoinNode(self, inputs)
-
 ```
 
 ### JoinNode
@@ -465,14 +451,12 @@ class JoinNode(BaseNode[StateT, DepsT, Any]):
         raise NotImplementedError(
             '`JoinNode` is not meant to be run directly, it is meant to be used in `BaseNode` subclasses to indicate a transition to v2-style steps.'
         )
-
 ```
 
 #### join
 
 ```python
 join: Join[StateT, DepsT, Any, Any]
-
 ```
 
 The step to execute.
@@ -481,7 +465,6 @@ The step to execute.
 
 ```python
 inputs: Any
-
 ```
 
 The inputs bound to this step.
@@ -492,22 +475,27 @@ The inputs bound to this step.
 run(
     ctx: GraphRunContext[StateT, DepsT],
 ) -> BaseNode[StateT, DepsT, Any] | End[Any]
-
 ```
 
 Attempt to run the join node.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `GraphRunContext[StateT, DepsT]` | The graph execution context | *required* |
+| Name  | Type                             | Description                 | Default    |
+| ----- | -------------------------------- | --------------------------- | ---------- |
+| `ctx` | `GraphRunContext[StateT, DepsT]` | The graph execution context | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `BaseNode[StateT, DepsT, Any] | End[Any]` | The result of step execution |
+| Type                           | Description |
+| ------------------------------ | ----------- |
+| \`BaseNode[StateT, DepsT, Any] | End[Any]\`  |
 
 Raises:
 
-| Type | Description | | --- | --- | | `NotImplementedError` | Always raised as StepNode is not meant to be run directly |
+| Type                  | Description                                               |
+| --------------------- | --------------------------------------------------------- |
+| `NotImplementedError` | Always raised as StepNode is not meant to be run directly |
 
 Source code in `pydantic_graph/pydantic_graph/beta/join.py`
 
@@ -527,5 +515,4 @@ async def run(self, ctx: GraphRunContext[StateT, DepsT]) -> BaseNode[StateT, Dep
     raise NotImplementedError(
         '`JoinNode` is not meant to be run directly, it is meant to be used in `BaseNode` subclasses to indicate a transition to v2-style steps.'
     )
-
 ```

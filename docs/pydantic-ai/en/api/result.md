@@ -245,6 +245,16 @@ class StreamedRunResult(Generic[AgentDepsT, OutputDataT]):
         else:
             raise ValueError('No stream response or run result provided')  # pragma: no cover
 
+    @property
+    def metadata(self) -> dict[str, Any] | None:
+        """Metadata associated with this agent run, if configured."""
+        if self._run_result is not None:
+            return self._run_result.metadata
+        elif self._stream_response is not None:
+            return self._stream_response.metadata
+        else:
+            return None
+
     # TODO (v2): Make this a property
     def usage(self) -> RunUsage:
         """Return the usage of the whole run.
@@ -297,6 +307,8 @@ class StreamedRunResult(Generic[AgentDepsT, OutputDataT]):
             raise ValueError('No stream response or run result provided')  # pragma: no cover
 
     async def _marked_completed(self, message: _messages.ModelResponse | None = None) -> None:
+        if self.is_complete:
+            return
         self.is_complete = True
         if message is not None:
             if self._stream_response:  # pragma: no branch
@@ -304,14 +316,12 @@ class StreamedRunResult(Generic[AgentDepsT, OutputDataT]):
             self._all_messages.append(message)
         if self._on_complete is not None:
             await self._on_complete()
-
 ```
 
 #### is_complete
 
 ```python
 is_complete: bool = field(default=False, init=False)
-
 ```
 
 Whether the stream has all been received.
@@ -324,18 +334,21 @@ This is set to `True` when one of stream_output, stream_text, stream_responses o
 all_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return the history of \_messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of messages. |
+| Type                 | Description       |
+| -------------------- | ----------------- |
+| `list[ModelMessage]` | List of messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -356,7 +369,6 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
     if output_tool_return_content is not None:
         raise NotImplementedError('Setting output tool return content is not supported for this result type.')
     return self._all_messages
-
 ```
 
 #### all_messages_json
@@ -365,18 +377,21 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
 all_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return all messages from all_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the messages. |
+| Type    | Description                           |
+| ------- | ------------------------------------- |
+| `bytes` | JSON bytes representing the messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -396,7 +411,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
     return _messages.ModelMessagesTypeAdapter.dump_json(
         self.all_messages(output_tool_return_content=output_tool_return_content)
     )
-
 ```
 
 #### new_messages
@@ -405,7 +419,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
 new_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return new messages associated with this run.
@@ -414,11 +427,15 @@ Messages from older runs are excluded.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of new messages. |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| `list[ModelMessage]` | List of new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -438,7 +455,6 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
         List of new messages.
     """
     return self.all_messages(output_tool_return_content=output_tool_return_content)[self._new_message_index :]
-
 ```
 
 #### new_messages_json
@@ -447,18 +463,21 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
 new_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return new messages from new_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the new messages. |
+| Type    | Description                               |
+| ------- | ----------------------------------------- |
+| `bytes` | JSON bytes representing the new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -478,7 +497,6 @@ def new_messages_json(self, *, output_tool_return_content: str | None = None) ->
     return _messages.ModelMessagesTypeAdapter.dump_json(
         self.new_messages(output_tool_return_content=output_tool_return_content)
     )
-
 ```
 
 #### stream
@@ -487,7 +505,6 @@ def new_messages_json(self, *, output_tool_return_content: str | None = None) ->
 stream(
     *, debounce_by: float | None = 0.1
 ) -> AsyncIterator[OutputDataT]
-
 ```
 
 Deprecated
@@ -501,7 +518,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 async def stream(self, *, debounce_by: float | None = 0.1) -> AsyncIterator[OutputDataT]:
     async for output in self.stream_output(debounce_by=debounce_by):
         yield output
-
 ```
 
 #### stream_output
@@ -510,7 +526,6 @@ async def stream(self, *, debounce_by: float | None = 0.1) -> AsyncIterator[Outp
 stream_output(
     *, debounce_by: float | None = 0.1
 ) -> AsyncIterator[OutputDataT]
-
 ```
 
 Stream the output as an async iterable.
@@ -519,11 +534,15 @@ The pydantic validator for structured data will be called in [partial mode](http
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the output chunks by. None means no debouncing. Debouncing is particularly important for long structured outputs to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description | Default                                                                                                                                                                                                                               |
+| ------------- | ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debounce_by` | \`float | None\`      | by how much (if at all) to debounce/group the output chunks by. None means no debouncing. Debouncing is particularly important for long structured outputs to reduce the overhead of performing validation as each token is received. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[OutputDataT]` | An async iterable of the response data. |
+| Type                         | Description                             |
+| ---------------------------- | --------------------------------------- |
+| `AsyncIterator[OutputDataT]` | An async iterable of the response data. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -552,7 +571,6 @@ async def stream_output(self, *, debounce_by: float | None = 0.1) -> AsyncIterat
         await self._marked_completed(self.response)
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### stream_text
@@ -561,7 +579,6 @@ async def stream_output(self, *, debounce_by: float | None = 0.1) -> AsyncIterat
 stream_text(
     *, delta: bool = False, debounce_by: float | None = 0.1
 ) -> AsyncIterator[str]
-
 ```
 
 Stream the text result as an async iterable.
@@ -572,7 +589,10 @@ Result validators will NOT be called on the text result if `delta=True`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `delta` | `bool` | if True, yield each chunk of text as it is received, if False (default), yield the full text up to the current point. | `False` | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description                                                                                                           | Default                                                                                                                                                                                                                                   |
+| ------------- | ------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delta`       | `bool`  | if True, yield each chunk of text as it is received, if False (default), yield the full text up to the current point. | `False`                                                                                                                                                                                                                                   |
+| `debounce_by` | \`float | None\`                                                                                                                | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -604,7 +624,6 @@ async def stream_text(self, *, delta: bool = False, debounce_by: float | None = 
         await self._marked_completed(self.response)
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### stream_structured
@@ -613,7 +632,6 @@ async def stream_text(self, *, delta: bool = False, debounce_by: float | None = 
 stream_structured(
     *, debounce_by: float | None = 0.1
 ) -> AsyncIterator[tuple[ModelResponse, bool]]
-
 ```
 
 Deprecated
@@ -629,7 +647,6 @@ async def stream_structured(
 ) -> AsyncIterator[tuple[_messages.ModelResponse, bool]]:
     async for msg, last in self.stream_responses(debounce_by=debounce_by):
         yield msg, last
-
 ```
 
 #### stream_responses
@@ -638,18 +655,21 @@ async def stream_structured(
 stream_responses(
     *, debounce_by: float | None = 0.1
 ) -> AsyncIterator[tuple[ModelResponse, bool]]
-
 ```
 
 Stream the response as an async iterable of Structured LLM Messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description | Default                                                                                                                                                                                                                                   |
+| ------------- | ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debounce_by` | \`float | None\`      | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[tuple[ModelResponse, bool]]` | An async iterable of the structured response message and whether that is the last message. |
+| Type                                        | Description                                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `AsyncIterator[tuple[ModelResponse, bool]]` | An async iterable of the structured response message and whether that is the last message. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -681,14 +701,12 @@ async def stream_responses(
         await self._marked_completed(msg)
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### get_output
 
 ```python
 get_output() -> OutputDataT
-
 ```
 
 Stream the whole response, validate and return it.
@@ -708,23 +726,28 @@ async def get_output(self) -> OutputDataT:
         return output
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### response
 
 ```python
 response: ModelResponse
-
 ```
 
 Return the current state of the response.
+
+#### metadata
+
+```python
+metadata: dict[str, Any] | None
+```
+
+Metadata associated with this agent run, if configured.
 
 #### usage
 
 ```python
 usage() -> RunUsage
-
 ```
 
 Return the usage of the whole run.
@@ -748,14 +771,12 @@ def usage(self) -> RunUsage:
         return self._stream_response.usage()
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### timestamp
 
 ```python
 timestamp() -> datetime
-
 ```
 
 Get the timestamp of the response.
@@ -771,14 +792,12 @@ def timestamp(self) -> datetime:
         return self._stream_response.timestamp()
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 #### run_id
 
 ```python
 run_id: str
-
 ```
 
 The unique identifier for the agent run.
@@ -789,7 +808,6 @@ The unique identifier for the agent run.
 validate_structured_output(
     message: ModelResponse, *, allow_partial: bool = False
 ) -> OutputDataT
-
 ```
 
 Deprecated
@@ -804,7 +822,6 @@ async def validate_structured_output(
     self, message: _messages.ModelResponse, *, allow_partial: bool = False
 ) -> OutputDataT:
     return await self.validate_response_output(message, allow_partial=allow_partial)
-
 ```
 
 #### validate_response_output
@@ -813,7 +830,6 @@ async def validate_structured_output(
 validate_response_output(
     message: ModelResponse, *, allow_partial: bool = False
 ) -> OutputDataT
-
 ```
 
 Validate a structured result message.
@@ -831,7 +847,6 @@ async def validate_response_output(
         return await self._stream_response.validate_response_output(message, allow_partial=allow_partial)
     else:
         raise ValueError('No stream response or run result provided')  # pragma: no cover
-
 ```
 
 ### StreamedRunResultSync
@@ -981,6 +996,11 @@ class StreamedRunResultSync(Generic[AgentDepsT, OutputDataT]):
         """The unique identifier for the agent run."""
         return self._streamed_run_result.run_id
 
+    @property
+    def metadata(self) -> dict[str, Any] | None:
+        """Metadata associated with this agent run, if configured."""
+        return self._streamed_run_result.metadata
+
     def validate_response_output(self, message: _messages.ModelResponse, *, allow_partial: bool = False) -> OutputDataT:
         """Validate a structured result message."""
         return _utils.get_event_loop().run_until_complete(
@@ -998,7 +1018,6 @@ class StreamedRunResultSync(Generic[AgentDepsT, OutputDataT]):
         [`get_output`][pydantic_ai.result.StreamedRunResultSync.get_output] completes.
         """
         return self._streamed_run_result.is_complete
-
 ```
 
 #### all_messages
@@ -1007,18 +1026,21 @@ class StreamedRunResultSync(Generic[AgentDepsT, OutputDataT]):
 all_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return the history of messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of messages. |
+| Type                 | Description       |
+| -------------------- | ----------------- |
+| `list[ModelMessage]` | List of messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1036,7 +1058,6 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
         List of messages.
     """
     return self._streamed_run_result.all_messages(output_tool_return_content=output_tool_return_content)
-
 ```
 
 #### all_messages_json
@@ -1045,18 +1066,21 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
 all_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return all messages from all_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the messages. |
+| Type    | Description                           |
+| ------- | ------------------------------------- |
+| `bytes` | JSON bytes representing the messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1074,7 +1098,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
         JSON bytes representing the messages.
     """
     return self._streamed_run_result.all_messages_json(output_tool_return_content=output_tool_return_content)
-
 ```
 
 #### new_messages
@@ -1083,7 +1106,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
 new_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return new messages associated with this run.
@@ -1092,11 +1114,15 @@ Messages from older runs are excluded.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of new messages. |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| `list[ModelMessage]` | List of new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1116,7 +1142,6 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
         List of new messages.
     """
     return self._streamed_run_result.new_messages(output_tool_return_content=output_tool_return_content)
-
 ```
 
 #### new_messages_json
@@ -1125,18 +1150,21 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
 new_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return new messages from new_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the new messages. |
+| Type    | Description                               |
+| ------- | ----------------------------------------- |
+| `bytes` | JSON bytes representing the new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1154,7 +1182,6 @@ def new_messages_json(self, *, output_tool_return_content: str | None = None) ->
         JSON bytes representing the new messages.
     """
     return self._streamed_run_result.new_messages_json(output_tool_return_content=output_tool_return_content)
-
 ```
 
 #### stream_output
@@ -1163,7 +1190,6 @@ def new_messages_json(self, *, output_tool_return_content: str | None = None) ->
 stream_output(
     *, debounce_by: float | None = 0.1
 ) -> Iterator[OutputDataT]
-
 ```
 
 Stream the output as an iterable.
@@ -1172,11 +1198,15 @@ The pydantic validator for structured data will be called in [partial mode](http
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the output chunks by. None means no debouncing. Debouncing is particularly important for long structured outputs to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description | Default                                                                                                                                                                                                                               |
+| ------------- | ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debounce_by` | \`float | None\`      | by how much (if at all) to debounce/group the output chunks by. None means no debouncing. Debouncing is particularly important for long structured outputs to reduce the overhead of performing validation as each token is received. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Iterator[OutputDataT]` | An iterable of the response data. |
+| Type                    | Description                       |
+| ----------------------- | --------------------------------- |
+| `Iterator[OutputDataT]` | An iterable of the response data. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1197,7 +1227,6 @@ def stream_output(self, *, debounce_by: float | None = 0.1) -> Iterator[OutputDa
         An iterable of the response data.
     """
     return _utils.sync_async_iterator(self._streamed_run_result.stream_output(debounce_by=debounce_by))
-
 ```
 
 #### stream_text
@@ -1206,7 +1235,6 @@ def stream_output(self, *, debounce_by: float | None = 0.1) -> Iterator[OutputDa
 stream_text(
     *, delta: bool = False, debounce_by: float | None = 0.1
 ) -> Iterator[str]
-
 ```
 
 Stream the text result as an iterable.
@@ -1217,7 +1245,10 @@ Result validators will NOT be called on the text result if `delta=True`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `delta` | `bool` | if True, yield each chunk of text as it is received, if False (default), yield the full text up to the current point. | `False` | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description                                                                                                           | Default                                                                                                                                                                                                                                   |
+| ------------- | ------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delta`       | `bool`  | if True, yield each chunk of text as it is received, if False (default), yield the full text up to the current point. | `False`                                                                                                                                                                                                                                   |
+| `debounce_by` | \`float | None\`                                                                                                                | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1236,7 +1267,6 @@ def stream_text(self, *, delta: bool = False, debounce_by: float | None = 0.1) -
             performing validation as each token is received.
     """
     return _utils.sync_async_iterator(self._streamed_run_result.stream_text(delta=delta, debounce_by=debounce_by))
-
 ```
 
 #### stream_responses
@@ -1245,18 +1275,21 @@ def stream_text(self, *, delta: bool = False, debounce_by: float | None = 0.1) -
 stream_responses(
     *, debounce_by: float | None = 0.1
 ) -> Iterator[tuple[ModelResponse, bool]]
-
 ```
 
 Stream the response as an iterable of Structured LLM Messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `debounce_by` | `float | None` | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. | `0.1` |
+| Name          | Type    | Description | Default                                                                                                                                                                                                                                   |
+| ------------- | ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debounce_by` | \`float | None\`      | by how much (if at all) to debounce/group the response chunks by. None means no debouncing. Debouncing is particularly important for long structured responses to reduce the overhead of performing validation as each token is received. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Iterator[tuple[ModelResponse, bool]]` | An iterable of the structured response message and whether that is the last message. |
+| Type                                   | Description                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `Iterator[tuple[ModelResponse, bool]]` | An iterable of the structured response message and whether that is the last message. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 
@@ -1273,14 +1306,12 @@ def stream_responses(self, *, debounce_by: float | None = 0.1) -> Iterator[tuple
         An iterable of the structured response message and whether that is the last message.
     """
     return _utils.sync_async_iterator(self._streamed_run_result.stream_responses(debounce_by=debounce_by))
-
 ```
 
 #### get_output
 
 ```python
 get_output() -> OutputDataT
-
 ```
 
 Stream the whole response, validate and return it.
@@ -1291,14 +1322,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 def get_output(self) -> OutputDataT:
     """Stream the whole response, validate and return it."""
     return _utils.get_event_loop().run_until_complete(self._streamed_run_result.get_output())
-
 ```
 
 #### response
 
 ```python
 response: ModelResponse
-
 ```
 
 Return the current state of the response.
@@ -1307,7 +1336,6 @@ Return the current state of the response.
 
 ```python
 usage() -> RunUsage
-
 ```
 
 Return the usage of the whole run.
@@ -1326,14 +1354,12 @@ def usage(self) -> RunUsage:
         This won't return the full usage until the stream is finished.
     """
     return self._streamed_run_result.usage()
-
 ```
 
 #### timestamp
 
 ```python
 timestamp() -> datetime
-
 ```
 
 Get the timestamp of the response.
@@ -1344,17 +1370,23 @@ Source code in `pydantic_ai_slim/pydantic_ai/result.py`
 def timestamp(self) -> datetime:
     """Get the timestamp of the response."""
     return self._streamed_run_result.timestamp()
-
 ```
 
 #### run_id
 
 ```python
 run_id: str
-
 ```
 
 The unique identifier for the agent run.
+
+#### metadata
+
+```python
+metadata: dict[str, Any] | None
+```
+
+Metadata associated with this agent run, if configured.
 
 #### validate_response_output
 
@@ -1362,7 +1394,6 @@ The unique identifier for the agent run.
 validate_response_output(
     message: ModelResponse, *, allow_partial: bool = False
 ) -> OutputDataT
-
 ```
 
 Validate a structured result message.
@@ -1375,14 +1406,12 @@ def validate_response_output(self, message: _messages.ModelResponse, *, allow_pa
     return _utils.get_event_loop().run_until_complete(
         self._streamed_run_result.validate_response_output(message, allow_partial=allow_partial)
     )
-
 ```
 
 #### is_complete
 
 ```python
 is_complete: bool
-
 ```
 
 Whether the stream has all been received.

@@ -6,24 +6,20 @@ As Outlines is a library allowing you to run models from various different provi
 
 ```bash
 pip install "pydantic-ai-slim[outlines-transformers]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[outlines-transformers]"
-
 ```
 
 Or
 
 ```bash
 pip install "pydantic-ai-slim[outlines-mlxlm]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[outlines-mlxlm]"
-
 ```
 
 There are 5 optional groups for the 5 model providers supported through Outlines:
@@ -53,7 +49,6 @@ outlines_model = outlines.from_transformers(
     AutoTokenizer.from_pretrained('erwanf/gpt2-mini')
 )
 model = OutlinesModel(outlines_model)
-
 ```
 
 As you already providing an Outlines model instance, there is no need to provide an `OutlinesProvider` yourself.
@@ -81,7 +76,6 @@ model = OutlinesModel.from_transformers(
     AutoModelForCausalLM.from_pretrained('microsoft/Phi-3-mini-4k-instruct'),
     AutoTokenizer.from_pretrained('microsoft/Phi-3-mini-4k-instruct')
 )
-
 ```
 
 #### LlamaCpp
@@ -97,7 +91,6 @@ model = OutlinesModel.from_llamacpp(
         filename='mistral-7b-instruct-v0.2.Q5_K_M.gguf',
     )
 )
-
 ```
 
 #### MLXLM
@@ -110,7 +103,6 @@ from pydantic_ai.models.outlines import OutlinesModel
 model = OutlinesModel.from_mlxlm(
     *load('mlx-community/TinyLlama-1.1B-Chat-v1.0-4bit')
 )
-
 ```
 
 #### SGLang
@@ -123,7 +115,6 @@ model = OutlinesModel.from_sglang(
     'api_key',
     'meta-llama/Llama-3.1-8B'
 )
-
 ```
 
 #### vLLM Offline
@@ -136,7 +127,6 @@ from pydantic_ai.models.outlines import OutlinesModel
 model = OutlinesModel.from_vllm_offline(
     LLM('microsoft/Phi-3-mini-4k-instruct')
 )
-
 ```
 
 ## Running the model
@@ -172,14 +162,13 @@ result = agent.run_sync(
     model_settings=ModelSettings(extra_body={'max_new_tokens': 100})
 )
 print(result.output) # width=20 height=30 depth=40 units='cm'
-
 ```
 
 Outlines does not support tools yet, but support for that feature will be added in the near future.
 
 ## Multimodal models
 
-If the model you are running through Outlines and the provider selected supports it, you can include images in your prompts using ImageUrl or BinaryImage. In that case, the prompt you provide when running the agent should be a list containing a string and one or several images. See the [input documentation](../../input/) for details and examples on using assets in model inputs.
+If the model you are running through Outlines and the provider selected supports it, you can include images in your prompts using ImageUrl or BinaryImage. In that case, the prompt you provide when running the agent should be a list containing a string and one or several images. See the [input documentation](https://ai.pydantic.dev/input/index.md) for details and examples on using assets in model inputs.
 
 This feature is supported in Outlines for the `SGLang` and `Transformers` models. If you want to run a multimodal model through `transformers`, you must provide a processor instead of a tokenizer as the second argument when initializing the model with the `OutlinesModel.from_transformers` method.
 
@@ -256,5 +245,4 @@ print(result.output)
 # total=41.98
 # date='2023-04-01'
 # payment_method='credit'
-
 ```

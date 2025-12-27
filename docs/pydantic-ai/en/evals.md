@@ -17,32 +17,32 @@ Unlike unit tests, evals are an emerging art/science. Anyone who claims to know 
 **Getting Started:**
 
 - [Installation](#installation)
-- [Quick Start](quick-start/)
-- [Core Concepts](core-concepts/)
+- [Quick Start](https://ai.pydantic.dev/evals/quick-start/index.md)
+- [Core Concepts](https://ai.pydantic.dev/evals/core-concepts/index.md)
 
 **Evaluators:**
 
-- [Evaluators Overview](evaluators/overview/) - Compare evaluator types and learn when to use each approach
-- [Built-in Evaluators](evaluators/built-in/) - Complete reference for exact match, instance checks, and other ready-to-use evaluators
-- [LLM as a Judge](evaluators/llm-judge/) - Use LLMs to evaluate subjective qualities, complex criteria, and natural language outputs
-- [Custom Evaluators](evaluators/custom/) - Implement domain-specific scoring logic and custom evaluation metrics
-- [Span-Based Evaluation](evaluators/span-based/) - Evaluate internal agent behavior (tool calls, execution flow) using OpenTelemetry traces. Essential for complex agents where correctness depends on *how* the answer was reached, not just the final output. Also ensures eval assertions align with production telemetry.
+- [Evaluators Overview](https://ai.pydantic.dev/evals/evaluators/overview/index.md) - Compare evaluator types and learn when to use each approach
+- [Built-in Evaluators](https://ai.pydantic.dev/evals/evaluators/built-in/index.md) - Complete reference for exact match, instance checks, and other ready-to-use evaluators
+- [LLM as a Judge](https://ai.pydantic.dev/evals/evaluators/llm-judge/index.md) - Use LLMs to evaluate subjective qualities, complex criteria, and natural language outputs
+- [Custom Evaluators](https://ai.pydantic.dev/evals/evaluators/custom/index.md) - Implement domain-specific scoring logic and custom evaluation metrics
+- [Span-Based Evaluation](https://ai.pydantic.dev/evals/evaluators/span-based/index.md) - Evaluate internal agent behavior (tool calls, execution flow) using OpenTelemetry traces. Essential for complex agents where correctness depends on *how* the answer was reached, not just the final output. Also ensures eval assertions align with production telemetry.
 
 **How-To Guides:**
 
-- [Logfire Integration](how-to/logfire-integration/) - Visualize results
-- [Dataset Management](how-to/dataset-management/) - Save, load, generate
-- [Concurrency & Performance](how-to/concurrency/) - Control parallel execution
-- [Retry Strategies](how-to/retry-strategies/) - Handle transient failures
-- [Metrics & Attributes](how-to/metrics-attributes/) - Track custom data
+- [Logfire Integration](https://ai.pydantic.dev/evals/how-to/logfire-integration/index.md) - Visualize results
+- [Dataset Management](https://ai.pydantic.dev/evals/how-to/dataset-management/index.md) - Save, load, generate
+- [Concurrency & Performance](https://ai.pydantic.dev/evals/how-to/concurrency/index.md) - Control parallel execution
+- [Retry Strategies](https://ai.pydantic.dev/evals/how-to/retry-strategies/index.md) - Handle transient failures
+- [Metrics & Attributes](https://ai.pydantic.dev/evals/how-to/metrics-attributes/index.md) - Track custom data
 
 **Examples:**
 
-- [Simple Validation](examples/simple-validation/) - Basic example
+- [Simple Validation](https://ai.pydantic.dev/evals/examples/simple-validation/index.md) - Basic example
 
 **Reference:**
 
-- [API Documentation](../api/pydantic_evals/dataset/)
+- [API Documentation](https://ai.pydantic.dev/api/pydantic_evals/dataset/index.md)
 
 ## Code-First Evaluation
 
@@ -58,24 +58,20 @@ To install the Pydantic Evals package, run:
 
 ```bash
 pip install pydantic-evals
-
 ```
 
 ```bash
 uv add pydantic-evals
-
 ```
 
 `pydantic-evals` does not depend on `pydantic-ai`, but has an optional dependency on `logfire` if you'd like to use OpenTelemetry traces in your evals, or send evaluation results to [logfire](https://pydantic.dev/logfire).
 
 ```bash
 pip install 'pydantic-evals[logfire]'
-
 ```
 
 ```bash
 uv add 'pydantic-evals[logfire]'
-
 ```
 
 ## Pydantic Evals Data Model
@@ -93,7 +89,6 @@ Dataset (1) ──────────── (Many) Case
      └─── (1) Task
      │
      └─── (Many) Evaluator
-
 ```
 
 ### Key Relationships
@@ -122,7 +117,7 @@ A useful metaphor (although not perfect) is to think of evals like a **Unit Test
 
 The key difference from traditional unit testing is that AI systems are probabilistic. If you're type checking you'll still get a simple pass/fail, but scores for text outputs are likely qualitative and/or categorical, and more open to interpretation.
 
-For a deeper understanding, see [Core Concepts](core-concepts/).
+For a deeper understanding, see [Core Concepts](https://ai.pydantic.dev/evals/core-concepts/index.md).
 
 ## Datasets and Cases
 
@@ -144,12 +139,11 @@ case1 = Case(
 )
 
 dataset = Dataset(cases=[case1])
-
 ```
 
 *(This example is complete, it can be run "as is")*
 
-See [Dataset Management](how-to/dataset-management/) to learn about saving, loading, and generating datasets.
+See [Dataset Management](https://ai.pydantic.dev/evals/how-to/dataset-management/index.md) to learn about saving, loading, and generating datasets.
 
 ## Evaluators
 
@@ -159,7 +153,7 @@ These can be deterministic, code-based checks (such as testing model output form
 
 While both kinds of testing are useful in LLM systems, classical code-based tests are cheaper and easier than tests which require either human or machine review of model outputs.
 
-Pydantic Evals includes several [built-in evaluators](evaluators/built-in/) and allows you to define [custom evaluators](evaluators/custom/):
+Pydantic Evals includes several [built-in evaluators](https://ai.pydantic.dev/evals/evaluators/built-in/index.md) and allows you to define [custom evaluators](https://ai.pydantic.dev/evals/evaluators/custom/index.md):
 
 simple_eval_evaluator.py
 
@@ -189,7 +183,6 @@ class MyEvaluator(Evaluator):
 
 
 dataset.add_evaluator(MyEvaluator())
-
 ```
 
 1. You can add built-in evaluators to a dataset using the add_evaluator method.
@@ -199,11 +192,11 @@ dataset.add_evaluator(MyEvaluator())
 
 Learn more:
 
-- [Evaluators Overview](evaluators/overview/) - When to use different types
-- [Built-in Evaluators](evaluators/built-in/) - Complete reference
-- [LLM Judge](evaluators/llm-judge/) - Using LLMs as evaluators
-- [Custom Evaluators](evaluators/custom/) - Write your own logic
-- [Span-Based Evaluation](evaluators/span-based/) - Analyze execution traces
+- [Evaluators Overview](https://ai.pydantic.dev/evals/evaluators/overview/index.md) - When to use different types
+- [Built-in Evaluators](https://ai.pydantic.dev/evals/evaluators/built-in/index.md) - Complete reference
+- [LLM Judge](https://ai.pydantic.dev/evals/evaluators/llm-judge/index.md) - Using LLMs as evaluators
+- [Custom Evaluators](https://ai.pydantic.dev/evals/evaluators/custom/index.md) - Write your own logic
+- [Span-Based Evaluation](https://ai.pydantic.dev/evals/evaluators/span-based/index.md) - Analyze execution traces
 
 ## Running Experiments
 
@@ -260,7 +253,6 @@ report.print(include_input=True, include_output=True, include_durations=False)  
 │ Averages    │                                │         │ MyEvaluator: 1.00 │ 100.0% ✔   │
 └─────────────┴────────────────────────────────┴─────────┴───────────────────┴────────────┘
 """
-
 ```
 
 1. Create a test case as above
@@ -271,7 +263,7 @@ report.print(include_input=True, include_output=True, include_durations=False)  
 
 *(This example is complete, it can be run "as is")*
 
-See [Quick Start](quick-start/) for more examples and [Concurrency & Performance](how-to/concurrency/) to learn about controlling parallel execution.
+See [Quick Start](https://ai.pydantic.dev/evals/quick-start/index.md) for more examples and [Concurrency & Performance](https://ai.pydantic.dev/evals/how-to/concurrency/index.md) to learn about controlling parallel execution.
 
 ## API Reference
 
@@ -279,9 +271,9 @@ For comprehensive coverage of all classes, methods, and configuration options, s
 
 ## Next Steps
 
-1. **Start with simple evaluations** using [Quick Start](quick-start/)
-1. **Understand the data model** with [Core Concepts](core-concepts/)
-1. **Explore built-in evaluators** in [Built-in Evaluators](evaluators/built-in/)
-1. **Integrate with Logfire** for visualization: [Logfire Integration](how-to/logfire-integration/)
-1. **Build comprehensive test suites** with [Dataset Management](how-to/dataset-management/)
-1. **Implement custom evaluators** for domain-specific metrics: [Custom Evaluators](evaluators/custom/)
+1. **Start with simple evaluations** using [Quick Start](https://ai.pydantic.dev/evals/quick-start/index.md)
+1. **Understand the data model** with [Core Concepts](https://ai.pydantic.dev/evals/core-concepts/index.md)
+1. **Explore built-in evaluators** in [Built-in Evaluators](https://ai.pydantic.dev/evals/evaluators/built-in/index.md)
+1. **Integrate with Logfire** for visualization: [Logfire Integration](https://ai.pydantic.dev/evals/how-to/logfire-integration/index.md)
+1. **Build comprehensive test suites** with [Dataset Management](https://ai.pydantic.dev/evals/how-to/dataset-management/index.md)
+1. **Implement custom evaluators** for domain-specific metrics: [Custom Evaluators](https://ai.pydantic.dev/evals/evaluators/custom/index.md)

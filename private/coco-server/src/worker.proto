@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package coco.worker.v1;
+
+service WorkerService {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc SubmitIngest(SubmitIngestRequest) returns (SubmitIngestResponse);
+}
+
+message PingRequest {}
+
+message PingResponse {
+  string version = 1;
+}
+
+message SubmitIngestRequest {
+  string job_id = 1;
+  string org_id = 2;
+  string project_id = 3;
+  string api_version = 4;
+  IngestBatchRequest request = 5;
+  optional string blob_ref = 6;
+  string user_id = 7;
+}
+
+message SubmitIngestResponse {
+  string job_id = 1;
+}
+
+message IngestBatchRequest {
+  optional bool activate = 1;
+  optional string indexing_config_id = 2;
+  repeated IngestDocument documents = 3;
+}
+
+message IngestDocument {
+  string doc_id = 1;
+  string source_ref = 2;
+  optional string title = 3;
+  optional string content_hash = 4;
+  optional float quality_score = 5;
+  optional bool verified = 6;
+  repeated IngestChunk chunks = 7;
+}
+
+message IngestChunk {
+  string chunk_id = 1;
+  string content = 2;
+  repeated float embedding = 3;
+  uint64 start = 4;
+  uint64 end = 5;
+  optional float quality_score = 6;
+  optional bool verified = 7;
+}

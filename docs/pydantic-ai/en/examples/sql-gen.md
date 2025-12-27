@@ -4,10 +4,10 @@ Example demonstrating how to use Pydantic AI to generate SQL queries based on us
 
 Demonstrates:
 
-- [dynamic system prompt](../../agents/#system-prompts)
-- [structured `output_type`](../../output/#structured-output)
-- [output validation](../../output/#output-validator-functions)
-- [agent dependencies](../../dependencies/)
+- [dynamic system prompt](https://ai.pydantic.dev/agents/#system-prompts)
+- [structured `output_type`](https://ai.pydantic.dev/output/#structured-output)
+- [output validation](https://ai.pydantic.dev/output/#output-validator-functions)
+- [agent dependencies](https://ai.pydantic.dev/dependencies/index.md)
 
 ## Running the Example
 
@@ -15,33 +15,28 @@ The resulting SQL is validated by running it as an `EXPLAIN` query on PostgreSQL
 
 ```bash
 docker run --rm -e POSTGRES_PASSWORD=postgres -p 54320:5432 postgres
-
 ```
 
 *(we run postgres on port `54320` to avoid conflicts with any other postgres instances you may have running)*
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.sql_gen
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.sql_gen
-
 ```
 
 or to use a custom prompt:
 
 ```bash
 python -m pydantic_ai_examples.sql_gen "find me errors"
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.sql_gen "find me errors"
-
 ```
 
 This model uses `gemini-2.5-flash` by default since Gemini is good at single shot queries of this kind.
@@ -231,5 +226,4 @@ async def database_connect(server_dsn: str, database: str) -> AsyncGenerator[Any
 
 if __name__ == '__main__':
     asyncio.run(main())
-
 ```

@@ -86,14 +86,12 @@ class RetryConfig(TypedDict, total=False):
     """An optional callable that is called when the retry attempts are exhausted and `reraise` is False.
 
     Tenacity's default for this argument is `None`."""
-
 ```
 
 #### sleep
 
 ```python
 sleep: Callable[[int | float], None | Awaitable[None]]
-
 ```
 
 A sleep strategy to use for sleeping between retries.
@@ -104,7 +102,6 @@ Tenacity's default for this argument is `tenacity.nap.sleep`.
 
 ```python
 stop: StopBaseT
-
 ```
 
 A stop strategy to determine when to stop retrying.
@@ -115,7 +112,6 @@ Tenacity's default for this argument is `tenacity.stop.stop_never`.
 
 ```python
 wait: WaitBaseT
-
 ```
 
 A wait strategy to determine how long to wait between retries.
@@ -126,7 +122,6 @@ Tenacity's default for this argument is `tenacity.wait.wait_none`.
 
 ```python
 retry: RetryBaseT | RetryBaseT
-
 ```
 
 A retry strategy to determine which exceptions should trigger a retry.
@@ -137,7 +132,6 @@ Tenacity's default for this argument is `tenacity.retry.retry_if_exception_type(
 
 ```python
 before: Callable[[RetryCallState], None | Awaitable[None]]
-
 ```
 
 A callable that is called before each retry attempt.
@@ -148,7 +142,6 @@ Tenacity's default for this argument is `tenacity.before.before_nothing`.
 
 ```python
 after: Callable[[RetryCallState], None | Awaitable[None]]
-
 ```
 
 A callable that is called after each retry attempt.
@@ -162,7 +155,6 @@ before_sleep: (
     Callable[[RetryCallState], None | Awaitable[None]]
     | None
 )
-
 ```
 
 An optional callable that is called before sleeping between retries.
@@ -173,7 +165,6 @@ Tenacity's default for this argument is `None`.
 
 ```python
 reraise: bool
-
 ```
 
 Whether to reraise the last exception if the retry attempts are exhausted, or raise a RetryError instead.
@@ -184,7 +175,6 @@ Tenacity's default for this argument is `False`.
 
 ```python
 retry_error_cls: type[RetryError]
-
 ```
 
 The exception class to raise when the retry attempts are exhausted and `reraise` is False.
@@ -197,7 +187,6 @@ Tenacity's default for this argument is `tenacity.RetryError`.
 retry_error_callback: (
     Callable[[RetryCallState], Any | Awaitable[Any]] | None
 )
-
 ```
 
 An optional callable that is called when the retry attempts are exhausted and `reraise` is False.
@@ -216,7 +205,11 @@ The transport works by intercepting HTTP requests and responses, allowing the te
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `wrapped` | `BaseTransport | None` | The underlying transport to wrap and add retry functionality to. | `None` | | `config` | `RetryConfig` | The arguments to use for the tenacity retry decorator, including retry conditions, wait strategy, stop conditions, etc. See the tenacity docs for more info. | *required* | | `validate_response` | `Callable[[Response], Any] | None` | Optional callable that takes a Response and can raise an exception to be handled by the controller if the response should trigger a retry. Common use case is to raise exceptions for certain HTTP status codes. If None, no response validation is performed. | `None` |
+| Name                | Type                          | Description                                                                                                                                                  | Default                                                                                                                                                                                                                                                        |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrapped`           | \`BaseTransport               | None\`                                                                                                                                                       | The underlying transport to wrap and add retry functionality to.                                                                                                                                                                                               |
+| `config`            | `RetryConfig`                 | The arguments to use for the tenacity retry decorator, including retry conditions, wait strategy, stop conditions, etc. See the tenacity docs for more info. | *required*                                                                                                                                                                                                                                                     |
+| `validate_response` | \`Callable\[[Response], Any\] | None\`                                                                                                                                                       | Optional callable that takes a Response and can raise an exception to be handled by the controller if the response should trigger a retry. Common use case is to raise exceptions for certain HTTP status codes. If None, no response validation is performed. |
 
 Example
 
@@ -237,7 +230,6 @@ transport = TenacityTransport(
     validate_response=lambda r: r.raise_for_status()
 )
 client = Client(transport=transport)
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/retries.py`
@@ -339,29 +331,34 @@ class TenacityTransport(BaseTransport):
 
     def close(self) -> None:
         self.wrapped.close()  # pragma: no cover
-
 ````
 
 #### handle_request
 
 ```python
 handle_request(request: Request) -> Response
-
 ```
 
 Handle an HTTP request with retry logic.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `request` | `Request` | The HTTP request to handle. | *required* |
+| Name      | Type      | Description                 | Default    |
+| --------- | --------- | --------------------------- | ---------- |
+| `request` | `Request` | The HTTP request to handle. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Response` | The HTTP response. |
+| Type       | Description        |
+| ---------- | ------------------ |
+| `Response` | The HTTP response. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `RuntimeError` | If the retry controller did not make any attempts. | | `Exception` | Any exception raised by the wrapped transport or validation function. |
+| Type           | Description                                                           |
+| -------------- | --------------------------------------------------------------------- |
+| `RuntimeError` | If the retry controller did not make any attempts.                    |
+| `Exception`    | Any exception raised by the wrapped transport or validation function. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/retries.py`
 
@@ -396,7 +393,6 @@ def handle_request(self, request: Request) -> Response:
         return response
 
     return handle_request(request)
-
 ```
 
 ### AsyncTenacityTransport
@@ -411,7 +407,11 @@ The transport works by intercepting HTTP requests and responses, allowing the te
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `wrapped` | `AsyncBaseTransport | None` | The underlying async transport to wrap and add retry functionality to. | `None` | | `config` | `RetryConfig` | The arguments to use for the tenacity retry decorator, including retry conditions, wait strategy, stop conditions, etc. See the tenacity docs for more info. | *required* | | `validate_response` | `Callable[[Response], Any] | None` | Optional callable that takes a Response and can raise an exception to be handled by the controller if the response should trigger a retry. Common use case is to raise exceptions for certain HTTP status codes. If None, no response validation is performed. | `None` |
+| Name                | Type                          | Description                                                                                                                                                  | Default                                                                                                                                                                                                                                                        |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrapped`           | \`AsyncBaseTransport          | None\`                                                                                                                                                       | The underlying async transport to wrap and add retry functionality to.                                                                                                                                                                                         |
+| `config`            | `RetryConfig`                 | The arguments to use for the tenacity retry decorator, including retry conditions, wait strategy, stop conditions, etc. See the tenacity docs for more info. | *required*                                                                                                                                                                                                                                                     |
+| `validate_response` | \`Callable\[[Response], Any\] | None\`                                                                                                                                                       | Optional callable that takes a Response and can raise an exception to be handled by the controller if the response should trigger a retry. Common use case is to raise exceptions for certain HTTP status codes. If None, no response validation is performed. |
 
 Example
 
@@ -431,7 +431,6 @@ transport = AsyncTenacityTransport(
     validate_response=lambda r: r.raise_for_status()
 )
 client = AsyncClient(transport=transport)
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/retries.py`
@@ -532,29 +531,34 @@ class AsyncTenacityTransport(AsyncBaseTransport):
 
     async def aclose(self) -> None:
         await self.wrapped.aclose()
-
 ````
 
 #### handle_async_request
 
 ```python
 handle_async_request(request: Request) -> Response
-
 ```
 
 Handle an async HTTP request with retry logic.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `request` | `Request` | The HTTP request to handle. | *required* |
+| Name      | Type      | Description                 | Default    |
+| --------- | --------- | --------------------------- | ---------- |
+| `request` | `Request` | The HTTP request to handle. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Response` | The HTTP response. |
+| Type       | Description        |
+| ---------- | ------------------ |
+| `Response` | The HTTP response. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `RuntimeError` | If the retry controller did not make any attempts. | | `Exception` | Any exception raised by the wrapped transport or validation function. |
+| Type           | Description                                                           |
+| -------------- | --------------------------------------------------------------------- |
+| `RuntimeError` | If the retry controller did not make any attempts.                    |
+| `Exception`    | Any exception raised by the wrapped transport or validation function. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/retries.py`
 
@@ -589,7 +593,6 @@ async def handle_async_request(self, request: Request) -> Response:
         return response
 
     return await handle_async_request(request)
-
 ```
 
 ### wait_retry_after
@@ -601,7 +604,6 @@ wait_retry_after(
     ) = None,
     max_wait: float = 300,
 ) -> Callable[[RetryCallState], float]
-
 ```
 
 Create a tenacity-compatible wait strategy that respects HTTP Retry-After headers.
@@ -615,11 +617,16 @@ The Retry-After header can be in two formats:
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `fallback_strategy` | `Callable[[RetryCallState], float] | None` | Wait strategy to use when no Retry-After header is present or parsing fails. Defaults to exponential backoff with max 60s. | `None` | | `max_wait` | `float` | Maximum time to wait in seconds, regardless of header value. Defaults to 300 (5 minutes). | `300` |
+| Name                | Type                                  | Description                                                                               | Default                                                                                                                    |
+| ------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `fallback_strategy` | \`Callable\[[RetryCallState], float\] | None\`                                                                                    | Wait strategy to use when no Retry-After header is present or parsing fails. Defaults to exponential backoff with max 60s. |
+| `max_wait`          | `float`                               | Maximum time to wait in seconds, regardless of header value. Defaults to 300 (5 minutes). | `300`                                                                                                                      |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Callable[[RetryCallState], float]` | A wait function that can be used with tenacity retry decorators. |
+| Type                                | Description                                                      |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `Callable[[RetryCallState], float]` | A wait function that can be used with tenacity retry decorators. |
 
 Example
 
@@ -639,7 +646,6 @@ transport = AsyncTenacityTransport(
     validate_response=lambda r: r.raise_for_status()
 )
 client = AsyncClient(transport=transport)
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/retries.py`
@@ -716,5 +722,4 @@ def wait_retry_after(
         return fallback_strategy(state)
 
     return wait_func
-
 ````

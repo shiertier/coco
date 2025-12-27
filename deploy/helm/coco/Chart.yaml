@@ -1,0 +1,6 @@
+apiVersion: v2
+name: coco
+description: CoCo API and worker services for server mode
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

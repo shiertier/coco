@@ -1,6 +1,6 @@
 # Collections
 
-Many components display a collection of items, and provide functionality such as keyboard navigation, and selection. Learn how to load and render collections using React Spectrums's compositional API.
+Many components display a collection of items, and provide functionality such as keyboard navigation, and selection. Learn how to load and render collections using React Spectrum's compositional API.
 
 ## Static collections
 

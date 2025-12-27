@@ -2,9 +2,9 @@ Example of a multi-agent flow where one agent delegates work to another, then ha
 
 Demonstrates:
 
-- [agent delegation](../../multi-agent-applications/#agent-delegation)
-- [programmatic agent hand-off](../../multi-agent-applications/#programmatic-agent-hand-off)
-- [usage limits](../../agents/#usage-limits)
+- [agent delegation](https://ai.pydantic.dev/multi-agent-applications/#agent-delegation)
+- [programmatic agent hand-off](https://ai.pydantic.dev/multi-agent-applications/#programmatic-agent-hand-off)
+- [usage limits](https://ai.pydantic.dev/agents/#usage-limits)
 
 In this scenario, a group of agents work together to find the best flight for a user.
 
@@ -28,21 +28,19 @@ graph TD
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.flight_booking
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.flight_booking
-
 ```
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [flight_booking.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/flight_booking.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [flight_booking.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/flight_booking.py)
 
 ```python
 """Example of a multi-agent flow where one agent delegates work to another.
@@ -291,7 +289,6 @@ if __name__ == '__main__':
     import asyncio
 
     asyncio.run(main())
-
 ```
 
 [flight_booking.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/flight_booking.py)
@@ -543,5 +540,4 @@ if __name__ == '__main__':
     import asyncio
 
     asyncio.run(main())
-
 ```

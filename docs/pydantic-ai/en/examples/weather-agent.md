@@ -2,9 +2,9 @@ Example of Pydantic AI with multiple tools which the LLM needs to call in turn t
 
 Demonstrates:
 
-- [tools](../../tools/)
-- [agent dependencies](../../dependencies/)
-- [streaming text responses](../../output/#streaming-text)
+- [tools](https://ai.pydantic.dev/tools/index.md)
+- [agent dependencies](https://ai.pydantic.dev/dependencies/index.md)
+- [streaming text responses](https://ai.pydantic.dev/output/#streaming-text)
 - Building a [Gradio](https://www.gradio.app/) UI for the agent
 
 In this case the idea is a "weather" agent — the user can ask for the weather in multiple locations, the agent will use the `get_lat_lng` tool to get the latitude and longitude of the locations, then use the `get_weather` tool to get the weather for those locations.
@@ -16,21 +16,19 @@ To run this example properly, you might want to add two extra API keys **(Note i
 - A weather API key from [tomorrow.io](https://www.tomorrow.io/weather-api/) set via `WEATHER_API_KEY`
 - A geocoding API key from [geocode.maps.co](https://geocode.maps.co/) set via `GEO_API_KEY`
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.weather_agent
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.weather_agent
-
 ```
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [weather_agent.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/weather_agent.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [weather_agent.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/weather_agent.py)
 
 ```python
 """Example of Pydantic AI with multiple tools which the LLM needs to call in turn to answer a question.
@@ -138,7 +136,6 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
 ```
 
 [weather_agent.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/weather_agent.py)
@@ -249,7 +246,6 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
 ```
 
 ## Running the UI
@@ -261,7 +257,6 @@ Here's what the UI looks like for the weather agent:
 ```bash
 pip install gradio>=5.9.0
 python/uv-run -m pydantic_ai_examples.weather_agent_gradio
-
 ```
 
 ## UI Code
@@ -397,5 +392,4 @@ with gr.Blocks() as demo:
 
 if __name__ == '__main__':
     demo.launch()
-
 ```

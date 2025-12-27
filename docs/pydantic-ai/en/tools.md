@@ -4,7 +4,7 @@ Function tools provide a mechanism for models to perform actions and retrieve ex
 
 They're useful when you want to enable the model to take some action and use the result, when it is impractical or impossible to put all the context an agent might need into the instructions, or when you want to make agents' behavior more deterministic or reliable by deferring some of the logic required to generate a response to another (not necessarily AI-powered) tool.
 
-If you want a model to be able to call a function as its final action, without the result being sent back to the model, you can use an [output function](../output/#output-functions) instead.
+If you want a model to be able to call a function as its final action, without the result being sent back to the model, you can use an [output function](https://ai.pydantic.dev/output/#output-functions) instead.
 
 There are a number of ways to register tools with an agent:
 
@@ -12,7 +12,7 @@ There are a number of ways to register tools with an agent:
 - via the @agent.tool_plain decorator — for tools that do not need access to the agent context
 - via the tools keyword argument to `Agent` which can take either plain functions, or instances of Tool
 
-For more advanced use cases, the [toolsets](../toolsets/) feature lets you manage collections of tools (built by you or provided by an [MCP server](../mcp/client/) or other [third party](../third-party-tools/#third-party-tools)) and register them with an agent in one go via the toolsets keyword argument to `Agent`. Internally, all `tools` and `toolsets` are gathered into a single [combined toolset](../toolsets/#combining-toolsets) that's made available to the model.
+For more advanced use cases, the [toolsets](https://ai.pydantic.dev/toolsets/index.md) feature lets you manage collections of tools (built by you or provided by an [MCP server](https://ai.pydantic.dev/mcp/client/index.md) or other [third party](https://ai.pydantic.dev/third-party-tools/#third-party-tools)) and register them with an agent in one go via the toolsets keyword argument to `Agent`. Internally, all `tools` and `toolsets` are gathered into a single [combined toolset](https://ai.pydantic.dev/toolsets/#combining-toolsets) that's made available to the model.
 
 Function tools vs. RAG
 
@@ -22,7 +22,7 @@ The main semantic difference between Pydantic AI Tools and RAG is RAG is synonym
 
 Function Tools vs. Structured Outputs
 
-As the name suggests, function tools use the model's "tools" or "functions" API to let the model know what is available to call. Tools or functions are also used to define the schema(s) for [structured output](../output/) when using the default [tool output mode](../output/#tool-output), thus a model might have access to many tools, some of which call function tools while others end the run and produce a final output.
+As the name suggests, function tools use the model's "tools" or "functions" API to let the model know what is available to call. Tools or functions are also used to define the schema(s) for [structured output](https://ai.pydantic.dev/output/index.md) when using the default [tool output mode](https://ai.pydantic.dev/output/#tool-output), thus a model might have access to many tools, some of which call function tools while others end the run and produce a final output.
 
 ## Registering via Decorator
 
@@ -63,7 +63,6 @@ def get_player_name(ctx: RunContext[str]) -> str:
 dice_result = agent.run_sync('My guess is 4', deps='Anne')  # (5)!
 print(dice_result.output)
 #> Congratulations Anne, you guessed correctly! You're a winner!
-
 ```
 
 1. This is a pretty simple task, so we can use the fast and cheap Gemini flash model.
@@ -95,6 +94,7 @@ print(dice_result.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -117,6 +117,7 @@ print(dice_result.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -139,6 +140,7 @@ print(dice_result.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -154,7 +156,6 @@ print(dice_result.all_messages())
     ),
 ]
 """
-
 ```
 
 We can represent this with a diagram:
@@ -244,17 +245,16 @@ print(dice_result['a'].output)
 #> Tough luck, Yashar, you rolled a 4. Better luck next time.
 print(dice_result['b'].output)
 #> Congratulations Anne, you guessed correctly! You're a winner!
-
 ```
 
 1. The simplest way to register tools via the `Agent` constructor is to pass a list of functions, the function signature is inspected to determine if the tool takes RunContext.
-1. `agent_a` and `agent_b` are identical — but we can use Tool to reuse tool definitions and give more fine-grained control over how tools are defined, e.g. setting their name or description, or using a custom [`prepare`](../tools-advanced/#tool-prepare) method.
+1. `agent_a` and `agent_b` are identical — but we can use Tool to reuse tool definitions and give more fine-grained control over how tools are defined, e.g. setting their name or description, or using a custom [`prepare`](https://ai.pydantic.dev/tools-advanced/#tool-prepare) method.
 
 *(This example is complete, it can be run "as is")*
 
 ## Tool Output
 
-Tools can return anything that Pydantic can serialize to JSON. For advanced output options including multi-modal content and metadata, see [Advanced Tool Features](../tools-advanced/#function-tool-output).
+Tools can return anything that Pydantic can serialize to JSON. For advanced output options including multi-modal content and metadata, see [Advanced Tool Features](https://ai.pydantic.dev/tools-advanced/#function-tool-output).
 
 ## Tool Schema
 
@@ -312,7 +312,6 @@ def print_schema(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse
 
 
 agent.run_sync('hello', model=FunctionModel(print_schema))
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -368,7 +367,6 @@ print(test_model.last_model_request_parameters.function_tools)
     )
 ]
 """
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -377,9 +375,9 @@ print(test_model.last_model_request_parameters.function_tools)
 
 For more tool features and integrations, see:
 
-- [Advanced Tool Features](../tools-advanced/) - Custom schemas, dynamic tools, tool execution and retries
-- [Toolsets](../toolsets/) - Managing collections of tools
-- [Builtin Tools](../builtin-tools/) - Native tools provided by LLM providers
-- [Common Tools](../common-tools/) - Ready-to-use tool implementations
-- [Third-Party Tools](../third-party-tools/) - Integrations with MCP, LangChain, ACI.dev and other tool libraries
-- [Deferred Tools](../deferred-tools/) - Tools requiring approval or external execution
+- [Advanced Tool Features](https://ai.pydantic.dev/tools-advanced/index.md) - Custom schemas, dynamic tools, tool execution and retries
+- [Toolsets](https://ai.pydantic.dev/toolsets/index.md) - Managing collections of tools
+- [Builtin Tools](https://ai.pydantic.dev/builtin-tools/index.md) - Native tools provided by LLM providers
+- [Common Tools](https://ai.pydantic.dev/common-tools/index.md) - Ready-to-use tool implementations
+- [Third-Party Tools](https://ai.pydantic.dev/third-party-tools/index.md) - Integrations with MCP, LangChain, ACI.dev and other tool libraries
+- [Deferred Tools](https://ai.pydantic.dev/deferred-tools/index.md) - Tools requiring approval or external execution

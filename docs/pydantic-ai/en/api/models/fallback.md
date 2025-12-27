@@ -138,7 +138,6 @@ class FallbackModel(Model):
                             **InstrumentedModel.model_request_parameters_attributes(model_request_parameters),
                         }
                     )
-
 ```
 
 #### __init__
@@ -152,14 +151,17 @@ __init__(
         | tuple[type[Exception], ...]
     ) = (ModelAPIError,)
 )
-
 ```
 
 Initialize a fallback model instance.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `default_model` | `Model | KnownModelName | str` | The name or instance of the default model to use. | *required* | | `fallback_models` | `Model | KnownModelName | str` | The names or instances of the fallback models to use upon failure. | `()` | | `fallback_on` | `Callable[[Exception], bool] | tuple[type[Exception], ...]` | A callable or tuple of exceptions that should trigger a fallback. | `(ModelAPIError,)` |
+| Name              | Type                            | Description                     | Default                                                           |
+| ----------------- | ------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| `default_model`   | \`Model                         | KnownModelName                  | str\`                                                             |
+| `fallback_models` | \`Model                         | KnownModelName                  | str\`                                                             |
+| `fallback_on`     | \`Callable\[[Exception], bool\] | tuple\[type[Exception], ...\]\` | A callable or tuple of exceptions that should trigger a fallback. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/fallback.py`
 
@@ -184,14 +186,12 @@ def __init__(
         self._fallback_on = _default_fallback_condition_factory(fallback_on)
     else:
         self._fallback_on = fallback_on
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -204,7 +204,6 @@ request(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> ModelResponse
-
 ```
 
 Try each model in sequence until one succeeds.
@@ -240,7 +239,6 @@ async def request(
         return response
 
     raise FallbackExceptionGroup('All models from FallbackModel failed', exceptions)
-
 ```
 
 #### request_stream
@@ -252,7 +250,6 @@ request_stream(
     model_request_parameters: ModelRequestParameters,
     run_context: RunContext[Any] | None = None,
 ) -> AsyncIterator[StreamedResponse]
-
 ```
 
 Try each model in sequence until one succeeds.
@@ -289,5 +286,4 @@ async def request_stream(
             return
 
     raise FallbackExceptionGroup('All models from FallbackModel failed', exceptions)
-
 ```

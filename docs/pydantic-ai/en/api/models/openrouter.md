@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for OpenRouter](../../../models/openrouter/).
+For details on how to set up authentication with this model, see [model configuration for OpenRouter](https://ai.pydantic.dev/models/openrouter/index.md).
 
 ### KnownOpenRouterProviders
 
@@ -72,7 +72,6 @@ KnownOpenRouterProviders = Literal[
     "google-ai-studio",
     "google-vertex",
 ]
-
 ```
 
 Known providers in the OpenRouter marketplace
@@ -81,7 +80,6 @@ Known providers in the OpenRouter marketplace
 
 ```python
 OpenRouterProviderName = str | KnownOpenRouterProviders
-
 ```
 
 Possible OpenRouter provider names.
@@ -92,7 +90,6 @@ Since OpenRouter is constantly updating their list of providers, we explicitly l
 
 ```python
 OpenRouterTransforms = Literal['middle-out']
-
 ```
 
 Available messages transforms for OpenRouter models with limited token windows.
@@ -140,14 +137,12 @@ class OpenRouterProviderConfig(TypedDict, total=False):
 
     max_price: _OpenRouterMaxPrice
     """The maximum pricing you want to pay for this request. [See details](https://openrouter.ai/docs/features/provider-routing#max-price)"""
-
 ```
 
 #### order
 
 ```python
 order: list[OpenRouterProviderName]
-
 ```
 
 List of provider slugs to try in order (e.g. ["anthropic", "openai"]). [See details](https://openrouter.ai/docs/features/provider-routing#ordering-specific-providers)
@@ -156,7 +151,6 @@ List of provider slugs to try in order (e.g. ["anthropic", "openai"]). [See deta
 
 ```python
 allow_fallbacks: bool
-
 ```
 
 Whether to allow backup providers when the primary is unavailable. [See details](https://openrouter.ai/docs/features/provider-routing#disabling-fallbacks)
@@ -165,7 +159,6 @@ Whether to allow backup providers when the primary is unavailable. [See details]
 
 ```python
 require_parameters: bool
-
 ```
 
 Only use providers that support all parameters in your request.
@@ -174,7 +167,6 @@ Only use providers that support all parameters in your request.
 
 ```python
 data_collection: Literal['allow', 'deny']
-
 ```
 
 Control whether to use providers that may store data. [See details](https://openrouter.ai/docs/features/provider-routing#requiring-providers-to-comply-with-data-policies)
@@ -183,7 +175,6 @@ Control whether to use providers that may store data. [See details](https://open
 
 ```python
 zdr: bool
-
 ```
 
 Restrict routing to only ZDR (Zero Data Retention) endpoints. [See details](https://openrouter.ai/docs/features/provider-routing#zero-data-retention-enforcement)
@@ -192,7 +183,6 @@ Restrict routing to only ZDR (Zero Data Retention) endpoints. [See details](http
 
 ```python
 only: list[OpenRouterProviderName]
-
 ```
 
 List of provider slugs to allow for this request. [See details](https://openrouter.ai/docs/features/provider-routing#allowing-only-specific-providers)
@@ -201,7 +191,6 @@ List of provider slugs to allow for this request. [See details](https://openrout
 
 ```python
 ignore: list[str]
-
 ```
 
 List of provider slugs to skip for this request. [See details](https://openrouter.ai/docs/features/provider-routing#ignoring-providers)
@@ -222,7 +211,6 @@ quantizations: list[
         "unknown",
     ]
 ]
-
 ```
 
 List of quantization levels to filter by (e.g. ["int4", "int8"]). [See details](https://openrouter.ai/docs/features/provider-routing#quantization)
@@ -231,7 +219,6 @@ List of quantization levels to filter by (e.g. ["int4", "int8"]). [See details](
 
 ```python
 sort: Literal['price', 'throughput', 'latency']
-
 ```
 
 Sort providers by price or throughput. (e.g. "price" or "throughput"). [See details](https://openrouter.ai/docs/features/provider-routing#provider-sorting)
@@ -240,7 +227,6 @@ Sort providers by price or throughput. (e.g. "price" or "throughput"). [See deta
 
 ```python
 max_price: _OpenRouterMaxPrice
-
 ```
 
 The maximum pricing you want to pay for this request. [See details](https://openrouter.ai/docs/features/provider-routing#max-price)
@@ -275,14 +261,12 @@ class OpenRouterReasoning(TypedDict, total=False):
 
     enabled: bool
     """Whether to enable reasoning with default parameters. Default is inferred from effort or max_tokens."""
-
 ```
 
 #### effort
 
 ```python
 effort: Literal['high', 'medium', 'low']
-
 ```
 
 OpenAI-style reasoning effort level. Cannot be used with max_tokens.
@@ -291,7 +275,6 @@ OpenAI-style reasoning effort level. Cannot be used with max_tokens.
 
 ```python
 max_tokens: int
-
 ```
 
 Anthropic-style specific token limit for reasoning. Cannot be used with effort.
@@ -300,7 +283,6 @@ Anthropic-style specific token limit for reasoning. Cannot be used with effort.
 
 ```python
 exclude: bool
-
 ```
 
 Whether to exclude reasoning tokens from the response. Default is False. All models support this.
@@ -309,7 +291,6 @@ Whether to exclude reasoning tokens from the response. Default is False. All mod
 
 ```python
 enabled: bool
-
 ```
 
 Whether to enable reasoning with default parameters. Default is inferred from effort or max_tokens.
@@ -327,7 +308,6 @@ class OpenRouterUsageConfig(TypedDict, total=False):
     """Configuration for OpenRouter usage."""
 
     include: bool
-
 ```
 
 ### OpenRouterModelSettings
@@ -377,14 +357,12 @@ class OpenRouterModelSettings(ModelSettings, total=False):
 
     The usage config object consolidates settings for enabling detailed usage information. [See more](https://openrouter.ai/docs/use-cases/usage-accounting)
     """
-
 ```
 
 #### openrouter_models
 
 ```python
 openrouter_models: list[str]
-
 ```
 
 A list of fallback models.
@@ -395,7 +373,6 @@ These models will be tried, in order, if the main model returns an error. [See d
 
 ```python
 openrouter_provider: OpenRouterProviderConfig
-
 ```
 
 OpenRouter routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime.
@@ -406,7 +383,6 @@ You can customize how your requests are routed using the provider object. [See m
 
 ```python
 openrouter_preset: str
-
 ```
 
 Presets allow you to separate your LLM configuration from your code.
@@ -417,7 +393,6 @@ Create and manage presets through the OpenRouter web application to control prov
 
 ```python
 openrouter_transforms: list[OpenRouterTransforms]
-
 ```
 
 To help with prompts that exceed the maximum context size of a model.
@@ -428,7 +403,6 @@ Transforms work by removing or truncating messages from the middle of the prompt
 
 ```python
 openrouter_reasoning: OpenRouterReasoning
-
 ```
 
 To control the reasoning tokens in the request.
@@ -439,7 +413,6 @@ The reasoning config object consolidates settings for controlling reasoning stre
 
 ```python
 openrouter_usage: OpenRouterUsageConfig
-
 ```
 
 To control the usage of the model.
@@ -505,12 +478,12 @@ class OpenRouterModel(OpenAIChatModel):
             return super()._process_thinking(message)
 
     @override
-    def _process_provider_details(self, response: chat.ChatCompletion) -> dict[str, Any]:
+    def _process_provider_details(self, response: chat.ChatCompletion) -> dict[str, Any] | None:
         assert isinstance(response, _OpenRouterChatCompletion)
 
-        provider_details = super()._process_provider_details(response)
+        provider_details = super()._process_provider_details(response) or {}
         provider_details.update(_map_openrouter_provider_details(response))
-        return provider_details
+        return provider_details or None
 
     @dataclass
     class _MapModelResponseContext(OpenAIChatModel._MapModelResponseContext):  # type: ignore[reportPrivateUsage]
@@ -541,7 +514,6 @@ class OpenRouterModel(OpenAIChatModel):
         self, key: Literal['stop', 'length', 'tool_calls', 'content_filter', 'error']
     ) -> FinishReason | None:
         return _CHAT_FINISH_REASON_MAP.get(key)
-
 ```
 
 #### __init__
@@ -556,14 +528,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an OpenRouter model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `str` | The name of the model to use. | *required* | | `provider` | `Literal['openrouter'] | Provider[AsyncOpenAI]` | The provider to use for authentication and API access. If not provided, a new provider will be created with the default settings. | `'openrouter'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                    | Description                   | Default                                                                                                                           |
+| ------------ | ----------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name` | `str`                   | The name of the model to use. | *required*                                                                                                                        |
+| `provider`   | \`Literal['openrouter'] | Provider[AsyncOpenAI]\`       | The provider to use for authentication and API access. If not provided, a new provider will be created with the default settings. |
+| `profile`    | \`ModelProfileSpec      | None\`                        | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                   |
+| `settings`   | \`ModelSettings         | None\`                        | Model-specific settings that will be used as defaults for this model.                                                             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/openrouter.py`
 
@@ -585,7 +561,6 @@ def __init__(
         settings: Model-specific settings that will be used as defaults for this model.
     """
     super().__init__(model_name, provider=provider or OpenRouterProvider(), profile=profile, settings=settings)
-
 ```
 
 ### OpenRouterStreamedResponse
@@ -638,14 +613,13 @@ class OpenRouterStreamedResponse(OpenAIStreamedResponse):
     def _map_provider_details(self, chunk: chat.ChatCompletionChunk) -> dict[str, Any] | None:
         assert isinstance(chunk, _OpenRouterChatCompletionChunk)
 
-        if provider_details := super()._map_provider_details(chunk):
-            provider_details.update(_map_openrouter_provider_details(chunk))
-            return provider_details
+        provider_details = super()._map_provider_details(chunk) or {}
+        provider_details.update(_map_openrouter_provider_details(chunk))
+        return provider_details or None
 
     @override
     def _map_finish_reason(  # type: ignore[reportIncompatibleMethodOverride]
         self, key: Literal['stop', 'length', 'tool_calls', 'content_filter', 'error']
     ) -> FinishReason | None:
         return _CHAT_FINISH_REASON_MAP.get(key)
-
 ```

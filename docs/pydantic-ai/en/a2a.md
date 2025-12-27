@@ -6,14 +6,13 @@ At Pydantic, we built the [FastA2A](#fasta2a) library to make it easier to imple
 
 We also built a convenience method that expose Pydantic AI agents as A2A servers - let's have a quick look at how to use it:
 
-[Learn about Gateway](../gateway) agent_to_a2a.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_to_a2a.py
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/openai:gpt-5', instructions='Be fun!')
 app = agent.to_a2a()
-
 ```
 
 agent_to_a2a.py
@@ -23,7 +22,6 @@ from pydantic_ai import Agent
 
 agent = Agent('openai:gpt-5', instructions='Be fun!')
 app = agent.to_a2a()
-
 ```
 
 *You can run the example with `uvicorn agent_to_a2a:app --host 0.0.0.0 --port 8000`*
@@ -92,12 +90,10 @@ FastA2A is available on PyPI as [`fasta2a`](https://pypi.org/project/fasta2a/) s
 
 ```bash
 pip install fasta2a
-
 ```
 
 ```bash
 uv add fasta2a
-
 ```
 
 The only dependencies are:
@@ -110,26 +106,23 @@ You can install Pydantic AI with the `a2a` extra to include **FastA2A**:
 
 ```bash
 pip install 'pydantic-ai-slim[a2a]'
-
 ```
 
 ```bash
 uv add 'pydantic-ai-slim[a2a]'
-
 ```
 
 ### Pydantic AI Agent to A2A Server
 
 To expose a Pydantic AI agent as an A2A server, you can use the `to_a2a` method:
 
-[Learn about Gateway](../gateway) agent_to_a2a.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_to_a2a.py
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/openai:gpt-5', instructions='Be fun!')
 app = agent.to_a2a()
-
 ```
 
 agent_to_a2a.py
@@ -139,14 +132,12 @@ from pydantic_ai import Agent
 
 agent = Agent('openai:gpt-5', instructions='Be fun!')
 app = agent.to_a2a()
-
 ```
 
 Since `app` is an ASGI application, it can be used with any ASGI server.
 
 ```bash
 uvicorn agent_to_a2a:app --host 0.0.0.0 --port 8000
-
 ```
 
 Since the goal of `to_a2a` is to be a convenience method, it accepts the same arguments as the FastA2A constructor.

@@ -6,17 +6,17 @@ This capability is typically disabled by default and depends on the specific mod
 
 ## OpenAI
 
-When using the OpenAIChatModel, text output inside `<think>` tags are converted to ThinkingPart objects. You can customize the tags using the thinking_tags field on the [model profile](../models/openai/#model-profile).
+When using the OpenAIChatModel, text output inside `<think>` tags are converted to ThinkingPart objects. You can customize the tags using the thinking_tags field on the [model profile](https://ai.pydantic.dev/models/openai/#model-profile).
 
-Some [OpenAI-compatible model providers](../models/openai/#openai-compatible-models) might also support native thinking parts that are not delimited by tags. Instead, they are sent and received as separate, custom fields in the API. Typically, if you are calling the model via the `<provider>:<model>` shorthand, Pydantic AI handles it for you. Nonetheless, you can still configure the fields with openai_chat_thinking_field.
+Some [OpenAI-compatible model providers](https://ai.pydantic.dev/models/openai/#openai-compatible-models) might also support native thinking parts that are not delimited by tags. Instead, they are sent and received as separate, custom fields in the API. Typically, if you are calling the model via the `<provider>:<model>` shorthand, Pydantic AI handles it for you. Nonetheless, you can still configure the fields with openai_chat_thinking_field.
 
 If your provider recommends to send back these custom fields not changed, for caching or interleaved thinking benefits, you can also achieve this with openai_chat_send_back_thinking_parts.
 
 ### OpenAI Responses
 
-The OpenAIResponsesModel can generate native thinking parts. To enable this functionality, you need to set the OpenAIResponsesModelSettings.openai_reasoning_effort and OpenAIResponsesModelSettings.openai_reasoning_summary [model settings](../agents/#model-run-settings).
+The OpenAIResponsesModel can generate native thinking parts. To enable this functionality, you need to set the OpenAIResponsesModelSettings.openai_reasoning_effort and OpenAIResponsesModelSettings.openai_reasoning_summary [model settings](https://ai.pydantic.dev/agents/#model-run-settings).
 
-By default, the unique IDs of reasoning, text, and function call parts from the message history are sent to the model, which can result in errors like `"Item 'rs_123' of type 'reasoning' was provided without its required following item."` if the message history you're sending does not match exactly what was received from the Responses API in a previous response, for example if you're using a [history processor](../message-history/#processing-message-history). To disable this, you can disable the OpenAIResponsesModelSettings.openai_send_reasoning_ids [model setting](../agents/#model-run-settings).
+By default, the unique IDs of reasoning, text, and function call parts from the message history are sent to the model, which can result in errors like `"Item 'rs_123' of type 'reasoning' was provided without its required following item."` if the message history you're sending does not match exactly what was received from the Responses API in a previous response, for example if you're using a [history processor](https://ai.pydantic.dev/message-history/#processing-message-history). To disable this, you can disable the OpenAIResponsesModelSettings.openai_send_reasoning_ids [model setting](https://ai.pydantic.dev/agents/#model-run-settings).
 
 openai_thinking_part.py
 
@@ -31,7 +31,6 @@ settings = OpenAIResponsesModelSettings(
 )
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 Raw reasoning without summaries
@@ -40,7 +39,7 @@ Some OpenAI-compatible APIs (such as LM Studio, vLLM, or OpenRouter with gpt-oss
 
 ## Anthropic
 
-To enable thinking, use the AnthropicModelSettings.anthropic_thinking [model setting](../agents/#model-run-settings).
+To enable thinking, use the AnthropicModelSettings.anthropic_thinking [model setting](https://ai.pydantic.dev/agents/#model-run-settings).
 
 anthropic_thinking_part.py
 
@@ -54,12 +53,11 @@ settings = AnthropicModelSettings(
 )
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 ## Google
 
-To enable thinking, use the GoogleModelSettings.google_thinking_config [model setting](../agents/#model-run-settings).
+To enable thinking, use the GoogleModelSettings.google_thinking_config [model setting](https://ai.pydantic.dev/agents/#model-run-settings).
 
 google_thinking_part.py
 
@@ -71,12 +69,11 @@ model = GoogleModel('gemini-2.5-pro')
 settings = GoogleModelSettings(google_thinking_config={'include_thoughts': True})
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 ## Bedrock
 
-Although Bedrock Converse doesn't provide a unified API to enable thinking, you can still use BedrockModelSettings.bedrock_additional_model_requests_fields [model setting](../agents/#model-run-settings) to pass provider-specific configuration:
+Although Bedrock Converse doesn't provide a unified API to enable thinking, you can still use BedrockModelSettings.bedrock_additional_model_requests_fields [model setting](https://ai.pydantic.dev/agents/#model-run-settings) to pass provider-specific configuration:
 
 bedrock_claude_thinking_part.py
 
@@ -91,7 +88,6 @@ model_settings = BedrockModelSettings(
     }
 )
 agent = Agent(model=model, model_settings=model_settings)
-
 ```
 
 bedrock_openai_thinking_part.py
@@ -105,7 +101,6 @@ model_settings = BedrockModelSettings(
     bedrock_additional_model_requests_fields={'reasoning_effort': 'low'}
 )
 agent = Agent(model=model, model_settings=model_settings)
-
 ```
 
 bedrock_qwen_thinking_part.py
@@ -119,7 +114,6 @@ model_settings = BedrockModelSettings(
     bedrock_additional_model_requests_fields={'reasoning_config': 'high'}
 )
 agent = Agent(model=model, model_settings=model_settings)
-
 ```
 
 Reasoning is [always enabled](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-reasoning.html) for Deepseek model
@@ -132,7 +126,6 @@ from pydantic_ai.models.bedrock import BedrockConverseModel
 
 model = BedrockConverseModel('us.deepseek.r1-v1:0')
 agent = Agent(model=model)
-
 ```
 
 ## Groq
@@ -143,7 +136,7 @@ Groq supports different formats to receive thinking parts:
 - `"hidden"`: The thinking part is not included in the text content.
 - `"parsed"`: The thinking part has its own structured part in the response which is converted into a ThinkingPart object.
 
-To enable thinking, use the GroqModelSettings.groq_reasoning_format [model setting](../agents/#model-run-settings):
+To enable thinking, use the GroqModelSettings.groq_reasoning_format [model setting](https://ai.pydantic.dev/agents/#model-run-settings):
 
 groq_thinking_part.py
 
@@ -155,12 +148,11 @@ model = GroqModel('qwen-qwq-32b')
 settings = GroqModelSettings(groq_reasoning_format='parsed')
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 ## OpenRouter
 
-To enable thinking, use the OpenRouterModelSettings.openrouter_reasoning [model setting](../agents/#model-run-settings).
+To enable thinking, use the OpenRouterModelSettings.openrouter_reasoning [model setting](https://ai.pydantic.dev/agents/#model-run-settings).
 
 openrouter_thinking_part.py
 
@@ -172,7 +164,6 @@ model = OpenRouterModel('openai/gpt-5')
 settings = OpenRouterModelSettings(openrouter_reasoning={'effort': 'high'})
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 ## Mistral
@@ -185,10 +176,10 @@ Thinking is supported by the `command-a-reasoning-08-2025` model. It does not ne
 
 ## Hugging Face
 
-Text output inside `<think>` tags is automatically converted to ThinkingPart objects. You can customize the tags using the thinking_tags field on the [model profile](../models/openai/#model-profile).
+Text output inside `<think>` tags is automatically converted to ThinkingPart objects. You can customize the tags using the thinking_tags field on the [model profile](https://ai.pydantic.dev/models/openai/#model-profile).
 
 ## Outlines
 
-Some local models run through Outlines include in their text output a thinking part delimited by tags. In that case, it will be handled by Pydantic AI that will separate the thinking part from the final answer without the need to specifically enable it. The thinking tags used by default are `"<think>"` and `"</think>"`. If your model uses different tags, you can specify them in the [model profile](../models/openai/#model-profile) using the thinking_tags field.
+Some local models run through Outlines include in their text output a thinking part delimited by tags. In that case, it will be handled by Pydantic AI that will separate the thinking part from the final answer without the need to specifically enable it. The thinking tags used by default are `"<think>"` and `"</think>"`. If your model uses different tags, you can specify them in the [model profile](https://ai.pydantic.dev/models/openai/#model-profile) using the thinking_tags field.
 
 Outlines currently does not support thinking along with structured output. If you provide an `output_type`, the model text output will not contain a thinking part with the associated tags, and you may experience degraded performance.

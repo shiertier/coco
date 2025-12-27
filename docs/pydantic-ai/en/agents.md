@@ -6,13 +6,20 @@ In some use cases a single Agent will control an entire application or component
 
 The Agent class has full API documentation, but conceptually you can think of an agent as a container for:
 
-| **Component** | **Description** | | --- | --- | | [Instructions](#instructions) | A set of instructions for the LLM written by the developer. | | [Function tool(s)](../tools/) and [toolsets](../toolsets/) | Functions that the LLM may call to get information while generating a response. | | [Structured output type](../output/) | The structured datatype the LLM must return at the end of a run, if specified. | | [Dependency type constraint](../dependencies/) | Dynamic instructions functions, tools, and output functions may all use dependencies when they're run. | | [LLM model](../api/models/base/) | Optional default LLM model associated with the agent. Can also be specified when running the agent. | | [Model Settings](#additional-configuration) | Optional default model settings to help fine tune requests. Can also be specified when running the agent. |
+| **Component**                                                                                                        | **Description**                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [Instructions](#instructions)                                                                                        | A set of instructions for the LLM written by the developer.                                               |
+| [Function tool(s)](https://ai.pydantic.dev/tools/index.md) and [toolsets](https://ai.pydantic.dev/toolsets/index.md) | Functions that the LLM may call to get information while generating a response.                           |
+| [Structured output type](https://ai.pydantic.dev/output/index.md)                                                    | The structured datatype the LLM must return at the end of a run, if specified.                            |
+| [Dependency type constraint](https://ai.pydantic.dev/dependencies/index.md)                                          | Dynamic instructions functions, tools, and output functions may all use dependencies when they're run.    |
+| [LLM model](https://ai.pydantic.dev/api/models/base/index.md)                                                        | Optional default LLM model associated with the agent. Can also be specified when running the agent.       |
+| [Model Settings](#additional-configuration)                                                                          | Optional default model settings to help fine tune requests. Can also be specified when running the agent. |
 
 In typing terms, agents are generic in their dependency and output types, e.g., an agent which required dependencies of type `Foobar` and produced outputs of type `list[str]` would have type `Agent[Foobar, list[str]]`. In practice, you shouldn't need to care about this, it should just mean your IDE can tell you when you have the right type, and if you choose to use [static type checking](#static-type-checking) it should work well with Pydantic AI.
 
 Here's a toy example of an agent that simulates a roulette wheel:
 
-[Learn about Gateway](../gateway) roulette_wheel.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) roulette_wheel.py
 
 ```python
 from pydantic_ai import Agent, RunContext
@@ -43,7 +50,6 @@ print(result.output)  # (4)!
 result = roulette_agent.run_sync('I bet five is the winner', deps=success_number)
 print(result.output)
 #> False
-
 ```
 
 1. Create an agent, which expects an integer dependency and produces a boolean output. This agent will have type `Agent[int, bool]`.
@@ -82,7 +88,6 @@ print(result.output)  # (4)!
 result = roulette_agent.run_sync('I bet five is the winner', deps=success_number)
 print(result.output)
 #> False
-
 ```
 
 1. Create an agent, which expects an integer dependency and produces a boolean output. This agent will have type `Agent[int, bool]`.
@@ -106,7 +111,7 @@ There are five ways to run an agent:
 
 Here's a simple example demonstrating the first four:
 
-[Learn about Gateway](../gateway) run_agent.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) run_agent.py
 
 ```python
 from pydantic_ai import Agent, AgentRunResultEvent, AgentStreamEvent
@@ -148,7 +153,6 @@ async def main():
         ),
     ]
     """
-
 ```
 
 run_agent.py
@@ -193,28 +197,27 @@ async def main():
         ),
     ]
     """
-
 ```
 
 *(This example is complete, it can be run "as is" — you'll need to add `asyncio.run(main())` to run `main`)*
 
-You can also pass messages from previous runs to continue a conversation or provide context, as described in [Messages and Chat History](../message-history/).
+You can also pass messages from previous runs to continue a conversation or provide context, as described in [Messages and Chat History](https://ai.pydantic.dev/message-history/index.md).
 
 ### Streaming Events and Final Output
 
 As shown in the example above, run_stream() makes it easy to stream the agent's final output as it comes in. It also takes an optional `event_stream_handler` argument that you can use to gain insight into what is happening during the run before the final output is produced.
 
-The example below shows how to stream events and text output. You can also [stream structured output](../output/#streaming-structured-output).
+The example below shows how to stream events and text output. You can also [stream structured output](https://ai.pydantic.dev/output/#streaming-structured-output).
 
 Note
 
-The `run_stream()` method will consider the first output that matches the [output type](../output/#structured-output) to be the final output of the agent run, even when the model generates tool calls after this "final" output.
+The `run_stream()` and `run_stream_sync()` methods will consider the first output that matches the [output type](https://ai.pydantic.dev/output/#structured-output) (which could be text, an [output tool](https://ai.pydantic.dev/output/#tool-output) call, or a [deferred](https://ai.pydantic.dev/deferred-tools/index.md) tool call) to be the final output of the agent run, even when the model generates (additional) tool calls after this "final" output.
 
 These "dangling" tool calls will not be executed unless the agent's end_strategy is set to `'exhaustive'`, and even then their results will not be sent back to the model as the agent run will already be considered completed.
 
 If you want to always keep running the agent when it performs tool calls, and stream all events from the model's streaming response and the agent's execution of tools, use agent.run_stream_events() or agent.iter() instead, as described in the following sections.
 
-[Learn about Gateway](../gateway) run_stream_event_stream_handler.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) run_stream_event_stream_handler.py
 
 ```python
 import asyncio
@@ -308,7 +311,6 @@ if __name__ == '__main__':
         '[Output] It will be warm and sunny in Paris on Tuesday.',
     ]
     """
-
 ```
 
 run_stream_event_stream_handler.py
@@ -405,8 +407,9 @@ if __name__ == '__main__':
         '[Output] It will be warm and sunny in Paris on Tuesday.',
     ]
     """
-
 ```
+
+*(This example is complete, it can be run "as is")*
 
 ### Streaming All Events
 
@@ -460,7 +463,6 @@ if __name__ == '__main__':
         '[Final Output] It will be warm and sunny in Paris on Tuesday.',
     ]
     """
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -475,7 +477,7 @@ In many scenarios, you don't need to worry about pydantic-graph at all; calling 
 
 Here's an example of using `async for` with `iter` to record each node the agent executes:
 
-[Learn about Gateway](../gateway) agent_iter_async_for.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_iter_async_for.py
 
 ```python
 from pydantic_ai import Agent
@@ -508,6 +510,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -525,7 +528,6 @@ async def main():
     """
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 agent_iter_async_for.py
@@ -561,6 +563,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -578,7 +581,6 @@ async def main():
     """
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 *(This example is complete, it can be run "as is" — you'll need to add `asyncio.run(main())` to run `main`)*
@@ -590,7 +592,7 @@ async def main():
 
 You can also drive the iteration manually by passing the node you want to run next to the `AgentRun.next(...)` method. This allows you to inspect or modify the node before it executes or skip nodes based on your own logic, and to catch errors in `next()` more easily:
 
-[Learn about Gateway](../gateway) agent_iter_next.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_iter_next.py
 
 ```python
 from pydantic_ai import Agent
@@ -628,6 +630,7 @@ async def main():
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -643,7 +646,6 @@ async def main():
             End(data=FinalResult(output='The capital of France is Paris.')),
         ]
         """
-
 ```
 
 1. We start by grabbing the first node that will be run in the agent's graph.
@@ -689,6 +691,7 @@ async def main():
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -704,7 +707,6 @@ async def main():
             End(data=FinalResult(output='The capital of France is Paris.')),
         ]
         """
-
 ```
 
 1. We start by grabbing the first node that will be run in the agent's graph.
@@ -718,7 +720,7 @@ async def main():
 
 You can retrieve usage statistics (tokens, requests, etc.) at any time from the AgentRun object via `agent_run.usage()`. This method returns a RunUsage object containing the usage data.
 
-Once the run finishes, `agent_run.result` becomes a AgentRunResult object containing the final output (and related metadata).
+Once the run finishes, `agent_run.result` becomes an AgentRunResult object containing the final output (and related metadata).
 
 #### Streaming All Events and Output
 
@@ -868,7 +870,6 @@ if __name__ == '__main__':
         '=== Final Agent Output: It will be warm and sunny in Paris on Tuesday. ===',
     ]
     """
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -883,7 +884,7 @@ You can apply these settings by passing the `usage_limits` argument to the `run{
 
 Consider the following example, where we limit the number of response tokens:
 
-[Learn about Gateway](../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, UsageLimitExceeded, UsageLimits
@@ -907,7 +908,6 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> Exceeded the output_tokens_limit of 10 (output_tokens=32)
-
 ```
 
 ```python
@@ -932,12 +932,11 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> Exceeded the output_tokens_limit of 10 (output_tokens=32)
-
 ```
 
 Restricting the number of requests can be useful in preventing infinite loops or excessive tool calling:
 
-[Learn about Gateway](../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from typing_extensions import TypedDict
@@ -973,7 +972,6 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> The next request would exceed the request_limit of 3
-
 ```
 
 1. This tool has the ability to retry 5 times before erroring, simulating a tool that might get stuck in a loop.
@@ -1013,7 +1011,6 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> The next request would exceed the request_limit of 3
-
 ```
 
 1. This tool has the ability to retry 5 times before erroring, simulating a tool that might get stuck in a loop.
@@ -1023,7 +1020,7 @@ except UsageLimitExceeded as e:
 
 If you need a limit on the number of successful tool invocations within a single run, use `tool_calls_limit`:
 
-[Learn about Gateway](../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
@@ -1042,7 +1039,6 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> The next tool call(s) would exceed the tool_calls_limit of 1 (tool_calls=2).
-
 ```
 
 ```python
@@ -1062,7 +1058,6 @@ try:
 except UsageLimitExceeded as e:
     print(e)
     #> The next tool call(s) would exceed the tool_calls_limit of 1 (tool_calls=2).
-
 ```
 
 Note
@@ -1102,14 +1097,49 @@ result_sync = agent.run_sync(
 )
 print(result_sync.output)
 #> The capital of Italy is Rome.
-
 ```
 
 The final request uses `temperature=0.0` (run-time), `max_tokens=500` (from model), demonstrating how settings merge with run-time taking precedence.
 
 Model Settings Support
 
-Model-level settings are supported by all concrete model implementations (OpenAI, Anthropic, Google, etc.). Wrapper models like [`FallbackModel`](../models/overview/#fallback-model), WrapperModel, and InstrumentedModel don't have their own settings - they use the settings of their underlying models.
+Model-level settings are supported by all concrete model implementations (OpenAI, Anthropic, Google, etc.). Wrapper models like [`FallbackModel`](https://ai.pydantic.dev/models/overview/#fallback-model), WrapperModel, and InstrumentedModel don't have their own settings - they use the settings of their underlying models.
+
+#### Run metadata
+
+Run metadata lets you tag each agent execution with contextual details (for example, a tenant ID to filter traces and logs) and read it after completion via AgentRun.metadata, AgentRunResult.metadata, or StreamedRunResult.metadata. The resolved metadata is attached to the RunContext during the run and, when instrumentation is enabled, added to the run span attributes for observability tools.
+
+Configure metadata on an Agent or pass it to a run. Both accept either a static dictionary or a callable that receives the RunContext. Metadata is computed (if a callable) and applied when the run starts, then recomputed after a run ends successfully, so it can include end-of-run values. Agent-level metadata and per-run metadata are merged, with per-run values overriding agent-level ones.
+
+run_metadata.py
+
+```python
+from dataclasses import dataclass
+
+from pydantic_ai import Agent
+
+
+@dataclass
+class Deps:
+    tenant: str
+
+
+agent = Agent[Deps](
+    'openai:gpt-5',
+    deps_type=Deps,
+    metadata=lambda ctx: {'tenant': ctx.deps.tenant},  # agent-level metadata
+)
+
+result = agent.run_sync(
+    'What is the capital of France?',
+    deps=Deps(tenant='tenant-123'),
+    metadata=lambda ctx: {'num_requests': ctx.usage.requests},  # per-run metadata
+)
+print(result.output)
+#> The capital of France is Paris.
+print(result.metadata)
+#> {'tenant': 'tenant-123', 'num_requests': 1}
+```
 
 ### Model specific settings
 
@@ -1146,7 +1176,6 @@ except UnexpectedModelBehavior as e:
     Content filter 'SAFETY' triggered, body:
     <safety settings details>
     """
-
 ```
 
 1. This error is raised because the safety thresholds were exceeded.
@@ -1157,7 +1186,7 @@ An agent **run** might represent an entire conversation — there's no limit to 
 
 Here's an example of a conversation comprised of multiple runs:
 
-[Learn about Gateway](../gateway) conversation_example.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) conversation_example.py
 
 ```python
 from pydantic_ai import Agent
@@ -1176,7 +1205,6 @@ result2 = agent.run_sync(
 )
 print(result2.output)
 #> Albert Einstein's most famous equation is (E = mc^2).
-
 ```
 
 1. Continue the conversation; without `message_history` the model would not know who "his" was referring to.
@@ -1200,7 +1228,6 @@ result2 = agent.run_sync(
 )
 print(result2.output)
 #> Albert Einstein's most famous equation is (E = mc^2).
-
 ```
 
 1. Continue the conversation; without `message_history` the model would not know who "his" was referring to.
@@ -1254,7 +1281,6 @@ def foobar(x: bytes) -> None:
 
 result = agent.run_sync('Does their name start with "A"?', deps=User('Anne'))
 foobar(result.output)  # (3)!
-
 ```
 
 1. The agent is defined as expecting an instance of `User` as `deps`.
@@ -1268,7 +1294,6 @@ Running `mypy` on this will give the following output:
 type_mistakes.py:18: error: Argument 1 to "system_prompt" of "Agent" has incompatible type "Callable[[RunContext[str]], str]"; expected "Callable[[RunContext[User]], str]"  [arg-type]
 type_mistakes.py:28: error: Argument 1 to "foobar" has incompatible type "bool"; expected "bytes"  [arg-type]
 Found 2 errors in 1 file (checked 1 source file)
-
 ```
 
 Running `pyright` would identify the same issues.
@@ -1294,7 +1319,7 @@ You can add both to a single agent; they're appended in the order they're define
 
 Here's an example using both types of system prompts:
 
-[Learn about Gateway](../gateway) system_prompts.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) system_prompts.py
 
 ```python
 from datetime import date
@@ -1321,7 +1346,6 @@ def add_the_date() -> str:  # (4)!
 result = agent.run_sync('What is the date?', deps='Frank')
 print(result.output)
 #> Hello Frank, the date today is 2032-01-02.
-
 ```
 
 1. The agent expects a string dependency.
@@ -1356,7 +1380,6 @@ def add_the_date() -> str:  # (4)!
 result = agent.run_sync('What is the date?', deps='Frank')
 print(result.output)
 #> Hello Frank, the date today is 2032-01-02.
-
 ```
 
 1. The agent expects a string dependency.
@@ -1387,7 +1410,7 @@ All three types of instructions can be added to a single agent, and they are app
 
 Here's an example using a static instruction as well as dynamic instructions:
 
-[Learn about Gateway](../gateway) instructions.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) instructions.py
 
 ```python
 from datetime import date
@@ -1414,7 +1437,6 @@ def add_the_date() -> str:  # (4)!
 result = agent.run_sync('What is the date?', deps='Frank')
 print(result.output)
 #> Hello Frank, the date today is 2032-01-02.
-
 ```
 
 1. The agent expects a string dependency.
@@ -1449,7 +1471,6 @@ def add_the_date() -> str:  # (4)!
 result = agent.run_sync('What is the date?', deps='Frank')
 print(result.output)
 #> Hello Frank, the date today is 2032-01-02.
-
 ```
 
 1. The agent expects a string dependency.
@@ -1463,16 +1484,16 @@ Note that returning an empty string will result in no instruction message added.
 
 ## Reflection and self-correction
 
-Validation errors from both function tool parameter validation and [structured output validation](../output/#structured-output) can be passed back to the model with a request to retry.
+Validation errors from both function tool parameter validation and [structured output validation](https://ai.pydantic.dev/output/#structured-output) can be passed back to the model with a request to retry.
 
-You can also raise ModelRetry from within a [tool](../tools/) or [output function](../output/#output-functions) to tell the model it should retry generating a response.
+You can also raise ModelRetry from within a [tool](https://ai.pydantic.dev/tools/index.md) or [output function](https://ai.pydantic.dev/output/#output-functions) to tell the model it should retry generating a response.
 
 - The default retry count is **1** but can be altered for the entire agent, a specific tool, or outputs.
 - You can access the current retry count from within a tool or output function via ctx.retry.
 
 Here's an example:
 
-[Learn about Gateway](../gateway) tool_retry.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) tool_retry.py
 
 ```python
 from pydantic import BaseModel
@@ -1515,7 +1536,6 @@ print(result.output)
 """
 user_id=123 message='Hello John, would you be free for coffee sometime next week? Let me know what works for you!'
 """
-
 ```
 
 tool_retry.py
@@ -1561,7 +1581,6 @@ print(result.output)
 """
 user_id=123 message='Hello John, would you be free for coffee sometime next week? Let me know what works for you!'
 """
-
 ```
 
 ## Model errors
@@ -1570,7 +1589,7 @@ If models behave unexpectedly (e.g., the retry limit is exceeded, or their API r
 
 In these cases, capture_run_messages can be used to access the messages exchanged during the run to help diagnose the issue.
 
-[Learn about Gateway](../gateway) agent_model_errors.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_model_errors.py
 
 ```python
 from pydantic_ai import Agent, ModelRetry, UnexpectedModelBehavior, capture_run_messages
@@ -1605,6 +1624,7 @@ with capture_run_messages() as messages:  # (2)!
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -1629,6 +1649,7 @@ with capture_run_messages() as messages:  # (2)!
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -1648,7 +1669,6 @@ with capture_run_messages() as messages:  # (2)!
         """
     else:
         print(result.output)
-
 ```
 
 1. Define a tool that will raise `ModelRetry` repeatedly in this case.
@@ -1689,6 +1709,7 @@ with capture_run_messages() as messages:  # (2)!
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -1713,6 +1734,7 @@ with capture_run_messages() as messages:  # (2)!
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -1732,7 +1754,6 @@ with capture_run_messages() as messages:  # (2)!
         """
     else:
         print(result.output)
-
 ```
 
 1. Define a tool that will raise `ModelRetry` repeatedly in this case.

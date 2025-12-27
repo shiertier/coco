@@ -4,25 +4,23 @@ Example of a graph for asking and evaluating questions.
 
 Demonstrates:
 
-- [`pydantic_graph`](../../graph/)
+- [`pydantic_graph`](https://ai.pydantic.dev/graph/index.md)
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.question_graph
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.question_graph
-
 ```
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [question_graph.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/question_graph.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [question_graph.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/question_graph.py)
 
 ```python
 """Example of a graph for asking and evaluating questions.
@@ -196,7 +194,6 @@ if __name__ == '__main__':
     else:
         a = sys.argv[2] if len(sys.argv) > 2 else None
         asyncio.run(run_as_cli(a))
-
 ```
 
 [question_graph.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/question_graph.py)
@@ -373,7 +370,6 @@ if __name__ == '__main__':
     else:
         a = sys.argv[2] if len(sys.argv) > 2 else None
         asyncio.run(run_as_cli(a))
-
 ```
 
 The mermaid diagram generated in this example looks like this:

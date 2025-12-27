@@ -109,7 +109,7 @@ npm install @react-spectrum/s2
               // Use content hash in filename for long term cacheability.
               filename: '[name].[contenthash].css',
               // Ignore warnings about CSS order. Style macros generate atomic CSS,
-              // which is resiliant to ordering differences.
+              // which is resilient to ordering differences.
               ignoreOrder: true
             })
           ],
@@ -208,7 +208,7 @@ npm install @react-spectrum/s2
           ],
           build: {
             target: ['es2022'],
-            // Lightning CSS produces much a smaller CSS bundle than the default minifier.
+            // Lightning CSS produces a much smaller CSS bundle than the default minifier.
             cssMinify: 'lightningcss',
             rollupOptions: {
               output: {
@@ -241,7 +241,7 @@ npm install @react-spectrum/s2
         ```ts
         // vite.config.ts
         import {defineConfig} from 'vite';
-        import localesPlugin from '@react-aria/optimize-locales-plugin';
+        import optimizeLocales from '@react-aria/optimize-locales-plugin';
 
         export default defineConfig({
           plugins: [
@@ -393,7 +393,7 @@ npm install @react-spectrum/s2
           ],
           build: {
             target: ['es2022'],
-            // Lightning CSS produces much a smaller CSS bundle than the default minifier.
+            // Lightning CSS produces a much smaller CSS bundle than the default minifier.
             cssMinify: 'lightningcss',
             rollupOptions: {
               output: {
@@ -476,7 +476,7 @@ npm install @react-spectrum/s2
         ```ts
         // vite.config.ts
         import {defineConfig} from 'vite';
-        import localesPlugin from '@react-aria/optimize-locales-plugin';
+        import optimizeLocales from '@react-aria/optimize-locales-plugin';
 
         export default defineConfig({
           plugins: [

@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Mistral](../../../models/mistral/).
+For details on how to set up authentication with this model, see [model configuration for Mistral](https://ai.pydantic.dev/models/mistral/index.md).
 
 ### LatestMistralModelNames
 
@@ -13,7 +13,6 @@ LatestMistralModelNames = Literal[
     "codestral-latest",
     "mistral-moderation-latest",
 ]
-
 ```
 
 Latest Mistral models.
@@ -22,7 +21,6 @@ Latest Mistral models.
 
 ```python
 MistralModelName = str | LatestMistralModelNames
-
 ```
 
 Possible Mistral model names.
@@ -40,7 +38,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/mistral.py`
 ```python
 class MistralModelSettings(ModelSettings, total=False):
     """Settings used for a Mistral model request."""
-
 ```
 
 ### MistralModel
@@ -280,11 +277,6 @@ class MistralModel(Model):
         """Process a non-streamed response, and prepare a message to return."""
         assert response.choices, 'Unexpected empty response choice.'
 
-        if response.created:
-            timestamp = number_to_datetime(response.created)
-        else:
-            timestamp = _now_utc()
-
         choice = response.choices[0]
         content = choice.message.content
         tool_calls = choice.message.tool_calls
@@ -302,14 +294,15 @@ class MistralModel(Model):
                 parts.append(tool)
 
         raw_finish_reason = choice.finish_reason
-        provider_details = {'finish_reason': raw_finish_reason}
+        provider_details: dict[str, Any] = {'finish_reason': raw_finish_reason}
+        if response.created:  # pragma: no branch
+            provider_details['timestamp'] = number_to_datetime(response.created)
         finish_reason = _FINISH_REASON_MAP.get(raw_finish_reason)
 
         return ModelResponse(
             parts=parts,
             usage=_map_usage(response),
             model_name=response.model,
-            timestamp=timestamp,
             provider_response_id=response.id,
             provider_name=self._provider.name,
             provider_url=self._provider.base_url,
@@ -330,18 +323,13 @@ class MistralModel(Model):
                 'Streamed response ended without content or tool calls'
             )
 
-        if first_chunk.data.created:
-            timestamp = number_to_datetime(first_chunk.data.created)
-        else:
-            timestamp = _now_utc()
-
         return MistralStreamedResponse(
             model_request_parameters=model_request_parameters,
             _response=peekable_response,
             _model_name=first_chunk.data.model,
-            _timestamp=timestamp,
             _provider_name=self._provider.name,
             _provider_url=self._provider.base_url,
+            _provider_timestamp=number_to_datetime(first_chunk.data.created) if first_chunk.data.created else None,
         )
 
     @staticmethod
@@ -549,7 +537,6 @@ class MistralModel(Model):
                 else:  # pragma: no cover
                     raise RuntimeError(f'Unsupported content type: {type(item)}')
         return MistralUserMessage(content=content)
-
 ````
 
 #### __init__
@@ -565,14 +552,19 @@ __init__(
     json_mode_schema_prompt: str = "Answer in JSON Object, respect the format:\n```\n{schema}\n```\n",
     settings: ModelSettings | None = None
 )
-
 ````
 
 Initialize a Mistral model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `MistralModelName` | The name of the model to use. | *required* | | `provider` | `Literal['mistral'] | Provider[Mistral]` | The provider to use for authentication and API access. Can be either the string 'mistral' or an instance of Provider[Mistral]. If not provided, a new provider will be created using the other parameters. | `'mistral'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `json_mode_schema_prompt` | `str` | The prompt to show when the model expects a JSON object as input. | ```` 'Answer in JSON Object, respect the format:\n```\n{schema}\n```\n' ```` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name                      | Type                 | Description                                                       | Default                                                                                                                                                                                                    |
+| ------------------------- | -------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name`              | `MistralModelName`   | The name of the model to use.                                     | *required*                                                                                                                                                                                                 |
+| `provider`                | \`Literal['mistral'] | Provider[Mistral]\`                                               | The provider to use for authentication and API access. Can be either the string 'mistral' or an instance of Provider[Mistral]. If not provided, a new provider will be created using the other parameters. |
+| `profile`                 | \`ModelProfileSpec   | None\`                                                            | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                                                                            |
+| `json_mode_schema_prompt` | `str`                | The prompt to show when the model expects a JSON object as input. | ```` 'Answer in JSON Object, respect the format:\n```\n{schema}\n```\n' ````                                                                                                                               |
+| `settings`                | \`ModelSettings      | None\`                                                            | Model-specific settings that will be used as defaults for this model.                                                                                                                                      |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/mistral.py`
 
@@ -606,14 +598,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ````
 
 #### model_name
 
 ```python
 model_name: MistralModelName
-
 ```
 
 The model name.
@@ -622,7 +612,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -635,7 +624,6 @@ request(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> ModelResponse
-
 ```
 
 Make a non-streaming request to the model from Pydantic AI call.
@@ -660,7 +648,6 @@ async def request(
     )
     model_response = self._process_response(response)
     return model_response
-
 ```
 
 #### request_stream
@@ -672,7 +659,6 @@ request_stream(
     model_request_parameters: ModelRequestParameters,
     run_context: RunContext[Any] | None = None,
 ) -> AsyncIterator[StreamedResponse]
-
 ```
 
 Make a streaming request to the model from Pydantic AI call.
@@ -699,7 +685,6 @@ async def request_stream(
     )
     async with response:
         yield await self._process_streamed_response(response, model_request_parameters)
-
 ```
 
 ### MistralStreamedResponse
@@ -717,13 +702,16 @@ class MistralStreamedResponse(StreamedResponse):
 
     _model_name: MistralModelName
     _response: AsyncIterable[MistralCompletionEvent]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _provider_timestamp: datetime | None = None
+    _timestamp: datetime = field(default_factory=_now_utc)
 
     _delta_content: str = field(default='', init=False)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:
+        if self._provider_timestamp is not None:  # pragma: no branch
+            self.provider_details = {'timestamp': self._provider_timestamp}
         chunk: MistralCompletionEvent
         async for chunk in self._response:
             self._usage += _map_usage(chunk.data)
@@ -737,7 +725,7 @@ class MistralStreamedResponse(StreamedResponse):
                 continue
 
             if raw_finish_reason := choice.finish_reason:
-                self.provider_details = {'finish_reason': raw_finish_reason}
+                self.provider_details = {**(self.provider_details or {}), 'finish_reason': raw_finish_reason}
                 self.finish_reason = _FINISH_REASON_MAP.get(raw_finish_reason)
 
             # Handle the text part of the response
@@ -836,14 +824,12 @@ class MistralStreamedResponse(StreamedResponse):
                     return False
 
         return True
-
 ```
 
 #### model_name
 
 ```python
 model_name: MistralModelName
-
 ```
 
 Get the model name of the response.
@@ -852,7 +838,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -861,7 +846,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -870,7 +854,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

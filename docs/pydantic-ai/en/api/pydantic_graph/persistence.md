@@ -6,7 +6,6 @@
 SnapshotStatus = Literal[
     "created", "pending", "running", "success", "error"
 ]
-
 ```
 
 The status of a snapshot.
@@ -49,14 +48,12 @@ class NodeSnapshot(Generic[StateT, RunEndT]):
     def __post_init__(self) -> None:
         if self.id == UNSET_SNAPSHOT_ID:
             self.id = self.node.get_snapshot_id()
-
 ```
 
 #### state
 
 ```python
 state: StateT
-
 ```
 
 The state of the graph before the node is run.
@@ -67,7 +64,6 @@ The state of the graph before the node is run.
 node: Annotated[
     BaseNode[StateT, Any, RunEndT], CustomNodeSchema()
 ]
-
 ```
 
 The node to run next.
@@ -76,7 +72,6 @@ The node to run next.
 
 ```python
 start_ts: datetime | None = None
-
 ```
 
 The timestamp when the node started running, `None` until the run starts.
@@ -85,7 +80,6 @@ The timestamp when the node started running, `None` until the run starts.
 
 ```python
 duration: float | None = None
-
 ```
 
 The duration of the node run in seconds, if the node has been run.
@@ -94,7 +88,6 @@ The duration of the node run in seconds, if the node has been run.
 
 ```python
 status: SnapshotStatus = 'created'
-
 ```
 
 The status of the snapshot.
@@ -103,7 +96,6 @@ The status of the snapshot.
 
 ```python
 kind: Literal['node'] = 'node'
-
 ```
 
 The kind of history step, can be used as a discriminator when deserializing history.
@@ -112,7 +104,6 @@ The kind of history step, can be used as a discriminator when deserializing hist
 
 ```python
 id: str = UNSET_SNAPSHOT_ID
-
 ```
 
 Unique ID of the snapshot.
@@ -153,14 +144,12 @@ class EndSnapshot(Generic[StateT, RunEndT]):
         Useful to allow `[snapshot.node for snapshot in persistence.history]`.
         """
         return self.result
-
 ```
 
 #### state
 
 ```python
 state: StateT
-
 ```
 
 The state of the graph at the end of the run.
@@ -169,7 +158,6 @@ The state of the graph at the end of the run.
 
 ```python
 result: End[RunEndT]
-
 ```
 
 The result of the graph run.
@@ -178,7 +166,6 @@ The result of the graph run.
 
 ```python
 ts: datetime = field(default_factory=now_utc)
-
 ```
 
 The timestamp when the graph run ended.
@@ -187,7 +174,6 @@ The timestamp when the graph run ended.
 
 ```python
 kind: Literal['end'] = 'end'
-
 ```
 
 The kind of history step, can be used as a discriminator when deserializing history.
@@ -196,7 +182,6 @@ The kind of history step, can be used as a discriminator when deserializing hist
 
 ```python
 id: str = UNSET_SNAPSHOT_ID
-
 ```
 
 Unique ID of the snapshot.
@@ -205,7 +190,6 @@ Unique ID of the snapshot.
 
 ```python
 node: End[RunEndT]
-
 ```
 
 Shim to get the result.
@@ -219,7 +203,6 @@ Snapshot = (
     NodeSnapshot[StateT, RunEndT]
     | EndSnapshot[StateT, RunEndT]
 )
-
 ```
 
 A step in the history of a graph run.
@@ -357,7 +340,6 @@ class BaseStatePersistence(ABC, Generic[StateT, RunEndT]):
             run_end_type: The run end type.
         """
         pass
-
 ```
 
 #### snapshot_node
@@ -366,7 +348,6 @@ class BaseStatePersistence(ABC, Generic[StateT, RunEndT]):
 snapshot_node(
     state: StateT, next_node: BaseNode[StateT, Any, RunEndT]
 ) -> None
-
 ```
 
 Snapshot the state of a graph, when the next step is to run a node.
@@ -375,7 +356,10 @@ This method should add a NodeSnapshot to persistence.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `state` | `StateT` | The state of the graph. | *required* | | `next_node` | `BaseNode[StateT, Any, RunEndT]` | The next node to run. | *required* |
+| Name        | Type                             | Description             | Default    |
+| ----------- | -------------------------------- | ----------------------- | ---------- |
+| `state`     | `StateT`                         | The state of the graph. | *required* |
+| `next_node` | `BaseNode[StateT, Any, RunEndT]` | The next node to run.   | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/persistence/__init__.py`
 
@@ -391,7 +375,6 @@ async def snapshot_node(self, state: StateT, next_node: BaseNode[StateT, Any, Ru
         next_node: The next node to run.
     """
     raise NotImplementedError
-
 ```
 
 #### snapshot_node_if_new
@@ -402,7 +385,6 @@ snapshot_node_if_new(
     state: StateT,
     next_node: BaseNode[StateT, Any, RunEndT],
 ) -> None
-
 ```
 
 Snapshot the state of a graph if the snapshot ID doesn't already exist in persistence.
@@ -411,7 +393,11 @@ This method will generally call snapshot_node but should do so in an atomic way.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `snapshot_id` | `str` | The ID of the snapshot to check. | *required* | | `state` | `StateT` | The state of the graph. | *required* | | `next_node` | `BaseNode[StateT, Any, RunEndT]` | The next node to run. | *required* |
+| Name          | Type                             | Description                      | Default    |
+| ------------- | -------------------------------- | -------------------------------- | ---------- |
+| `snapshot_id` | `str`                            | The ID of the snapshot to check. | *required* |
+| `state`       | `StateT`                         | The state of the graph.          | *required* |
+| `next_node`   | `BaseNode[StateT, Any, RunEndT]` | The next node to run.            | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/persistence/__init__.py`
 
@@ -431,14 +417,12 @@ async def snapshot_node_if_new(
         next_node: The next node to run.
     """
     raise NotImplementedError
-
 ```
 
 #### snapshot_end
 
 ```python
 snapshot_end(state: StateT, end: End[RunEndT]) -> None
-
 ```
 
 Snapshot the state of a graph when the graph has ended.
@@ -447,7 +431,10 @@ This method should add an EndSnapshot to persistence.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `state` | `StateT` | The state of the graph. | *required* | | `end` | `End[RunEndT]` | data from the end of the run. | *required* |
+| Name    | Type           | Description                   | Default    |
+| ------- | -------------- | ----------------------------- | ---------- |
+| `state` | `StateT`       | The state of the graph.       | *required* |
+| `end`   | `End[RunEndT]` | data from the end of the run. | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/persistence/__init__.py`
 
@@ -463,7 +450,6 @@ async def snapshot_end(self, state: StateT, end: End[RunEndT]) -> None:
         end: data from the end of the run.
     """
     raise NotImplementedError
-
 ```
 
 #### record_run
@@ -472,22 +458,28 @@ async def snapshot_end(self, state: StateT, end: End[RunEndT]) -> None:
 record_run(
     snapshot_id: str,
 ) -> AbstractAsyncContextManager[None]
-
 ```
 
 Record the run of the node, or error if the node is already running.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `snapshot_id` | `str` | The ID of the snapshot to record. | *required* |
+| Name          | Type  | Description                       | Default    |
+| ------------- | ----- | --------------------------------- | ---------- |
+| `snapshot_id` | `str` | The ID of the snapshot to record. | *required* |
 
 Raises:
 
-| Type | Description | | --- | --- | | `GraphNodeRunningError` | if the node status it not 'created' or 'pending'. | | `LookupError` | if the snapshot ID is not found in persistence. |
+| Type                    | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `GraphNodeRunningError` | if the node status it not 'created' or 'pending'. |
+| `LookupError`           | if the snapshot ID is not found in persistence.   |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AbstractAsyncContextManager[None]` | An async context manager that records the run of the node. |
+| Type                                | Description                                                |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `AbstractAsyncContextManager[None]` | An async context manager that records the run of the node. |
 
 In particular this should set:
 
@@ -519,14 +511,12 @@ def record_run(self, snapshot_id: str) -> AbstractAsyncContextManager[None]:
       [`NodeSnapshot.duration`][pydantic_graph.persistence.NodeSnapshot.duration] when the run finishes.
     """
     raise NotImplementedError
-
 ```
 
 #### load_next
 
 ```python
 load_next() -> NodeSnapshot[StateT, RunEndT] | None
-
 ```
 
 Retrieve a node snapshot with status `'created`' and set its status to `'pending'`.
@@ -548,14 +538,12 @@ async def load_next(self) -> NodeSnapshot[StateT, RunEndT] | None:
     Returns: The snapshot, or `None` if no snapshot with status `'created`' exists.
     """
     raise NotImplementedError
-
 ```
 
 #### load_all
 
 ```python
 load_all() -> list[Snapshot[StateT, RunEndT]]
-
 ```
 
 Load the entire history of snapshots.
@@ -577,14 +565,12 @@ async def load_all(self) -> list[Snapshot[StateT, RunEndT]]:
     Returns: The list of snapshots.
     """
     raise NotImplementedError
-
 ```
 
 #### set_graph_types
 
 ```python
 set_graph_types(graph: Graph[StateT, Any, RunEndT]) -> None
-
 ```
 
 Set the types of the state and run end from a graph.
@@ -604,14 +590,12 @@ def set_graph_types(self, graph: Graph[StateT, Any, RunEndT]) -> None:
     if self.should_set_types():
         with _utils.set_nodes_type_context(graph.get_nodes()):
             self.set_types(*graph.inferred_types)
-
 ```
 
 #### should_set_types
 
 ```python
 should_set_types() -> bool
-
 ```
 
 Whether types need to be set.
@@ -627,7 +611,6 @@ def should_set_types(self) -> bool:
     Implementations should override this method to return `True` when types have not been set if they are needed.
     """
     return False
-
 ```
 
 #### set_types
@@ -636,7 +619,6 @@ def should_set_types(self) -> bool:
 set_types(
     state_type: type[StateT], run_end_type: type[RunEndT]
 ) -> None
-
 ```
 
 Set the types of the state and run end.
@@ -645,7 +627,10 @@ This can be used to create type adapters for serializing and deserializing snaps
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `state_type` | `type[StateT]` | The state type. | *required* | | `run_end_type` | `type[RunEndT]` | The run end type. | *required* |
+| Name           | Type            | Description       | Default    |
+| -------------- | --------------- | ----------------- | ---------- |
+| `state_type`   | `type[StateT]`  | The state type.   | *required* |
+| `run_end_type` | `type[RunEndT]` | The run end type. | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/persistence/__init__.py`
 
@@ -661,7 +646,6 @@ def set_types(self, state_type: type[StateT], run_end_type: type[RunEndT]) -> No
         run_end_type: The run end type.
     """
     pass
-
 ```
 
 ### build_snapshot_list_type_adapter
@@ -670,7 +654,6 @@ def set_types(self, state_type: type[StateT], run_end_type: type[RunEndT]) -> No
 build_snapshot_list_type_adapter(
     state_t: type[StateT], run_end_t: type[RunEndT]
 ) -> TypeAdapter[list[Snapshot[StateT, RunEndT]]]
-
 ```
 
 Build a type adapter for a list of snapshots.
@@ -691,7 +674,6 @@ def build_snapshot_list_type_adapter(
     [`NodeSnapshot.node`][pydantic_graph.persistence.NodeSnapshot.node].
     """
     return pydantic.TypeAdapter(list[Annotated[Snapshot[state_t, run_end_t], pydantic.Discriminator('kind')]])
-
 ```
 
 In memory state persistence.
@@ -761,14 +743,12 @@ class SimpleStatePersistence(BaseStatePersistence[StateT, RunEndT]):
 
     async def load_all(self) -> list[Snapshot[StateT, RunEndT]]:
         raise NotImplementedError('load is not supported for SimpleStatePersistence')
-
 ```
 
 #### last_snapshot
 
 ```python
 last_snapshot: Snapshot[StateT, RunEndT] | None = None
-
 ```
 
 The last snapshot.
@@ -870,14 +850,12 @@ class FullStatePersistence(BaseStatePersistence[StateT, RunEndT]):
             return state
         else:
             return copy.deepcopy(state)
-
 ```
 
 #### deep_copy
 
 ```python
 deep_copy: bool = True
-
 ```
 
 Whether to deep copy the state and nodes when storing them.
@@ -890,7 +868,6 @@ Defaults to `True` so even if nodes or state are modified after the snapshot is 
 history: list[Snapshot[StateT, RunEndT]] = field(
     default_factory=list
 )
-
 ```
 
 List of snapshots taken during the graph run.
@@ -899,7 +876,6 @@ List of snapshots taken during the graph run.
 
 ```python
 dump_json(*, indent: int | None = None) -> bytes
-
 ```
 
 Dump the history to JSON bytes.
@@ -911,14 +887,12 @@ def dump_json(self, *, indent: int | None = None) -> bytes:
     """Dump the history to JSON bytes."""
     assert self._snapshots_type_adapter is not None, 'type adapter must be set to use `dump_json`'
     return self._snapshots_type_adapter.dump_json(self.history, indent=indent)
-
 ```
 
 #### load_json
 
 ```python
 load_json(json_data: str | bytes | bytearray) -> None
-
 ```
 
 Load the history from JSON.
@@ -930,7 +904,6 @@ def load_json(self, json_data: str | bytes | bytearray) -> None:
     """Load the history from JSON."""
     assert self._snapshots_type_adapter is not None, 'type adapter must be set to use `load_json`'
     self.history = self._snapshots_type_adapter.validate_json(json_data)
-
 ```
 
 ### FileStatePersistence
@@ -1080,14 +1053,12 @@ class FileStatePersistence(BaseStatePersistence[StateT, RunEndT]):
             yield
         finally:
             await _graph_utils.run_in_executor(lock_file.unlink, missing_ok=True)
-
 ````
 
 #### json_file
 
 ```python
 json_file: Path
-
 ```
 
 Path to the JSON file where the snapshots are stored.
@@ -1103,14 +1074,12 @@ from pydantic_graph import FullStatePersistence
 
 run_id = 'run_123abc'
 persistence = FullStatePersistence(Path('runs') / f'{run_id}.json')
-
 ```
 
 #### should_set_types
 
 ```python
 should_set_types() -> bool
-
 ```
 
 Whether types need to be set.
@@ -1121,5 +1090,4 @@ Source code in `pydantic_graph/pydantic_graph/persistence/file.py`
 def should_set_types(self) -> bool:
     """Whether types need to be set."""
     return self._snapshots_type_adapter is None
-
 ```

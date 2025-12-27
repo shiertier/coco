@@ -6,7 +6,6 @@
 AgentDepsT = TypeVar(
     "AgentDepsT", default=None, contravariant=True
 )
-
 ```
 
 Type variable for agent dependencies.
@@ -60,6 +59,8 @@ class RunContext(Generic[RunContextAgentDepsT]):
     """Whether the output passed to an output validator is partial."""
     run_id: str | None = None
     """"Unique identifier for the agent run."""
+    metadata: dict[str, Any] | None = None
+    """Metadata associated with this agent run, if configured."""
 
     @property
     def last_attempt(self) -> bool:
@@ -67,14 +68,12 @@ class RunContext(Generic[RunContextAgentDepsT]):
         return self.retry == self.max_retries
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### deps
 
 ```python
 deps: RunContextAgentDepsT
-
 ```
 
 Dependencies for the agent.
@@ -83,7 +82,6 @@ Dependencies for the agent.
 
 ```python
 model: Model
-
 ```
 
 The model used in this run.
@@ -92,7 +90,6 @@ The model used in this run.
 
 ```python
 usage: RunUsage
-
 ```
 
 LLM usage associated with the run.
@@ -101,7 +98,6 @@ LLM usage associated with the run.
 
 ```python
 prompt: str | Sequence[UserContent] | None = None
-
 ```
 
 The original user prompt passed to the run.
@@ -110,7 +106,6 @@ The original user prompt passed to the run.
 
 ```python
 messages: list[ModelMessage] = field(default_factory=list)
-
 ```
 
 Messages exchanged in the conversation so far.
@@ -119,7 +114,6 @@ Messages exchanged in the conversation so far.
 
 ```python
 validation_context: Any = None
-
 ```
 
 Pydantic [validation context](https://docs.pydantic.dev/latest/concepts/validators/#validation-context) for tool args and run outputs.
@@ -128,7 +122,6 @@ Pydantic [validation context](https://docs.pydantic.dev/latest/concepts/validato
 
 ```python
 tracer: Tracer = field(default_factory=NoOpTracer)
-
 ```
 
 The tracer to use for tracing the run.
@@ -137,7 +130,6 @@ The tracer to use for tracing the run.
 
 ```python
 trace_include_content: bool = False
-
 ```
 
 Whether to include the content of the messages in the trace.
@@ -148,7 +140,6 @@ Whether to include the content of the messages in the trace.
 instrumentation_version: int = (
     DEFAULT_INSTRUMENTATION_VERSION
 )
-
 ```
 
 Instrumentation settings version, if instrumentation is enabled.
@@ -157,7 +148,6 @@ Instrumentation settings version, if instrumentation is enabled.
 
 ```python
 retries: dict[str, int] = field(default_factory=dict)
-
 ```
 
 Number of retries for each tool so far.
@@ -166,7 +156,6 @@ Number of retries for each tool so far.
 
 ```python
 tool_call_id: str | None = None
-
 ```
 
 The ID of the tool call.
@@ -175,7 +164,6 @@ The ID of the tool call.
 
 ```python
 tool_name: str | None = None
-
 ```
 
 Name of the tool being called.
@@ -184,7 +172,6 @@ Name of the tool being called.
 
 ```python
 retry: int = 0
-
 ```
 
 Number of retries of this tool so far.
@@ -193,7 +180,6 @@ Number of retries of this tool so far.
 
 ```python
 max_retries: int = 0
-
 ```
 
 The maximum number of retries of this tool.
@@ -202,7 +188,6 @@ The maximum number of retries of this tool.
 
 ```python
 run_step: int = 0
-
 ```
 
 The current step in the run.
@@ -211,7 +196,6 @@ The current step in the run.
 
 ```python
 tool_call_approved: bool = False
-
 ```
 
 Whether a tool call that required approval has now been approved.
@@ -220,7 +204,6 @@ Whether a tool call that required approval has now been approved.
 
 ```python
 partial_output: bool = False
-
 ```
 
 Whether the output passed to an output validator is partial.
@@ -229,16 +212,22 @@ Whether the output passed to an output validator is partial.
 
 ```python
 run_id: str | None = None
-
 ```
 
 "Unique identifier for the agent run.
+
+#### metadata
+
+```python
+metadata: dict[str, Any] | None = None
+```
+
+Metadata associated with this agent run, if configured.
 
 #### last_attempt
 
 ```python
 last_attempt: bool
-
 ```
 
 Whether this is the last attempt at running this tool before an error is raised.
@@ -247,7 +236,6 @@ Whether this is the last attempt at running this tool before an error is raised.
 
 ```python
 ToolParams = ParamSpec('ToolParams', default=...)
-
 ```
 
 Retrieval function param spec.
@@ -256,15 +244,18 @@ Retrieval function param spec.
 
 ```python
 SystemPromptFunc: TypeAlias = (
-    Callable[[RunContext[AgentDepsT]], str]
-    | Callable[[RunContext[AgentDepsT]], Awaitable[str]]
-    | Callable[[], str]
-    | Callable[[], Awaitable[str]]
+    Callable[[RunContext[AgentDepsT]], str | None]
+    | Callable[
+        [RunContext[AgentDepsT]], Awaitable[str | None]
+    ]
+    | Callable[[], str | None]
+    | Callable[[], Awaitable[str | None]]
 )
-
 ```
 
 A function that may or maybe not take `RunContext` as an argument, and may or may not be async.
+
+Functions which return None are excluded from model requests.
 
 Usage `SystemPromptFunc[AgentDepsT]`.
 
@@ -274,7 +265,6 @@ Usage `SystemPromptFunc[AgentDepsT]`.
 ToolFuncContext: TypeAlias = Callable[
     Concatenate[RunContext[AgentDepsT], ToolParams], Any
 ]
-
 ```
 
 A tool function that takes `RunContext` as the first argument.
@@ -285,7 +275,6 @@ Usage `ToolContextFunc[AgentDepsT, ToolParams]`.
 
 ```python
 ToolFuncPlain: TypeAlias = Callable[ToolParams, Any]
-
 ```
 
 A tool function that does not take `RunContext` as the first argument.
@@ -299,7 +288,6 @@ ToolFuncEither: TypeAlias = (
     ToolFuncContext[AgentDepsT, ToolParams]
     | ToolFuncPlain[ToolParams]
 )
-
 ```
 
 Either kind of tool function.
@@ -315,12 +303,11 @@ ToolPrepareFunc: TypeAlias = Callable[
     [RunContext[AgentDepsT], "ToolDefinition"],
     Awaitable["ToolDefinition | None"],
 ]
-
 ```
 
 Definition of a function that can prepare a tool definition at call time.
 
-See [tool docs](../../tools-advanced/#tool-prepare) for more information.
+See [tool docs](https://ai.pydantic.dev/tools-advanced/#tool-prepare) for more information.
 
 Example — here `only_if_42` is valid as a `ToolPrepareFunc`:
 
@@ -338,7 +325,6 @@ def hitchhiker(ctx: RunContext[int], answer: str) -> str:
     return f'{ctx.deps} {answer}'
 
 hitchhiker = Tool(hitchhiker, prepare=only_if_42)
-
 ```
 
 Usage `ToolPrepareFunc[AgentDepsT]`.
@@ -350,7 +336,6 @@ ToolsPrepareFunc: TypeAlias = Callable[
     [RunContext[AgentDepsT], list["ToolDefinition"]],
     Awaitable["list[ToolDefinition] | None"],
 ]
-
 ```
 
 Definition of a function that can prepare the tool definition of all tools for each step. This is useful if you want to customize the definition of multiple tools or you want to register a subset of tools for a given step.
@@ -372,7 +357,6 @@ async def turn_on_strict_if_openai(
     return tool_defs
 
 agent = Agent('openai:gpt-4o', prepare_tools=turn_on_strict_if_openai)
-
 ```
 
 Usage `ToolsPrepareFunc[AgentDepsT]`.
@@ -386,7 +370,6 @@ BuiltinToolFunc: TypeAlias = Callable[
     | AbstractBuiltinTool
     | None,
 ]
-
 ```
 
 Definition of a function that can prepare a builtin tool at call time.
@@ -399,7 +382,6 @@ This is useful if you want to customize the builtin tool based on the run contex
 DocstringFormat: TypeAlias = Literal[
     "google", "numpy", "sphinx", "auto"
 ]
-
 ```
 
 Supported docstring formats.
@@ -417,7 +399,7 @@ This can be used as an agent's `output_type` and will be used as the output of t
 
 Results can be passed to the next agent run using a DeferredToolResults object with the same tool call IDs.
 
-See [deferred tools docs](../../deferred-tools/#deferred-tools) for more information.
+See [deferred tools docs](https://ai.pydantic.dev/deferred-tools/#deferred-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -439,14 +421,12 @@ class DeferredToolRequests:
     """Tool calls that require human-in-the-loop approval."""
     metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
     """Metadata for deferred tool calls, keyed by `tool_call_id`."""
-
 ```
 
 #### calls
 
 ```python
 calls: list[ToolCallPart] = field(default_factory=list)
-
 ```
 
 Tool calls that require external execution.
@@ -455,7 +435,6 @@ Tool calls that require external execution.
 
 ```python
 approvals: list[ToolCallPart] = field(default_factory=list)
-
 ```
 
 Tool calls that require human-in-the-loop approval.
@@ -466,7 +445,6 @@ Tool calls that require human-in-the-loop approval.
 metadata: dict[str, dict[str, Any]] = field(
     default_factory=dict
 )
-
 ```
 
 Metadata for deferred tool calls, keyed by `tool_call_id`.
@@ -486,14 +464,12 @@ class ToolApproved:
     """Optional tool call arguments to use instead of the original arguments."""
 
     kind: Literal['tool-approved'] = 'tool-approved'
-
 ```
 
 #### override_args
 
 ```python
 override_args: dict[str, Any] | None = None
-
 ```
 
 Optional tool call arguments to use instead of the original arguments.
@@ -515,14 +491,12 @@ class ToolDenied:
     _: KW_ONLY
 
     kind: Literal['tool-denied'] = 'tool-denied'
-
 ```
 
 #### message
 
 ```python
 message: str = 'The tool call was denied.'
-
 ```
 
 The message to return to the model.
@@ -533,7 +507,6 @@ The message to return to the model.
 DeferredToolApprovalResult: TypeAlias = Annotated[
     ToolApproved | ToolDenied, Discriminator("kind")
 ]
-
 ```
 
 Result for a tool call that required human-in-the-loop approval.
@@ -547,7 +520,6 @@ DeferredToolCallResult: TypeAlias = Annotated[
     | Annotated[RetryPromptPart, Tag("retry-prompt")],
     Discriminator(_deferred_tool_call_result_discriminator),
 ]
-
 ```
 
 Result for a tool call that required external execution.
@@ -558,7 +530,6 @@ Result for a tool call that required external execution.
 DeferredToolResult = (
     DeferredToolApprovalResult | DeferredToolCallResult
 )
-
 ```
 
 Result for a tool call that required approval or external execution.
@@ -569,7 +540,7 @@ Results for deferred tool calls from a previous run that required approval or ex
 
 The tool call IDs need to match those from the DeferredToolRequests output object from the previous run.
 
-See [deferred tools docs](../../deferred-tools/#deferred-tools) for more information.
+See [deferred tools docs](https://ai.pydantic.dev/deferred-tools/#deferred-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -587,7 +558,6 @@ class DeferredToolResults:
     """Map of tool call IDs to results for tool calls that required external execution."""
     approvals: dict[str, bool | DeferredToolApprovalResult] = field(default_factory=dict)
     """Map of tool call IDs to results for tool calls that required human-in-the-loop approval."""
-
 ```
 
 #### calls
@@ -596,7 +566,6 @@ class DeferredToolResults:
 calls: dict[str, DeferredToolCallResult | Any] = field(
     default_factory=dict
 )
-
 ```
 
 Map of tool call IDs to results for tool calls that required external execution.
@@ -607,7 +576,6 @@ Map of tool call IDs to results for tool calls that required external execution.
 approvals: dict[str, bool | DeferredToolApprovalResult] = (
     field(default_factory=dict)
 )
-
 ```
 
 Map of tool call IDs to results for tool calls that required human-in-the-loop approval.
@@ -618,7 +586,6 @@ Map of tool call IDs to results for tool calls that required human-in-the-loop a
 ToolAgentDepsT = TypeVar(
     "ToolAgentDepsT", default=object, contravariant=True
 )
-
 ```
 
 Type variable for agent dependencies for a tool.
@@ -827,7 +794,6 @@ class Tool(Generic[ToolAgentDepsT]):
             return await self.prepare(ctx, base_tool_def)
         else:
             return base_tool_def
-
 ````
 
 #### __init__
@@ -853,7 +819,6 @@ __init__(
     timeout: float | None = None,
     function_schema: FunctionSchema | None = None
 )
-
 ```
 
 Create a new tool instance.
@@ -867,7 +832,6 @@ async def my_tool(ctx: RunContext[int], x: int, y: int) -> str:
     return f'{ctx.deps} {x} {y}'
 
 agent = Agent('test', tools=[Tool(my_tool)])
-
 ```
 
 or with a custom prepare method:
@@ -887,12 +851,27 @@ async def prep_my_tool(
         return tool_def
 
 agent = Agent('test', tools=[Tool(my_tool, prepare=prep_my_tool)])
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `function` | `ToolFuncEither[ToolAgentDepsT]` | The Python function to call as the tool. | *required* | | `takes_ctx` | `bool | None` | Whether the function takes a RunContext first argument, this is inferred if unset. | `None` | | `max_retries` | `int | None` | Maximum number of retries allowed for this tool, set to the agent default if None. | `None` | | `name` | `str | None` | Name of the tool, inferred from the function if None. | `None` | | `description` | `str | None` | Description of the tool, inferred from the function if None. | `None` | | `prepare` | `ToolPrepareFunc[ToolAgentDepsT] | None` | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc. | `None` | | `docstring_format` | `DocstringFormat` | The format of the docstring, see DocstringFormat. Defaults to 'auto', such that the format is inferred from the structure of the docstring. | `'auto'` | | `require_parameter_descriptions` | `bool` | If True, raise an error if a parameter description is missing. Defaults to False. | `False` | | `schema_generator` | `type[GenerateJsonSchema]` | The JSON schema generator class to use. Defaults to GenerateToolJsonSchema. | `GenerateToolJsonSchema` | | `strict` | `bool | None` | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. | `None` | | `sequential` | `bool` | Whether the function requires a sequential/serial execution environment. Defaults to False. | `False` | | `requires_approval` | `bool` | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. | `False` | | `metadata` | `dict[str, Any] | None` | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. | `None` | | `timeout` | `float | None` | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout). | `None` | | `function_schema` | `FunctionSchema | None` | The function schema to use for the tool. If not provided, it will be generated. | `None` |
+| Name                             | Type                              | Description                                                                                                                                 | Default                                                                                                                                                                                                                           |
+| -------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `function`                       | `ToolFuncEither[ToolAgentDepsT]`  | The Python function to call as the tool.                                                                                                    | *required*                                                                                                                                                                                                                        |
+| `takes_ctx`                      | \`bool                            | None\`                                                                                                                                      | Whether the function takes a RunContext first argument, this is inferred if unset.                                                                                                                                                |
+| `max_retries`                    | \`int                             | None\`                                                                                                                                      | Maximum number of retries allowed for this tool, set to the agent default if None.                                                                                                                                                |
+| `name`                           | \`str                             | None\`                                                                                                                                      | Name of the tool, inferred from the function if None.                                                                                                                                                                             |
+| `description`                    | \`str                             | None\`                                                                                                                                      | Description of the tool, inferred from the function if None.                                                                                                                                                                      |
+| `prepare`                        | \`ToolPrepareFunc[ToolAgentDepsT] | None\`                                                                                                                                      | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc. |
+| `docstring_format`               | `DocstringFormat`                 | The format of the docstring, see DocstringFormat. Defaults to 'auto', such that the format is inferred from the structure of the docstring. | `'auto'`                                                                                                                                                                                                                          |
+| `require_parameter_descriptions` | `bool`                            | If True, raise an error if a parameter description is missing. Defaults to False.                                                           | `False`                                                                                                                                                                                                                           |
+| `schema_generator`               | `type[GenerateJsonSchema]`        | The JSON schema generator class to use. Defaults to GenerateToolJsonSchema.                                                                 | `GenerateToolJsonSchema`                                                                                                                                                                                                          |
+| `strict`                         | \`bool                            | None\`                                                                                                                                      | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info.                                                                                                                                |
+| `sequential`                     | `bool`                            | Whether the function requires a sequential/serial execution environment. Defaults to False.                                                 | `False`                                                                                                                                                                                                                           |
+| `requires_approval`              | `bool`                            | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info.                        | `False`                                                                                                                                                                                                                           |
+| `metadata`                       | \`dict[str, Any]                  | None\`                                                                                                                                      | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization.                                                                                                      |
+| `timeout`                        | \`float                           | None\`                                                                                                                                      | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout).                                                                                          |
+| `function_schema`                | \`FunctionSchema                  | None\`                                                                                                                                      | The function schema to use for the tool. If not provided, it will be generated.                                                                                                                                                   |
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -994,7 +973,6 @@ def __init__(
     self.requires_approval = requires_approval
     self.metadata = metadata
     self.timeout = timeout
-
 ````
 
 #### function_schema
@@ -1010,7 +988,6 @@ function_schema: FunctionSchema = (
         require_parameter_descriptions=require_parameter_descriptions,
     )
 )
-
 ```
 
 The base JSON schema for the tool's parameters.
@@ -1028,18 +1005,26 @@ from_schema(
     takes_ctx: bool = False,
     sequential: bool = False,
 ) -> Self
-
 ```
 
 Creates a Pydantic tool from a function and a JSON schema.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `function` | `Callable[..., Any]` | The function to call. This will be called with keywords only, and no validation of the arguments will be performed. | *required* | | `name` | `str` | The unique name of the tool that clearly communicates its purpose | *required* | | `description` | `str | None` | Used to tell the model how/when/why to use the tool. You can provide few-shot examples as a part of the description. | *required* | | `json_schema` | `JsonSchemaValue` | The schema for the function arguments | *required* | | `takes_ctx` | `bool` | An optional boolean parameter indicating whether the function accepts the context object as an argument. | `False` | | `sequential` | `bool` | Whether the function requires a sequential/serial execution environment. Defaults to False. | `False` |
+| Name          | Type                 | Description                                                                                                         | Default                                                                                                              |
+| ------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `function`    | `Callable[..., Any]` | The function to call. This will be called with keywords only, and no validation of the arguments will be performed. | *required*                                                                                                           |
+| `name`        | `str`                | The unique name of the tool that clearly communicates its purpose                                                   | *required*                                                                                                           |
+| `description` | \`str                | None\`                                                                                                              | Used to tell the model how/when/why to use the tool. You can provide few-shot examples as a part of the description. |
+| `json_schema` | `JsonSchemaValue`    | The schema for the function arguments                                                                               | *required*                                                                                                           |
+| `takes_ctx`   | `bool`               | An optional boolean parameter indicating whether the function accepts the context object as an argument.            | `False`                                                                                                              |
+| `sequential`  | `bool`               | Whether the function requires a sequential/serial execution environment. Defaults to False.                         | `False`                                                                                                              |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Self` | A Pydantic tool that calls the function |
+| Type   | Description                             |
+| ------ | --------------------------------------- |
+| `Self` | A Pydantic tool that calls the function |
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -1088,7 +1073,6 @@ def from_schema(
         function_schema=function_schema,
         sequential=sequential,
     )
-
 ```
 
 #### prepare_tool_def
@@ -1097,7 +1081,6 @@ def from_schema(
 prepare_tool_def(
     ctx: RunContext[ToolAgentDepsT],
 ) -> ToolDefinition | None
-
 ```
 
 Get the tool definition.
@@ -1106,7 +1089,9 @@ By default, this method creates a tool definition, then either returns it, or ca
 
 Returns:
 
-| Type | Description | | --- | --- | | `ToolDefinition | None` | return a ToolDefinition or None if the tools should not be registered for this run. |
+| Type             | Description |
+| ---------------- | ----------- |
+| \`ToolDefinition | None\`      |
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -1126,14 +1111,12 @@ async def prepare_tool_def(self, ctx: RunContext[ToolAgentDepsT]) -> ToolDefinit
         return await self.prepare(ctx, base_tool_def)
     else:
         return base_tool_def
-
 ```
 
 ### ObjectJsonSchema
 
 ```python
 ObjectJsonSchema: TypeAlias = dict[str, Any]
-
 ```
 
 Type representing JSON schema of an object, e.g. where `"type": "object"`.
@@ -1148,7 +1131,6 @@ With PEP-728 this should be a TypedDict with `type: Literal['object']`, and `ext
 ToolKind: TypeAlias = Literal[
     "function", "output", "external", "unapproved"
 ]
-
 ```
 
 Kind of tool.
@@ -1232,14 +1214,12 @@ class ToolDefinition:
         return self.kind in ('external', 'unapproved')
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the tool.
@@ -1253,7 +1233,6 @@ parameters_json_schema: ObjectJsonSchema = field(
         "properties": {},
     }
 )
-
 ```
 
 The JSON schema for the tool's parameters.
@@ -1262,7 +1241,6 @@ The JSON schema for the tool's parameters.
 
 ```python
 description: str | None = None
-
 ```
 
 The description of the tool.
@@ -1271,7 +1249,6 @@ The description of the tool.
 
 ```python
 outer_typed_dict_key: str | None = None
-
 ```
 
 The key in the outer [TypedDict] that wraps an output tool.
@@ -1282,7 +1259,6 @@ This will only be set for output tools which don't have an `object` JSON schema.
 
 ```python
 strict: bool | None = None
-
 ```
 
 Whether to enforce (vendor-specific) strict JSON schema validation for tool calls.
@@ -1297,7 +1273,6 @@ Note: this is currently supported by OpenAI and Anthropic models.
 
 ```python
 sequential: bool = False
-
 ```
 
 Whether this tool requires a sequential/serial execution environment.
@@ -1306,21 +1281,19 @@ Whether this tool requires a sequential/serial execution environment.
 
 ```python
 kind: ToolKind = field(default='function')
-
 ```
 
 The kind of tool:
 
 - `'function'`: a tool that will be executed by Pydantic AI during an agent run and has its result returned to the model
 - `'output'`: a tool that passes through an output value that ends the run
-- `'external'`: a tool whose result will be produced outside of the Pydantic AI agent run in which it was called, because it depends on an upstream service (or user) or could take longer to generate than it's reasonable to keep the agent process running. See the [tools documentation](../../deferred-tools/#deferred-tools) for more info.
-- `'unapproved'`: a tool that requires human-in-the-loop approval. See the [tools documentation](../../deferred-tools/#human-in-the-loop-tool-approval) for more info.
+- `'external'`: a tool whose result will be produced outside of the Pydantic AI agent run in which it was called, because it depends on an upstream service (or user) or could take longer to generate than it's reasonable to keep the agent process running. See the [tools documentation](https://ai.pydantic.dev/deferred-tools/#deferred-tools) for more info.
+- `'unapproved'`: a tool that requires human-in-the-loop approval. See the [tools documentation](https://ai.pydantic.dev/deferred-tools/#human-in-the-loop-tool-approval) for more info.
 
 #### metadata
 
 ```python
 metadata: dict[str, Any] | None = None
-
 ```
 
 Tool metadata that can be set by the toolset this tool came from. It is not sent to the model, but can be used for filtering and tool behavior customization.
@@ -1331,7 +1304,6 @@ For MCP tools, this contains the `meta`, `annotations`, and `output_schema` fiel
 
 ```python
 timeout: float | None = None
-
 ```
 
 Timeout in seconds for tool execution.
@@ -1342,9 +1314,8 @@ If the tool takes longer than this, a retry prompt is returned to the model. Def
 
 ```python
 defer: bool
-
 ```
 
 Whether calls to this tool will be deferred.
 
-See the [tools documentation](../../deferred-tools/#deferred-tools) for more info.
+See the [tools documentation](https://ai.pydantic.dev/deferred-tools/#deferred-tools) for more info.

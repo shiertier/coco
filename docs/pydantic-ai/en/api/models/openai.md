@@ -2,13 +2,12 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for OpenAI](../../../models/openai/).
+For details on how to set up authentication with this model, see [model configuration for OpenAI](https://ai.pydantic.dev/models/openai/index.md).
 
 ### OpenAIModelName
 
 ```python
 OpenAIModelName = str | AllModels
-
 ```
 
 Possible OpenAI model names.
@@ -23,7 +22,6 @@ Using this more broad type for the model name instead of the ChatModel definitio
 MCP_SERVER_TOOL_CONNECTOR_URI_SCHEME: Literal[
     "x-openai-connector"
 ] = "x-openai-connector"
-
 ```
 
 Prefix for OpenAI connector IDs. OpenAI supports either a URL or a connector ID when passing MCP configuration to a model, by using that prefix like `x-openai-connector:<connector-id>` in a URL, you can pass a connector ID to a model.
@@ -89,14 +87,12 @@ class OpenAIChatModelSettings(ModelSettings, total=False):
 
     See the [OpenAI Prompt Caching documentation](https://platform.openai.com/docs/guides/prompt-caching#how-it-works) for more information.
     """
-
 ```
 
 #### openai_reasoning_effort
 
 ```python
 openai_reasoning_effort: ReasoningEffort
-
 ```
 
 Constrains effort on reasoning for [reasoning models](https://platform.openai.com/docs/guides/reasoning).
@@ -107,7 +103,6 @@ Currently supported values are `low`, `medium`, and `high`. Reducing reasoning e
 
 ```python
 openai_logprobs: bool
-
 ```
 
 Include log probabilities in the response.
@@ -118,7 +113,6 @@ For Chat models, these will be included in `ModelResponse.provider_details['logp
 
 ```python
 openai_top_logprobs: int
-
 ```
 
 Include log probabilities of the top n tokens in the response.
@@ -127,7 +121,6 @@ Include log probabilities of the top n tokens in the response.
 
 ```python
 openai_user: str
-
 ```
 
 A unique identifier representing the end-user, which can help OpenAI monitor and detect abuse.
@@ -140,7 +133,6 @@ See [OpenAI's safety best practices](https://platform.openai.com/docs/guides/saf
 openai_service_tier: Literal[
     "auto", "default", "flex", "priority"
 ]
-
 ```
 
 The service tier to use for the model request.
@@ -151,7 +143,6 @@ Currently supported values are `auto`, `default`, `flex`, and `priority`. For mo
 
 ```python
 openai_prediction: ChatCompletionPredictionContentParam
-
 ```
 
 Enables [predictive outputs](https://platform.openai.com/docs/guides/predicted-outputs).
@@ -162,7 +153,6 @@ This feature is currently only supported for some OpenAI models.
 
 ```python
 openai_prompt_cache_key: str
-
 ```
 
 Used by OpenAI to cache responses for similar requests to optimize your cache hit rates.
@@ -173,7 +163,6 @@ See the [OpenAI Prompt Caching documentation](https://platform.openai.com/docs/g
 
 ```python
 openai_prompt_cache_retention: Literal['in-memory', '24h']
-
 ```
 
 The retention policy for the prompt cache. Set to 24h to enable extended prompt caching, which keeps cached prefixes active for longer, up to a maximum of 24 hours.
@@ -196,7 +185,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 @deprecated('Use `OpenAIChatModelSettings` instead.')
 class OpenAIModelSettings(OpenAIChatModelSettings, total=False):
     """Deprecated alias for `OpenAIChatModelSettings`."""
-
 ```
 
 ### OpenAIResponsesModelSettings
@@ -291,7 +279,6 @@ class OpenAIResponsesModelSettings(OpenAIChatModelSettings, total=False):
 
     Corresponds to the `file_search_call.results` value of the `include` parameter in the Responses API.
     """
-
 ```
 
 #### openai_builtin_tools
@@ -302,7 +289,6 @@ openai_builtin_tools: Sequence[
     | WebSearchToolParam
     | ComputerToolParam
 ]
-
 ```
 
 The provided OpenAI built-in tools to use.
@@ -315,7 +301,6 @@ See [OpenAI's built-in tools](https://platform.openai.com/docs/guides/tools?api-
 openai_reasoning_generate_summary: Literal[
     "detailed", "concise"
 ]
-
 ```
 
 Deprecated alias for `openai_reasoning_summary`.
@@ -326,7 +311,6 @@ Deprecated alias for `openai_reasoning_summary`.
 openai_reasoning_summary: Literal[
     "detailed", "concise", "auto"
 ]
-
 ```
 
 A summary of the reasoning performed by the model.
@@ -339,18 +323,16 @@ Check the [OpenAI Reasoning documentation](https://platform.openai.com/docs/guid
 
 ```python
 openai_send_reasoning_ids: bool
-
 ```
 
 Whether to send the unique IDs of reasoning, text, and function call parts from the message history to the model. Enabled by default for reasoning models.
 
-This can result in errors like `"Item 'rs_123' of type 'reasoning' was provided without its required following item."` if the message history you're sending does not match exactly what was received from the Responses API in a previous response, for example if you're using a [history processor](../../../message-history/#processing-message-history). In that case, you'll want to disable this.
+This can result in errors like `"Item 'rs_123' of type 'reasoning' was provided without its required following item."` if the message history you're sending does not match exactly what was received from the Responses API in a previous response, for example if you're using a [history processor](https://ai.pydantic.dev/message-history/#processing-message-history). In that case, you'll want to disable this.
 
 #### openai_truncation
 
 ```python
 openai_truncation: Literal['disabled', 'auto']
-
 ```
 
 The truncation strategy to use for the model response.
@@ -364,7 +346,6 @@ It can be either:
 
 ```python
 openai_text_verbosity: Literal['low', 'medium', 'high']
-
 ```
 
 Constrains the verbosity of the model's text response.
@@ -375,7 +356,6 @@ Lower values will result in more concise responses, while higher values will res
 
 ```python
 openai_previous_response_id: Literal['auto'] | str
-
 ```
 
 The ID of a previous response from the model to use as the starting point for a continued conversation.
@@ -388,7 +368,6 @@ This enables the model to use server-side conversation state and faithfully refe
 
 ```python
 openai_include_code_execution_outputs: bool
-
 ```
 
 Whether to include the code execution results in the response.
@@ -399,7 +378,6 @@ Corresponds to the `code_interpreter_call.outputs` value of the `include` parame
 
 ```python
 openai_include_web_search_sources: bool
-
 ```
 
 Whether to include the web search results in the response.
@@ -410,7 +388,6 @@ Corresponds to the `web_search_call.action.sources` value of the `include` param
 
 ```python
 openai_include_file_search_results: bool
-
 ```
 
 Whether to include the file search results in the response.
@@ -449,24 +426,10 @@ class OpenAIChatModel(Model):
         self,
         model_name: OpenAIModelName,
         *,
-        provider: Literal[
-            'azure',
-            'deepseek',
-            'cerebras',
-            'fireworks',
-            'github',
-            'grok',
-            'heroku',
-            'moonshotai',
-            'ollama',
+        provider: OpenAIChatCompatibleProvider
+        | Literal[
             'openai',
             'openai-chat',
-            'openrouter',
-            'together',
-            'vercel',
-            'litellm',
-            'nebius',
-            'ovhcloud',
             'gateway',
         ]
         | Provider[AsyncOpenAI] = 'openai',
@@ -480,24 +443,10 @@ class OpenAIChatModel(Model):
         self,
         model_name: OpenAIModelName,
         *,
-        provider: Literal[
-            'azure',
-            'deepseek',
-            'cerebras',
-            'fireworks',
-            'github',
-            'grok',
-            'heroku',
-            'moonshotai',
-            'ollama',
+        provider: OpenAIChatCompatibleProvider
+        | Literal[
             'openai',
             'openai-chat',
-            'openrouter',
-            'together',
-            'vercel',
-            'litellm',
-            'nebius',
-            'ovhcloud',
             'gateway',
         ]
         | Provider[AsyncOpenAI] = 'openai',
@@ -510,24 +459,10 @@ class OpenAIChatModel(Model):
         self,
         model_name: OpenAIModelName,
         *,
-        provider: Literal[
-            'azure',
-            'deepseek',
-            'cerebras',
-            'fireworks',
-            'github',
-            'grok',
-            'heroku',
-            'moonshotai',
-            'ollama',
+        provider: OpenAIChatCompatibleProvider
+        | Literal[
             'openai',
             'openai-chat',
-            'openrouter',
-            'together',
-            'vercel',
-            'litellm',
-            'nebius',
-            'ovhcloud',
             'gateway',
         ]
         | Provider[AsyncOpenAI] = 'openai',
@@ -749,7 +684,7 @@ class OpenAIChatModel(Model):
         """
         return chat.ChatCompletion.model_validate(response.model_dump())
 
-    def _process_provider_details(self, response: chat.ChatCompletion) -> dict[str, Any]:
+    def _process_provider_details(self, response: chat.ChatCompletion) -> dict[str, Any] | None:
         """Hook that response content to provider details.
 
         This method may be overridden by subclasses of `OpenAIChatModel` to apply custom mappings.
@@ -767,10 +702,8 @@ class OpenAIChatModel(Model):
                 f'Invalid response from {self.system} chat completions endpoint, expected JSON data'
             )
 
-        if response.created:
-            timestamp = number_to_datetime(response.created)
-        else:
-            timestamp = _now_utc()
+        timestamp = _now_utc()
+        if not response.created:
             response.created = int(timestamp.timestamp())
 
         # Workaround for local Ollama which sometimes returns a `None` finish reason.
@@ -806,12 +739,18 @@ class OpenAIChatModel(Model):
                 part.tool_call_id = _guard_tool_call_id(part)
                 items.append(part)
 
+        provider_details = self._process_provider_details(response)
+        if response.created:  # pragma: no branch
+            if provider_details is None:
+                provider_details = {}
+            provider_details['timestamp'] = number_to_datetime(response.created)
+
         return ModelResponse(
             parts=items,
             usage=self._map_usage(response),
             model_name=response.model,
             timestamp=timestamp,
-            provider_details=self._process_provider_details(response),
+            provider_details=provider_details or None,
             provider_response_id=response.id,
             provider_name=self._provider.name,
             provider_url=self._provider.base_url,
@@ -866,9 +805,9 @@ class OpenAIChatModel(Model):
             _model_name=model_name,
             _model_profile=self.profile,
             _response=peekable_response,
-            _timestamp=number_to_datetime(first_chunk.created),
             _provider_name=self._provider.name,
             _provider_url=self._provider.base_url,
+            _provider_timestamp=number_to_datetime(first_chunk.created) if first_chunk.created else None,
         )
 
     @property
@@ -1213,7 +1152,6 @@ class OpenAIChatModel(Model):
             ]
         )
         return ChatCompletionContentPartTextParam(text=text, type='text')
-
 ```
 
 #### __init__
@@ -1223,32 +1161,13 @@ __init__(
     model_name: OpenAIModelName,
     *,
     provider: (
-        Literal[
-            "azure",
-            "deepseek",
-            "cerebras",
-            "fireworks",
-            "github",
-            "grok",
-            "heroku",
-            "moonshotai",
-            "ollama",
-            "openai",
-            "openai-chat",
-            "openrouter",
-            "together",
-            "vercel",
-            "litellm",
-            "nebius",
-            "ovhcloud",
-            "gateway",
-        ]
+        OpenAIChatCompatibleProvider
+        | Literal["openai", "openai-chat", "gateway"]
         | Provider[AsyncOpenAI]
     ) = "openai",
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1256,26 +1175,8 @@ __init__(
     model_name: OpenAIModelName,
     *,
     provider: (
-        Literal[
-            "azure",
-            "deepseek",
-            "cerebras",
-            "fireworks",
-            "github",
-            "grok",
-            "heroku",
-            "moonshotai",
-            "ollama",
-            "openai",
-            "openai-chat",
-            "openrouter",
-            "together",
-            "vercel",
-            "litellm",
-            "nebius",
-            "ovhcloud",
-            "gateway",
-        ]
+        OpenAIChatCompatibleProvider
+        | Literal["openai", "openai-chat", "gateway"]
         | Provider[AsyncOpenAI]
     ) = "openai",
     profile: ModelProfileSpec | None = None,
@@ -1284,7 +1185,6 @@ __init__(
     ) = None,
     settings: ModelSettings | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1292,26 +1192,8 @@ __init__(
     model_name: OpenAIModelName,
     *,
     provider: (
-        Literal[
-            "azure",
-            "deepseek",
-            "cerebras",
-            "fireworks",
-            "github",
-            "grok",
-            "heroku",
-            "moonshotai",
-            "ollama",
-            "openai",
-            "openai-chat",
-            "openrouter",
-            "together",
-            "vercel",
-            "litellm",
-            "nebius",
-            "ovhcloud",
-            "gateway",
-        ]
+        OpenAIChatCompatibleProvider
+        | Literal["openai", "openai-chat", "gateway"]
         | Provider[AsyncOpenAI]
     ) = "openai",
     profile: ModelProfileSpec | None = None,
@@ -1320,14 +1202,19 @@ __init__(
     ) = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an OpenAI model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `OpenAIModelName` | The name of the OpenAI model to use. List of model names available here (Unfortunately, despite being ask to do so, OpenAI do not provide .inv files for their API). | *required* | | `provider` | `Literal['azure', 'deepseek', 'cerebras', 'fireworks', 'github', 'grok', 'heroku', 'moonshotai', 'ollama', 'openai', 'openai-chat', 'openrouter', 'together', 'vercel', 'litellm', 'nebius', 'ovhcloud', 'gateway'] | Provider[AsyncOpenAI]` | The provider to use. Defaults to 'openai'. | `'openai'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `system_prompt_role` | `OpenAISystemPromptRole | None` | The role to use for the system prompt message. If not provided, defaults to 'system'. In the future, this may be inferred from the model name. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name                 | Type                           | Description                                                                                                                                                          | Default                                                                                                                                        |
+| -------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name`         | `OpenAIModelName`              | The name of the OpenAI model to use. List of model names available here (Unfortunately, despite being ask to do so, OpenAI do not provide .inv files for their API). | *required*                                                                                                                                     |
+| `provider`           | \`OpenAIChatCompatibleProvider | Literal['openai', 'openai-chat', 'gateway']                                                                                                                          | Provider[AsyncOpenAI]\`                                                                                                                        |
+| `profile`            | \`ModelProfileSpec             | None\`                                                                                                                                                               | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                |
+| `system_prompt_role` | \`OpenAISystemPromptRole       | None\`                                                                                                                                                               | The role to use for the system prompt message. If not provided, defaults to 'system'. In the future, this may be inferred from the model name. |
+| `settings`           | \`ModelSettings                | None\`                                                                                                                                                               | Default model settings for this model instance.                                                                                                |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 
@@ -1336,24 +1223,10 @@ def __init__(
     self,
     model_name: OpenAIModelName,
     *,
-    provider: Literal[
-        'azure',
-        'deepseek',
-        'cerebras',
-        'fireworks',
-        'github',
-        'grok',
-        'heroku',
-        'moonshotai',
-        'ollama',
+    provider: OpenAIChatCompatibleProvider
+    | Literal[
         'openai',
         'openai-chat',
-        'openrouter',
-        'together',
-        'vercel',
-        'litellm',
-        'nebius',
-        'ovhcloud',
         'gateway',
     ]
     | Provider[AsyncOpenAI] = 'openai',
@@ -1384,14 +1257,12 @@ def __init__(
 
     if system_prompt_role is not None:
         self.profile = OpenAIModelProfile(openai_system_prompt_role=system_prompt_role).update(self.profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: OpenAIModelName
-
 ```
 
 The model name.
@@ -1400,7 +1271,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -1411,7 +1281,6 @@ The model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 Return the set of builtin tool types this model can handle.
@@ -1423,14 +1292,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     """Return the set of builtin tool types this model can handle."""
     return frozenset({WebSearchTool})
-
 ```
 
 #### profile
 
 ```python
 profile: ModelProfile
-
 ```
 
 The model profile.
@@ -1458,7 +1325,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 @dataclass(init=False)
 class OpenAIModel(OpenAIChatModel):
     """Deprecated alias for `OpenAIChatModel`."""
-
 ```
 
 ### OpenAIResponsesModel
@@ -1494,16 +1360,9 @@ class OpenAIResponsesModel(Model):
         self,
         model_name: OpenAIModelName,
         *,
-        provider: Literal[
+        provider: OpenAIResponsesCompatibleProvider
+        | Literal[
             'openai',
-            'deepseek',
-            'azure',
-            'openrouter',
-            'grok',
-            'fireworks',
-            'together',
-            'nebius',
-            'ovhcloud',
             'gateway',
         ]
         | Provider[AsyncOpenAI] = 'openai',
@@ -1585,14 +1444,15 @@ class OpenAIResponsesModel(Model):
         self, response: responses.Response, model_request_parameters: ModelRequestParameters
     ) -> ModelResponse:
         """Process a non-streamed response, and prepare a message to return."""
-        timestamp = number_to_datetime(response.created_at)
         items: list[ModelResponsePart] = []
         for item in response.output:
             if isinstance(item, responses.ResponseReasoningItem):
                 signature = item.encrypted_content
                 # Handle raw CoT content from gpt-oss models
+                provider_details: dict[str, Any] = {}
                 raw_content: list[str] | None = [c.text for c in item.content] if item.content else None
-                provider_details: dict[str, Any] | None = {'raw_content': raw_content} if raw_content else None
+                if raw_content:
+                    provider_details['raw_content'] = raw_content
 
                 if item.summary:
                     for summary in item.summary:
@@ -1603,7 +1463,7 @@ class OpenAIResponsesModel(Model):
                                 id=item.id,
                                 signature=signature,
                                 provider_name=self.system if (signature or provider_details) else None,
-                                provider_details=provider_details,
+                                provider_details=provider_details or None,
                             )
                         )
                         # We only need to store the signature and raw_content once.
@@ -1616,7 +1476,7 @@ class OpenAIResponsesModel(Model):
                             id=item.id,
                             signature=signature,
                             provider_name=self.system if (signature or provider_details) else None,
-                            provider_details=provider_details,
+                            provider_details=provider_details or None,
                         )
                     )
             elif isinstance(item, responses.ResponseOutputMessage):
@@ -1677,22 +1537,24 @@ class OpenAIResponsesModel(Model):
                 pass
 
         finish_reason: FinishReason | None = None
-        provider_details: dict[str, Any] | None = None
+        provider_details: dict[str, Any] = {}
         raw_finish_reason = details.reason if (details := response.incomplete_details) else response.status
         if raw_finish_reason:
-            provider_details = {'finish_reason': raw_finish_reason}
+            provider_details['finish_reason'] = raw_finish_reason
             finish_reason = _RESPONSES_FINISH_REASON_MAP.get(raw_finish_reason)
+        if response.created_at:  # pragma: no branch
+            provider_details['timestamp'] = number_to_datetime(response.created_at)
 
         return ModelResponse(
             parts=items,
             usage=_map_usage(response, self._provider.name, self._provider.base_url, self.model_name),
             model_name=response.model,
             provider_response_id=response.id,
-            timestamp=timestamp,
+            timestamp=_now_utc(),
             provider_name=self._provider.name,
             provider_url=self._provider.base_url,
             finish_reason=finish_reason,
-            provider_details=provider_details,
+            provider_details=provider_details or None,
         )
 
     async def _process_streamed_response(
@@ -1711,9 +1573,11 @@ class OpenAIResponsesModel(Model):
             model_request_parameters=model_request_parameters,
             _model_name=first_chunk.response.model,
             _response=peekable_response,
-            _timestamp=number_to_datetime(first_chunk.response.created_at),
             _provider_name=self._provider.name,
             _provider_url=self._provider.base_url,
+            _provider_timestamp=number_to_datetime(first_chunk.response.created_at)
+            if first_chunk.response.created_at
+            else None,
         )
 
     @overload
@@ -1924,13 +1788,14 @@ class OpenAIResponsesModel(Model):
             elif isinstance(tool, ImageGenerationTool):  # pragma: no branch
                 has_image_generating_tool = True
                 size = _resolve_openai_image_generation_size(tool)
+                output_compression = tool.output_compression if tool.output_compression is not None else 100
                 tools.append(
                     responses.tool_param.ImageGeneration(
                         type='image_generation',
                         background=tool.background,
                         input_fidelity=tool.input_fidelity,
                         moderation=tool.moderation,
-                        output_compression=tool.output_compression,
+                        output_compression=output_compression,
                         output_format=tool.output_format or 'png',
                         partial_images=tool.partial_images,
                         quality=tool.quality,
@@ -2350,7 +2215,6 @@ class OpenAIResponsesModel(Model):
                 else:
                     assert_never(item)
         return responses.EasyInputMessageParam(role='user', content=content)
-
 ```
 
 #### __init__
@@ -2360,31 +2224,25 @@ __init__(
     model_name: OpenAIModelName,
     *,
     provider: (
-        Literal[
-            "openai",
-            "deepseek",
-            "azure",
-            "openrouter",
-            "grok",
-            "fireworks",
-            "together",
-            "nebius",
-            "ovhcloud",
-            "gateway",
-        ]
+        OpenAIResponsesCompatibleProvider
+        | Literal["openai", "gateway"]
         | Provider[AsyncOpenAI]
     ) = "openai",
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an OpenAI Responses model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `OpenAIModelName` | The name of the OpenAI model to use. | *required* | | `provider` | `Literal['openai', 'deepseek', 'azure', 'openrouter', 'grok', 'fireworks', 'together', 'nebius', 'ovhcloud', 'gateway'] | Provider[AsyncOpenAI]` | The provider to use. Defaults to 'openai'. | `'openai'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name         | Type                                | Description                          | Default                                                                                         |
+| ------------ | ----------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `model_name` | `OpenAIModelName`                   | The name of the OpenAI model to use. | *required*                                                                                      |
+| `provider`   | \`OpenAIResponsesCompatibleProvider | Literal['openai', 'gateway']         | Provider[AsyncOpenAI]\`                                                                         |
+| `profile`    | \`ModelProfileSpec                  | None\`                               | The model profile to use. Defaults to a profile picked by the provider based on the model name. |
+| `settings`   | \`ModelSettings                     | None\`                               | Default model settings for this model instance.                                                 |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 
@@ -2393,16 +2251,9 @@ def __init__(
     self,
     model_name: OpenAIModelName,
     *,
-    provider: Literal[
+    provider: OpenAIResponsesCompatibleProvider
+    | Literal[
         'openai',
-        'deepseek',
-        'azure',
-        'openrouter',
-        'grok',
-        'fireworks',
-        'together',
-        'nebius',
-        'ovhcloud',
         'gateway',
     ]
     | Provider[AsyncOpenAI] = 'openai',
@@ -2425,14 +2276,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: OpenAIModelName
-
 ```
 
 The model name.
@@ -2441,7 +2290,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -2452,7 +2300,6 @@ The model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 Return the set of builtin tool types this model can handle.
@@ -2464,7 +2311,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/openai.py`
 def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     """Return the set of builtin tool types this model can handle."""
     return frozenset({WebSearchTool, CodeExecutionTool, FileSearchTool, MCPServerTool, ImageGenerationTool})
-
 ```
 
 ### OpenAIStreamedResponse
@@ -2483,11 +2329,14 @@ class OpenAIStreamedResponse(StreamedResponse):
     _model_name: OpenAIModelName
     _model_profile: ModelProfile
     _response: AsyncIterable[ChatCompletionChunk]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _provider_timestamp: datetime | None = None
+    _timestamp: datetime = field(default_factory=_now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:
+        if self._provider_timestamp is not None:  # pragma: no branch
+            self.provider_details = {'timestamp': self._provider_timestamp}
         async for chunk in self._validate_response():
             self._usage += self._map_usage(chunk)
 
@@ -2509,8 +2358,8 @@ class OpenAIStreamedResponse(StreamedResponse):
             if raw_finish_reason := choice.finish_reason:
                 self.finish_reason = self._map_finish_reason(raw_finish_reason)
 
-            if provider_details := self._map_provider_details(chunk):
-                self.provider_details = provider_details
+            if provider_details := self._map_provider_details(chunk):  # pragma: no branch
+                self.provider_details = {**(self.provider_details or {}), **provider_details}
 
             for event in self._map_part_delta(choice):
                 yield event
@@ -2635,14 +2484,12 @@ class OpenAIStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: OpenAIModelName
-
 ```
 
 Get the model name of the response.
@@ -2651,7 +2498,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -2660,7 +2506,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -2669,7 +2514,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.
@@ -2689,11 +2533,15 @@ class OpenAIResponsesStreamedResponse(StreamedResponse):
 
     _model_name: OpenAIModelName
     _response: AsyncIterable[responses.ResponseStreamEvent]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _provider_timestamp: datetime | None = None
+    _timestamp: datetime = field(default_factory=_now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:  # noqa: C901
+        if self._provider_timestamp is not None:  # pragma: no branch
+            self.provider_details = {'timestamp': self._provider_timestamp}
+
         async for chunk in self._response:
             # NOTE: You can inspect the builtin tools used checking the `ResponseCompletedEvent`.
             if isinstance(chunk, responses.ResponseCompletedEvent):
@@ -2703,7 +2551,7 @@ class OpenAIResponsesStreamedResponse(StreamedResponse):
                     details.reason if (details := chunk.response.incomplete_details) else chunk.response.status
                 )
                 if raw_finish_reason:  # pragma: no branch
-                    self.provider_details = {'finish_reason': raw_finish_reason}
+                    self.provider_details = {**(self.provider_details or {}), 'finish_reason': raw_finish_reason}
                     self.finish_reason = _RESPONSES_FINISH_REASON_MAP.get(raw_finish_reason)
 
             elif isinstance(chunk, responses.ResponseContentPartAddedEvent):
@@ -3042,14 +2890,12 @@ class OpenAIResponsesStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: OpenAIModelName
-
 ```
 
 Get the model name of the response.
@@ -3058,7 +2904,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -3067,7 +2912,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -3076,7 +2920,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

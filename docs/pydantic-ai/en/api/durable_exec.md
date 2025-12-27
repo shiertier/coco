@@ -13,6 +13,8 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         wrapped: AbstractAgent[AgentDepsT, OutputDataT],
         *,
         name: str | None = None,
+        models: Mapping[str, Model] | None = None,
+        provider_factory: TemporalProviderFactory | None = None,
         event_stream_handler: EventStreamHandler[AgentDepsT] | None = None,
         activity_config: ActivityConfig | None = None,
         model_activity_config: ActivityConfig | None = None,
@@ -38,6 +40,16 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         Args:
             wrapped: The agent to wrap.
             name: Optional unique agent name to use in the Temporal activities' names. If not provided, the agent's `name` will be used.
+            models:
+                Optional mapping of model instances to register with the agent.
+                Keys define the names that can be referenced at runtime and the values are `Model` instances.
+                Registered model instances can be passed directly to `run(model=...)`.
+                If the wrapped agent doesn't have a model set and none is provided to `run()`,
+                the first model in this mapping will be used as the default.
+            provider_factory:
+                Optional callable used when instantiating models from provider strings (those supplied at runtime).
+                The callable receives the provider name and the current run context, allowing custom configuration such as injecting API keys stored on `deps`.
+                Note: This factory is only used inside Temporal workflows. Outside workflows, model strings are resolved using the default provider behavior.
             event_stream_handler: Optional event stream handler to use instead of the one set on the wrapped agent.
             activity_config: The base Temporal activity config to use for all activities. If no config is provided, a `start_to_close_timeout` of 60 seconds is used.
             model_activity_config: The Temporal activity config to use for model request activities. This is merged with the base activity config.
@@ -47,7 +59,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                 If a tool does not use IO, you can specify `False` to disable using an activity.
                 Note that the tool is required to be defined as an `async` function as non-async tools are run in threads which are non-deterministic and thus not supported outside of activities.
             run_context_type: The `TemporalRunContext` subclass to use to serialize and deserialize the run context for use inside a Temporal activity.
-                By default, only the `deps`, `retries`, `tool_call_id`, `tool_name`, `retry` and `run_step` attributes will be available.
+                By default, only the `deps`, `run_id`, `metadata`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available.
                 To make another attribute available, create a `TemporalRunContext` subclass with a custom `serialize_run_context` class method that returns a dictionary that includes the attribute.
             temporalize_toolset_func: Optional function to use to prepare "leaf" toolsets (i.e. those that implement their own tool listing and calling) for Temporal by wrapping them in a `TemporalWrapperToolset` that moves methods that require IO to Temporal activities.
                 If not provided, only `FunctionToolset` and `MCPServer` will be prepared for Temporal.
@@ -59,6 +71,10 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         self._event_stream_handler = event_stream_handler
         self.run_context_type = run_context_type
 
+        if self.name is None:
+            raise UserError(
+                "An agent needs to have a unique `name` in order to be used with Temporal. The name will be used to identify the agent's activities within the workflow."
+            )
         # start_to_close_timeout is required
         activity_config = activity_config or ActivityConfig(start_to_close_timeout=timedelta(seconds=60))
 
@@ -76,18 +92,9 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         toolset_activity_config = toolset_activity_config or {}
         tool_activity_config = tool_activity_config or {}
 
-        if self.name is None:
-            raise UserError(
-                "An agent needs to have a unique `name` in order to be used with Temporal. The name will be used to identify the agent's activities within the workflow."
-            )
-
         activity_name_prefix = f'agent__{self.name}'
 
         activities: list[Callable[..., Any]] = []
-        if not isinstance(wrapped.model, Model):
-            raise UserError(
-                'An agent needs to have a `model` in order to be used with Temporal, it cannot be set at agent run time.'
-            )
 
         async def event_stream_handler_activity(params: _EventStreamHandlerParams, deps: AgentDepsT) -> None:
             # We can never get here without an `event_stream_handler`, as `TemporalAgent.run_stream` and `TemporalAgent.iter` raise an error saying to use `TemporalAgent.run` instead,
@@ -109,15 +116,20 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         )
         activities.append(self.event_stream_handler_activity)
 
+        # Get wrapped agent's model if it's a Model instance
+        wrapped_model = wrapped.model if isinstance(wrapped.model, Model) else None
         temporal_model = TemporalModel(
-            wrapped.model,
+            wrapped_model,
             activity_name_prefix=activity_name_prefix,
             activity_config=activity_config | model_activity_config,
             deps_type=self.deps_type,
             run_context_type=self.run_context_type,
             event_stream_handler=self.event_stream_handler,
+            models=models,
+            provider_factory=provider_factory,
         )
         activities.extend(temporal_model.temporal_activities)
+        self._temporal_model = temporal_model
 
         def temporalize_toolset(toolset: AbstractToolset[AgentDepsT]) -> AbstractToolset[AgentDepsT]:
             id = toolset.id
@@ -140,7 +152,6 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
 
         temporal_toolsets = [toolset.visit_and_replace(temporalize_toolset) for toolset in wrapped.toolsets]
 
-        self._model = temporal_model
         self._toolsets = temporal_toolsets
         self._temporal_activities = activities
 
@@ -158,7 +169,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
 
     @property
     def model(self) -> Model:
-        return self._model
+        return self._temporal_model
 
     @property
     def event_stream_handler(self) -> EventStreamHandler[AgentDepsT] | None:
@@ -189,7 +200,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
 
     @property
     def toolsets(self) -> Sequence[AbstractToolset[AgentDepsT]]:
-        with self._temporal_overrides():
+        with self._temporal_overrides(force=True):
             return super().toolsets
 
     @property
@@ -197,10 +208,23 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         return self._temporal_activities
 
     @contextmanager
-    def _temporal_overrides(self) -> Iterator[None]:
+    def _temporal_overrides(
+        self, *, model: models.Model | models.KnownModelName | str | None = None, force: bool = False
+    ) -> Iterator[None]:
+        """Context manager for workflow-specific overrides.
+
+        When called outside a workflow, this is a no-op.
+        When called inside a workflow, it overrides the model and toolsets.
+        """
+        if not workflow.in_workflow() and not force:
+            yield
+            return
+
         # We reset tools here as the temporalized function toolset is already in self._toolsets.
+        # Override model and set the model for workflow execution
         with (
-            super().override(model=self._model, toolsets=self._toolsets, tools=[]),
+            super().override(model=self._temporal_model, toolsets=self._toolsets, tools=[]),
+            self._temporal_model.using_model(model),
             _utils.disable_threads(),
         ):
             temporal_active_token = self._temporal_overrides_active.set(True)
@@ -227,6 +251,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -247,6 +272,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -266,6 +292,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -296,11 +323,14 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             message_history: History of the conversation so far.
             deferred_tool_results: Optional results for deferred tool calls in the message history.
             model: Optional model to use for this run, required if `model` was not set when creating the agent.
+                Inside workflows, only registered model instances, registered names, or provider strings are valid.
             instructions: Optional additional instructions to use for this run.
             deps: Optional dependencies to use for this run.
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             event_stream_handler: Optional event stream handler to use for this run.
@@ -309,23 +339,28 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         Returns:
             The result of the run.
         """
-        if workflow.in_workflow() and event_stream_handler is not None:
-            raise UserError(
-                'Event stream handler cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
-            )
+        if workflow.in_workflow():
+            if event_stream_handler is not None:
+                raise UserError(
+                    'Event stream handler cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
+                )
+            resolved_model = None
+        else:
+            resolved_model = self._temporal_model.resolve_model(model)
 
-        with self._temporal_overrides():
+        with self._temporal_overrides(model=model):
             return await super().run(
                 user_prompt,
                 output_type=output_type,
                 message_history=message_history,
                 deferred_tool_results=deferred_tool_results,
-                model=model,
+                model=resolved_model,
                 instructions=instructions,
                 deps=deps,
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
@@ -347,6 +382,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -367,6 +403,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -386,6 +423,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -420,6 +458,8 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             event_stream_handler: Optional event stream handler to use for this run.
@@ -444,6 +484,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -465,6 +506,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -485,6 +527,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -505,6 +548,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -537,6 +581,8 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -562,6 +608,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             event_stream_handler=event_stream_handler,
@@ -584,6 +631,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -603,6 +651,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -621,6 +670,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -671,6 +721,8 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -696,6 +748,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -715,6 +768,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
@@ -735,6 +789,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -755,6 +810,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -801,6 +857,7 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                                 timestamp=datetime.datetime(...),
                             )
                         ],
+                        timestamp=datetime.datetime(...),
                         run_id='...',
                     )
                 ),
@@ -832,6 +889,8 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -846,26 +905,29 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                     'Set an `event_stream_handler` on the agent and use `agent.run()` instead.'
                 )
 
-            if model is not None:
-                raise UserError(
-                    'Model cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
-                )
+            assert model is None, 'Temporal overrides must set the model before `agent.iter()` is invoked'
+
             if toolsets is not None:
                 raise UserError(
                     'Toolsets cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
                 )
+
+            resolved_model = None
+        else:
+            resolved_model = self._temporal_model.resolve_model(model)
 
         async with super().iter(
             user_prompt=user_prompt,
             output_type=output_type,
             message_history=message_history,
             deferred_tool_results=deferred_tool_results,
-            model=model,
+            model=resolved_model,
             instructions=instructions,
             deps=deps,
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -920,7 +982,6 @@ class TemporalAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             instructions=instructions,
         ):
             yield
-
 ````
 
 #### __init__
@@ -930,6 +991,8 @@ __init__(
     wrapped: AbstractAgent[AgentDepsT, OutputDataT],
     *,
     name: str | None = None,
+    models: Mapping[str, Model] | None = None,
+    provider_factory: TemporalProviderFactory | None = None,
     event_stream_handler: (
         EventStreamHandler[AgentDepsT] | None
     ) = None,
@@ -959,7 +1022,6 @@ __init__(
         AbstractToolset[AgentDepsT],
     ] = temporalize_toolset
 )
-
 ```
 
 Wrap an agent to enable it to be used inside a Temporal workflow, by automatically offloading model requests, tool calls, and MCP server communication to Temporal activities.
@@ -968,7 +1030,19 @@ After wrapping, the original agent can still be used as normal outside of the Te
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `wrapped` | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to wrap. | *required* | | `name` | `str | None` | Optional unique agent name to use in the Temporal activities' names. If not provided, the agent's name will be used. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use instead of the one set on the wrapped agent. | `None` | | `activity_config` | `ActivityConfig | None` | The base Temporal activity config to use for all activities. If no config is provided, a start_to_close_timeout of 60 seconds is used. | `None` | | `model_activity_config` | `ActivityConfig | None` | The Temporal activity config to use for model request activities. This is merged with the base activity config. | `None` | | `toolset_activity_config` | `dict[str, ActivityConfig] | None` | The Temporal activity config to use for get-tools and call-tool activities for specific toolsets identified by ID. This is merged with the base activity config. | `None` | | `tool_activity_config` | `dict[str, dict[str, ActivityConfig | Literal[False]]] | None` | The Temporal activity config to use for specific tool call activities identified by toolset ID and tool name. This is merged with the base and toolset-specific activity configs. If a tool does not use IO, you can specify False to disable using an activity. Note that the tool is required to be defined as an async function as non-async tools are run in threads which are non-deterministic and thus not supported outside of activities. | `None` | | `run_context_type` | `type[TemporalRunContext[AgentDepsT]]` | The TemporalRunContext subclass to use to serialize and deserialize the run context for use inside a Temporal activity. By default, only the deps, retries, tool_call_id, tool_name, retry and run_step attributes will be available. To make another attribute available, create a TemporalRunContext subclass with a custom serialize_run_context class method that returns a dictionary that includes the attribute. | `TemporalRunContext[AgentDepsT]` | | `temporalize_toolset_func` | `Callable[[AbstractToolset[AgentDepsT], str, ActivityConfig, dict[str, ActivityConfig | Literal[False]], type[AgentDepsT], type[TemporalRunContext[AgentDepsT]]], AbstractToolset[AgentDepsT]]` | Optional function to use to prepare "leaf" toolsets (i.e. those that implement their own tool listing and calling) for Temporal by wrapping them in a TemporalWrapperToolset that moves methods that require IO to Temporal activities. If not provided, only FunctionToolset and MCPServer will be prepared for Temporal. The function takes the toolset, the activity name prefix, the toolset-specific activity config, the tool-specific activity configs and the run context type. | `temporalize_toolset` |
+| Name                       | Type                                                                                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrapped`                  | `AbstractAgent[AgentDepsT, OutputDataT]`                                                  | The agent to wrap.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | *required*                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `name`                     | \`str                                                                                     | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Optional unique agent name to use in the Temporal activities' names. If not provided, the agent's name will be used.                                                                                                                                                                                                                                                                                                                                                                    |
+| `models`                   | \`Mapping[str, Model]                                                                     | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Optional mapping of model instances to register with the agent. Keys define the names that can be referenced at runtime and the values are Model instances. Registered model instances can be passed directly to run(model=...). If the wrapped agent doesn't have a model set and none is provided to run(), the first model in this mapping will be used as the default.                                                                                                              |
+| `provider_factory`         | \`TemporalProviderFactory                                                                 | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Optional callable used when instantiating models from provider strings (those supplied at runtime). The callable receives the provider name and the current run context, allowing custom configuration such as injecting API keys stored on deps. Note: This factory is only used inside Temporal workflows. Outside workflows, model strings are resolved using the default provider behavior.                                                                                         |
+| `event_stream_handler`     | \`EventStreamHandler[AgentDepsT]                                                          | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Optional event stream handler to use instead of the one set on the wrapped agent.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `activity_config`          | \`ActivityConfig                                                                          | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | The base Temporal activity config to use for all activities. If no config is provided, a start_to_close_timeout of 60 seconds is used.                                                                                                                                                                                                                                                                                                                                                  |
+| `model_activity_config`    | \`ActivityConfig                                                                          | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | The Temporal activity config to use for model request activities. This is merged with the base activity config.                                                                                                                                                                                                                                                                                                                                                                         |
+| `toolset_activity_config`  | \`dict[str, ActivityConfig]                                                               | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | The Temporal activity config to use for get-tools and call-tool activities for specific toolsets identified by ID. This is merged with the base activity config.                                                                                                                                                                                                                                                                                                                        |
+| `tool_activity_config`     | \`dict\[str, dict\[str, ActivityConfig                                                    | Literal[False]\]\]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | None\`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `run_context_type`         | `type[TemporalRunContext[AgentDepsT]]`                                                    | The TemporalRunContext subclass to use to serialize and deserialize the run context for use inside a Temporal activity. By default, only the deps, run_id, metadata, retries, tool_call_id, tool_name, tool_call_approved, retry, max_retries, run_step, usage, and partial_output attributes will be available. To make another attribute available, create a TemporalRunContext subclass with a custom serialize_run_context class method that returns a dictionary that includes the attribute. | `TemporalRunContext[AgentDepsT]`                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `temporalize_toolset_func` | \`Callable\[\[AbstractToolset[AgentDepsT], str, ActivityConfig, dict\[str, ActivityConfig | Literal[False]\], type[AgentDepsT], type\[TemporalRunContext[AgentDepsT]\]\], AbstractToolset[AgentDepsT]\]\`                                                                                                                                                                                                                                                                                                                                                                                      | Optional function to use to prepare "leaf" toolsets (i.e. those that implement their own tool listing and calling) for Temporal by wrapping them in a TemporalWrapperToolset that moves methods that require IO to Temporal activities. If not provided, only FunctionToolset and MCPServer will be prepared for Temporal. The function takes the toolset, the activity name prefix, the toolset-specific activity config, the tool-specific activity configs and the run context type. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -978,6 +1052,8 @@ def __init__(
     wrapped: AbstractAgent[AgentDepsT, OutputDataT],
     *,
     name: str | None = None,
+    models: Mapping[str, Model] | None = None,
+    provider_factory: TemporalProviderFactory | None = None,
     event_stream_handler: EventStreamHandler[AgentDepsT] | None = None,
     activity_config: ActivityConfig | None = None,
     model_activity_config: ActivityConfig | None = None,
@@ -1003,6 +1079,16 @@ def __init__(
     Args:
         wrapped: The agent to wrap.
         name: Optional unique agent name to use in the Temporal activities' names. If not provided, the agent's `name` will be used.
+        models:
+            Optional mapping of model instances to register with the agent.
+            Keys define the names that can be referenced at runtime and the values are `Model` instances.
+            Registered model instances can be passed directly to `run(model=...)`.
+            If the wrapped agent doesn't have a model set and none is provided to `run()`,
+            the first model in this mapping will be used as the default.
+        provider_factory:
+            Optional callable used when instantiating models from provider strings (those supplied at runtime).
+            The callable receives the provider name and the current run context, allowing custom configuration such as injecting API keys stored on `deps`.
+            Note: This factory is only used inside Temporal workflows. Outside workflows, model strings are resolved using the default provider behavior.
         event_stream_handler: Optional event stream handler to use instead of the one set on the wrapped agent.
         activity_config: The base Temporal activity config to use for all activities. If no config is provided, a `start_to_close_timeout` of 60 seconds is used.
         model_activity_config: The Temporal activity config to use for model request activities. This is merged with the base activity config.
@@ -1012,7 +1098,7 @@ def __init__(
             If a tool does not use IO, you can specify `False` to disable using an activity.
             Note that the tool is required to be defined as an `async` function as non-async tools are run in threads which are non-deterministic and thus not supported outside of activities.
         run_context_type: The `TemporalRunContext` subclass to use to serialize and deserialize the run context for use inside a Temporal activity.
-            By default, only the `deps`, `retries`, `tool_call_id`, `tool_name`, `retry` and `run_step` attributes will be available.
+            By default, only the `deps`, `run_id`, `metadata`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available.
             To make another attribute available, create a `TemporalRunContext` subclass with a custom `serialize_run_context` class method that returns a dictionary that includes the attribute.
         temporalize_toolset_func: Optional function to use to prepare "leaf" toolsets (i.e. those that implement their own tool listing and calling) for Temporal by wrapping them in a `TemporalWrapperToolset` that moves methods that require IO to Temporal activities.
             If not provided, only `FunctionToolset` and `MCPServer` will be prepared for Temporal.
@@ -1024,6 +1110,10 @@ def __init__(
     self._event_stream_handler = event_stream_handler
     self.run_context_type = run_context_type
 
+    if self.name is None:
+        raise UserError(
+            "An agent needs to have a unique `name` in order to be used with Temporal. The name will be used to identify the agent's activities within the workflow."
+        )
     # start_to_close_timeout is required
     activity_config = activity_config or ActivityConfig(start_to_close_timeout=timedelta(seconds=60))
 
@@ -1041,18 +1131,9 @@ def __init__(
     toolset_activity_config = toolset_activity_config or {}
     tool_activity_config = tool_activity_config or {}
 
-    if self.name is None:
-        raise UserError(
-            "An agent needs to have a unique `name` in order to be used with Temporal. The name will be used to identify the agent's activities within the workflow."
-        )
-
     activity_name_prefix = f'agent__{self.name}'
 
     activities: list[Callable[..., Any]] = []
-    if not isinstance(wrapped.model, Model):
-        raise UserError(
-            'An agent needs to have a `model` in order to be used with Temporal, it cannot be set at agent run time.'
-        )
 
     async def event_stream_handler_activity(params: _EventStreamHandlerParams, deps: AgentDepsT) -> None:
         # We can never get here without an `event_stream_handler`, as `TemporalAgent.run_stream` and `TemporalAgent.iter` raise an error saying to use `TemporalAgent.run` instead,
@@ -1074,15 +1155,20 @@ def __init__(
     )
     activities.append(self.event_stream_handler_activity)
 
+    # Get wrapped agent's model if it's a Model instance
+    wrapped_model = wrapped.model if isinstance(wrapped.model, Model) else None
     temporal_model = TemporalModel(
-        wrapped.model,
+        wrapped_model,
         activity_name_prefix=activity_name_prefix,
         activity_config=activity_config | model_activity_config,
         deps_type=self.deps_type,
         run_context_type=self.run_context_type,
         event_stream_handler=self.event_stream_handler,
+        models=models,
+        provider_factory=provider_factory,
     )
     activities.extend(temporal_model.temporal_activities)
+    self._temporal_model = temporal_model
 
     def temporalize_toolset(toolset: AbstractToolset[AgentDepsT]) -> AbstractToolset[AgentDepsT]:
         id = toolset.id
@@ -1105,12 +1191,10 @@ def __init__(
 
     temporal_toolsets = [toolset.visit_and_replace(temporalize_toolset) for toolset in wrapped.toolsets]
 
-    self._model = temporal_model
     self._toolsets = temporal_toolsets
     self._temporal_activities = activities
 
     self._temporal_overrides_active: ContextVar[bool] = ContextVar('_temporal_overrides_active', default=False)
-
 ```
 
 #### run
@@ -1130,6 +1214,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1145,7 +1230,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -1163,6 +1247,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1178,7 +1263,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -1196,6 +1280,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1212,7 +1297,6 @@ run(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Run the agent with a user prompt in async mode.
@@ -1230,16 +1314,33 @@ async def main():
     agent_run = await agent.run('What is the capital of France?')
     print(agent_run.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -1257,6 +1358,7 @@ async def run(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -1287,11 +1389,14 @@ async def run(
         message_history: History of the conversation so far.
         deferred_tool_results: Optional results for deferred tool calls in the message history.
         model: Optional model to use for this run, required if `model` was not set when creating the agent.
+            Inside workflows, only registered model instances, registered names, or provider strings are valid.
         instructions: Optional additional instructions to use for this run.
         deps: Optional dependencies to use for this run.
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         event_stream_handler: Optional event stream handler to use for this run.
@@ -1300,30 +1405,34 @@ async def run(
     Returns:
         The result of the run.
     """
-    if workflow.in_workflow() and event_stream_handler is not None:
-        raise UserError(
-            'Event stream handler cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
-        )
+    if workflow.in_workflow():
+        if event_stream_handler is not None:
+            raise UserError(
+                'Event stream handler cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
+            )
+        resolved_model = None
+    else:
+        resolved_model = self._temporal_model.resolve_model(model)
 
-    with self._temporal_overrides():
+    with self._temporal_overrides(model=model):
         return await super().run(
             user_prompt,
             output_type=output_type,
             message_history=message_history,
             deferred_tool_results=deferred_tool_results,
-            model=model,
+            model=resolved_model,
             instructions=instructions,
             deps=deps,
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
             event_stream_handler=event_stream_handler or self.event_stream_handler,
             **_deprecated_kwargs,
         )
-
 ````
 
 #### run_sync
@@ -1343,6 +1452,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1358,7 +1468,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -1376,6 +1485,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1391,7 +1501,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -1409,6 +1518,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1425,7 +1535,6 @@ run_sync(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Synchronously run the agent with a user prompt.
@@ -1442,16 +1551,33 @@ agent = Agent('openai:gpt-4o')
 result_sync = agent.run_sync('What is the capital of Italy?')
 print(result_sync.output)
 #> The capital of Italy is Rome.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -1469,6 +1595,7 @@ def run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -1503,6 +1630,8 @@ def run_sync(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         event_stream_handler: Optional event stream handler to use for this run.
@@ -1527,13 +1656,13 @@ def run_sync(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
         event_stream_handler=event_stream_handler,
         **_deprecated_kwargs,
     )
-
 ````
 
 #### run_stream
@@ -1553,6 +1682,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1570,7 +1700,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -1588,6 +1717,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1605,7 +1735,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -1623,6 +1752,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1639,7 +1769,6 @@ run_stream(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AsyncIterator[StreamedRunResult[AgentDepsT, Any]]
-
 ```
 
 Run the agent with a user prompt in async mode, returning a streamed response.
@@ -1655,16 +1784,33 @@ async def main():
     async with agent.run_stream('What is the capital of the UK?') as response:
         print(await response.get_output())
         #> The capital of the UK is London.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager.          |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
+| Type                                                | Description            |
+| --------------------------------------------------- | ---------------------- |
+| `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -1683,6 +1829,7 @@ async def run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -1715,6 +1862,8 @@ async def run_stream(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -1740,6 +1889,7 @@ async def run_stream(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         event_stream_handler=event_stream_handler,
@@ -1747,7 +1897,6 @@ async def run_stream(
         **_deprecated_kwargs,
     ) as result:
         yield result
-
 ````
 
 #### run_stream_events
@@ -1767,6 +1916,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1781,7 +1931,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[OutputDataT]
 ]
-
 ```
 
 ```python
@@ -1799,6 +1948,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1813,7 +1963,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -1831,6 +1980,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -1845,7 +1995,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[Any]
 ]
-
 ```
 
 Run the agent with a user prompt in async mode and stream events from the run.
@@ -1877,18 +2026,35 @@ async def main():
         ),
     ]
     '''
-
 ```
 
 Arguments are the same as for self.run, except that `event_stream_handler` is now allowed.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | An async iterable of stream events AgentStreamEvent and finally a AgentRunResultEvent with the final | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | run result. |
+| Type                              | Description                  |
+| --------------------------------- | ---------------------------- |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -1906,6 +2072,7 @@ def run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -1956,6 +2123,8 @@ def run_stream_events(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -1981,11 +2150,11 @@ def run_stream_events(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
     )
-
 ````
 
 #### iter
@@ -2005,6 +2174,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     builtin_tools: (
         Sequence[
@@ -2020,7 +2190,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -2038,6 +2207,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -2053,7 +2223,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -2071,6 +2240,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -2084,7 +2254,6 @@ iter(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AsyncIterator[AgentRun[AgentDepsT, Any]]
-
 ```
 
 A contextmanager which can be used to iterate over the agent graph's nodes as they are executed.
@@ -2125,6 +2294,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -2142,16 +2312,32 @@ async def main():
     '''
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
+| Type                                       | Description            |
+| ------------------------------------------ | ---------------------- |
+| `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -2170,6 +2356,7 @@ async def iter(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2216,6 +2403,7 @@ async def iter(
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -2247,6 +2435,8 @@ async def iter(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -2261,33 +2451,35 @@ async def iter(
                 'Set an `event_stream_handler` on the agent and use `agent.run()` instead.'
             )
 
-        if model is not None:
-            raise UserError(
-                'Model cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
-            )
+        assert model is None, 'Temporal overrides must set the model before `agent.iter()` is invoked'
+
         if toolsets is not None:
             raise UserError(
                 'Toolsets cannot be set at agent run time inside a Temporal workflow, it must be set at agent creation time.'
             )
+
+        resolved_model = None
+    else:
+        resolved_model = self._temporal_model.resolve_model(model)
 
     async with super().iter(
         user_prompt=user_prompt,
         output_type=output_type,
         message_history=message_history,
         deferred_tool_results=deferred_tool_results,
-        model=model,
+        model=resolved_model,
         instructions=instructions,
         deps=deps,
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
         **_deprecated_kwargs,
     ) as run:
         yield run
-
 ````
 
 #### override
@@ -2310,16 +2502,22 @@ override(
     ) = UNSET,
     instructions: Instructions[AgentDepsT] | Unset = UNSET
 ) -> Iterator[None]
-
 ```
 
 Context manager to temporarily override agent name, dependencies, model, toolsets, tools, or instructions.
 
-This is particularly useful when testing. You can find an example of this [here](../../testing/#overriding-model-via-pytest-fixtures).
+This is particularly useful when testing. You can find an example of this [here](https://ai.pydantic.dev/testing/#overriding-model-via-pytest-fixtures).
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str | Unset` | The name to use instead of the name passed to the agent constructor and agent run. | `UNSET` | | `deps` | `AgentDepsT | Unset` | The dependencies to use instead of the dependencies passed to the agent run. | `UNSET` | | `model` | `Model | KnownModelName | str | Unset` | The model to use instead of the model passed to the agent run. | `UNSET` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | Unset` | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. | `UNSET` | | `tools` | `Sequence[Tool[AgentDepsT] | ToolFuncEither[AgentDepsT, ...]] | Unset` | The tools to use instead of the tools registered with the agent. | `UNSET` | | `instructions` | `Instructions[AgentDepsT] | Unset` | The instructions to use instead of the instructions registered with the agent. | `UNSET` |
+| Name           | Type                                      | Description                       | Default                                                                                    |
+| -------------- | ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `name`         | \`str                                     | Unset\`                           | The name to use instead of the name passed to the agent constructor and agent run.         |
+| `deps`         | \`AgentDepsT                              | Unset\`                           | The dependencies to use instead of the dependencies passed to the agent run.               |
+| `model`        | \`Model                                   | KnownModelName                    | str                                                                                        |
+| `toolsets`     | \`Sequence\[AbstractToolset[AgentDepsT]\] | Unset\`                           | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. |
+| `tools`        | \`Sequence\[Tool[AgentDepsT]              | ToolFuncEither[AgentDepsT, ...]\] | Unset\`                                                                                    |
+| `instructions` | \`Instructions[AgentDepsT]                | Unset\`                           | The instructions to use instead of the instructions registered with the agent.             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_agent.py`
 
@@ -2371,7 +2569,6 @@ def override(
         instructions=instructions,
     ):
         yield
-
 ```
 
 ### LogfirePlugin
@@ -2423,7 +2620,6 @@ class LogfirePlugin(SimplePlugin):
                 )
 
         return await next(config)
-
 ```
 
 ### TemporalRunContext
@@ -2432,7 +2628,7 @@ Bases: `RunContext[AgentDepsT]`
 
 The RunContext subclass to use to serialize and deserialize the run context for use inside a Temporal activity.
 
-By default, only the `deps`, `run_id`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available. To make another attribute available, create a `TemporalRunContext` subclass with a custom `serialize_run_context` class method that returns a dictionary that includes the attribute and pass it to TemporalAgent.
+By default, only the `deps`, `run_id`, `metadata`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available. To make another attribute available, create a `TemporalRunContext` subclass with a custom `serialize_run_context` class method that returns a dictionary that includes the attribute and pass it to TemporalAgent.
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_run_context.py`
 
@@ -2440,7 +2636,7 @@ Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_run_context.
 class TemporalRunContext(RunContext[AgentDepsT]):
     """The [`RunContext`][pydantic_ai.tools.RunContext] subclass to use to serialize and deserialize the run context for use inside a Temporal activity.
 
-    By default, only the `deps`, `run_id`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available.
+    By default, only the `deps`, `run_id`, `metadata`, `retries`, `tool_call_id`, `tool_name`, `tool_call_approved`, `retry`, `max_retries`, `run_step`, `usage`, and `partial_output` attributes will be available.
     To make another attribute available, create a `TemporalRunContext` subclass with a custom `serialize_run_context` class method that returns a dictionary that includes the attribute and pass it to [`TemporalAgent`][pydantic_ai.durable_exec.temporal.TemporalAgent].
     """
 
@@ -2469,6 +2665,7 @@ class TemporalRunContext(RunContext[AgentDepsT]):
         """Serialize the run context to a `dict[str, Any]`."""
         return {
             'run_id': ctx.run_id,
+            'metadata': ctx.metadata,
             'retries': ctx.retries,
             'tool_call_id': ctx.tool_call_id,
             'tool_name': ctx.tool_name,
@@ -2484,7 +2681,6 @@ class TemporalRunContext(RunContext[AgentDepsT]):
     def deserialize_run_context(cls, ctx: dict[str, Any], deps: Any) -> TemporalRunContext[Any]:
         """Deserialize the run context from a `dict[str, Any]`."""
         return cls(**ctx, deps=deps)
-
 ```
 
 #### serialize_run_context
@@ -2493,7 +2689,6 @@ class TemporalRunContext(RunContext[AgentDepsT]):
 serialize_run_context(
     ctx: RunContext[Any],
 ) -> dict[str, Any]
-
 ```
 
 Serialize the run context to a `dict[str, Any]`.
@@ -2506,6 +2701,7 @@ def serialize_run_context(cls, ctx: RunContext[Any]) -> dict[str, Any]:
     """Serialize the run context to a `dict[str, Any]`."""
     return {
         'run_id': ctx.run_id,
+        'metadata': ctx.metadata,
         'retries': ctx.retries,
         'tool_call_id': ctx.tool_call_id,
         'tool_name': ctx.tool_name,
@@ -2516,7 +2712,6 @@ def serialize_run_context(cls, ctx: RunContext[Any]) -> dict[str, Any]:
         'partial_output': ctx.partial_output,
         'usage': ctx.usage,
     }
-
 ```
 
 #### deserialize_run_context
@@ -2525,7 +2720,6 @@ def serialize_run_context(cls, ctx: RunContext[Any]) -> dict[str, Any]:
 deserialize_run_context(
     ctx: dict[str, Any], deps: Any
 ) -> TemporalRunContext[Any]
-
 ```
 
 Deserialize the run context from a `dict[str, Any]`.
@@ -2537,7 +2731,80 @@ Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_run_context.
 def deserialize_run_context(cls, ctx: dict[str, Any], deps: Any) -> TemporalRunContext[Any]:
     """Deserialize the run context from a `dict[str, Any]`."""
     return cls(**ctx, deps=deps)
+```
 
+### TemporalWrapperToolset
+
+Bases: `WrapperToolset[AgentDepsT]`, `ABC`
+
+Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_toolset.py`
+
+```python
+class TemporalWrapperToolset(WrapperToolset[AgentDepsT], ABC):
+    @property
+    def id(self) -> str:
+        # An error is raised in `TemporalAgent` if no `id` is set.
+        assert self.wrapped.id is not None
+        return self.wrapped.id
+
+    @property
+    @abstractmethod
+    def temporal_activities(self) -> list[Callable[..., Any]]:
+        raise NotImplementedError
+
+    def visit_and_replace(
+        self, visitor: Callable[[AbstractToolset[AgentDepsT]], AbstractToolset[AgentDepsT]]
+    ) -> AbstractToolset[AgentDepsT]:
+        # Temporalized toolsets cannot be swapped out after the fact.
+        return self
+
+    async def __aenter__(self) -> Self:
+        if not workflow.in_workflow():  # pragma: no cover
+            await self.wrapped.__aenter__()
+        return self
+
+    async def __aexit__(self, *args: Any) -> bool | None:
+        if not workflow.in_workflow():  # pragma: no cover
+            return await self.wrapped.__aexit__(*args)
+        return None
+
+    async def _wrap_call_tool_result(self, coro: Awaitable[Any]) -> CallToolResult:
+        try:
+            result = await coro
+            return _ToolReturn(result=result)
+        except ApprovalRequired as e:
+            return _ApprovalRequired(metadata=e.metadata)
+        except CallDeferred as e:
+            return _CallDeferred(metadata=e.metadata)
+        except ModelRetry as e:
+            return _ModelRetry(message=e.message)
+
+    def _unwrap_call_tool_result(self, result: CallToolResult) -> Any:
+        if isinstance(result, _ToolReturn):
+            return result.result
+        elif isinstance(result, _ApprovalRequired):
+            raise ApprovalRequired(metadata=result.metadata)
+        elif isinstance(result, _CallDeferred):
+            raise CallDeferred(metadata=result.metadata)
+        elif isinstance(result, _ModelRetry):
+            raise ModelRetry(result.message)
+        else:
+            assert_never(result)
+
+    async def _call_tool_in_activity(
+        self,
+        name: str,
+        tool_args: dict[str, Any],
+        ctx: RunContext[AgentDepsT],
+        tool: ToolsetTool[AgentDepsT],
+    ) -> CallToolResult:
+        """Call a tool inside an activity, re-validating args that were deserialized.
+
+        The tool args will already have been validated into their proper types in the `ToolManager`,
+        but `execute_activity` would have turned them into simple Python types again, so we need to re-validate them.
+        """
+        args_dict = tool.args_validator.validate_python(tool_args)
+        return await self._wrap_call_tool_result(self.wrapped.call_tool(name, args_dict, ctx, tool))
 ```
 
 ### PydanticAIWorkflow
@@ -2551,7 +2818,6 @@ class PydanticAIWorkflow:
     """Temporal Workflow base class that provides `__pydantic_ai_agents__` for direct agent registration."""
 
     __pydantic_ai_agents__: Sequence[TemporalAgent[Any, Any]]
-
 ```
 
 ### PydanticAIPlugin
@@ -2598,7 +2864,6 @@ class PydanticAIPlugin(SimplePlugin):
         config['activities'] = activities
 
         return config
-
 ```
 
 ### AgentPlugin
@@ -2618,7 +2883,6 @@ class AgentPlugin(SimplePlugin):
             name='AgentPlugin',
             activities=agent.temporal_activities,
         )
-
 ```
 
 ### DBOSAgent
@@ -2729,6 +2993,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: ModelSettings | None = None,
             usage_limits: _usage.UsageLimits | None = None,
             usage: _usage.RunUsage | None = None,
+            metadata: AgentMetadata[AgentDepsT] | None = None,
             infer_name: bool = True,
             toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
             builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2747,6 +3012,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
                     model_settings=model_settings,
                     usage_limits=usage_limits,
                     usage=usage,
+                    metadata=metadata,
                     infer_name=infer_name,
                     toolsets=toolsets,
                     builtin_tools=builtin_tools,
@@ -2770,6 +3036,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             instructions: Instructions[AgentDepsT] = None,
             usage_limits: _usage.UsageLimits | None = None,
             usage: _usage.RunUsage | None = None,
+            metadata: AgentMetadata[AgentDepsT] | None = None,
             infer_name: bool = True,
             toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
             builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2788,6 +3055,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
                     model_settings=model_settings,
                     usage_limits=usage_limits,
                     usage=usage,
+                    metadata=metadata,
                     infer_name=infer_name,
                     toolsets=toolsets,
                     builtin_tools=builtin_tools,
@@ -2862,6 +3130,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2882,6 +3151,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2901,6 +3171,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -2936,6 +3207,8 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -2959,6 +3232,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -2980,6 +3254,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3000,6 +3275,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3019,6 +3295,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3053,6 +3330,8 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -3076,6 +3355,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -3097,6 +3377,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3117,6 +3398,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3137,6 +3419,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3169,6 +3452,8 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -3194,6 +3479,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -3216,6 +3502,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3235,6 +3522,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3253,6 +3541,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3303,6 +3592,8 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -3330,6 +3621,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3350,6 +3642,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3370,6 +3663,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3416,6 +3710,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
                                 timestamp=datetime.datetime(...),
                             )
                         ],
+                        timestamp=datetime.datetime(...),
                         run_id='...',
                     )
                 ),
@@ -3447,6 +3742,8 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -3471,6 +3768,7 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
@@ -3516,7 +3814,6 @@ class DBOSAgent(WrapperAgent[AgentDepsT, OutputDataT], DBOSConfiguredInstance):
             instructions=instructions,
         ):
             yield
-
 ````
 
 #### __init__
@@ -3532,7 +3829,6 @@ __init__(
     mcp_step_config: StepConfig | None = None,
     model_step_config: StepConfig | None = None
 )
-
 ```
 
 Wrap an agent to enable it with DBOS durable workflows, by automatically offloading model requests, tool calls, and MCP server communication to DBOS steps.
@@ -3541,7 +3837,13 @@ After wrapping, the original agent can still be used as normal outside of the DB
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `wrapped` | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to wrap. | *required* | | `name` | `str | None` | Optional unique agent name to use as the DBOS configured instance name. If not provided, the agent's name will be used. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use instead of the one set on the wrapped agent. | `None` | | `mcp_step_config` | `StepConfig | None` | The base DBOS step config to use for MCP server steps. If no config is provided, use the default settings of DBOS. | `None` | | `model_step_config` | `StepConfig | None` | The DBOS step config to use for model request steps. If no config is provided, use the default settings of DBOS. | `None` |
+| Name                   | Type                                     | Description        | Default                                                                                                                 |
+| ---------------------- | ---------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `wrapped`              | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to wrap. | *required*                                                                                                              |
+| `name`                 | \`str                                    | None\`             | Optional unique agent name to use as the DBOS configured instance name. If not provided, the agent's name will be used. |
+| `event_stream_handler` | \`EventStreamHandler[AgentDepsT]         | None\`             | Optional event stream handler to use instead of the one set on the wrapped agent.                                       |
+| `mcp_step_config`      | \`StepConfig                             | None\`             | The base DBOS step config to use for MCP server steps. If no config is provided, use the default settings of DBOS.      |
+| `model_step_config`    | \`StepConfig                             | None\`             | The DBOS step config to use for model request steps. If no config is provided, use the default settings of DBOS.        |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -3645,6 +3947,7 @@ def __init__(
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3663,6 +3966,7 @@ def __init__(
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
@@ -3686,6 +3990,7 @@ def __init__(
         instructions: Instructions[AgentDepsT] = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3704,6 +4009,7 @@ def __init__(
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
@@ -3712,7 +4018,6 @@ def __init__(
             )
 
     self.dbos_wrapped_run_sync_workflow = wrapped_run_sync_workflow
-
 ```
 
 #### run
@@ -3732,6 +4037,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -3747,7 +4053,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -3765,6 +4070,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -3780,7 +4086,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -3798,6 +4103,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -3814,7 +4120,6 @@ run(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Run the agent with a user prompt in async mode.
@@ -3832,16 +4137,33 @@ async def main():
     agent_run = await agent.run('What is the capital of France?')
     print(agent_run.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -3859,6 +4181,7 @@ async def run(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -3894,6 +4217,8 @@ async def run(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -3917,13 +4242,13 @@ async def run(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
         event_stream_handler=event_stream_handler,
         **_deprecated_kwargs,
     )
-
 ````
 
 #### run_sync
@@ -3943,6 +4268,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -3958,7 +4284,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -3976,6 +4301,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -3991,7 +4317,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -4009,6 +4334,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4025,7 +4351,6 @@ run_sync(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Synchronously run the agent with a user prompt.
@@ -4042,16 +4367,33 @@ agent = Agent('openai:gpt-4o')
 result_sync = agent.run_sync('What is the capital of Italy?')
 print(result_sync.output)
 #> The capital of Italy is Rome.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -4069,6 +4411,7 @@ def run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -4103,6 +4446,8 @@ def run_sync(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -4126,13 +4471,13 @@ def run_sync(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
         event_stream_handler=event_stream_handler,
         **_deprecated_kwargs,
     )
-
 ````
 
 #### run_stream
@@ -4152,6 +4497,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4169,7 +4515,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -4187,6 +4532,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4204,7 +4550,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -4222,6 +4567,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4238,7 +4584,6 @@ run_stream(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AsyncIterator[StreamedRunResult[AgentDepsT, Any]]
-
 ```
 
 Run the agent with a user prompt in async mode, returning a streamed response.
@@ -4254,16 +4599,33 @@ async def main():
     async with agent.run_stream('What is the capital of the UK?') as response:
         print(await response.get_output())
         #> The capital of the UK is London.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager.          |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
+| Type                                                | Description            |
+| --------------------------------------------------- | ---------------------- |
+| `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -4282,6 +4644,7 @@ async def run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -4314,6 +4677,8 @@ async def run_stream(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -4339,6 +4704,7 @@ async def run_stream(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
@@ -4346,7 +4712,6 @@ async def run_stream(
         **_deprecated_kwargs,
     ) as result:
         yield result
-
 ````
 
 #### run_stream_events
@@ -4366,6 +4731,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4380,7 +4746,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[OutputDataT]
 ]
-
 ```
 
 ```python
@@ -4398,6 +4763,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4412,7 +4778,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -4430,6 +4795,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4444,7 +4810,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[Any]
 ]
-
 ```
 
 Run the agent with a user prompt in async mode and stream events from the run.
@@ -4476,18 +4841,35 @@ async def main():
         ),
     ]
     '''
-
 ```
 
 Arguments are the same as for self.run, except that `event_stream_handler` is now allowed.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | An async iterable of stream events AgentStreamEvent and finally a AgentRunResultEvent with the final | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | run result. |
+| Type                              | Description                  |
+| --------------------------------- | ---------------------------- |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -4505,6 +4887,7 @@ def run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -4555,6 +4938,8 @@ def run_stream_events(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -4567,7 +4952,6 @@ def run_stream_events(
         '`agent.run_stream_events()` cannot be used with DBOS. '
         'Set an `event_stream_handler` on the agent and use `agent.run()` instead.'
     )
-
 ````
 
 #### iter
@@ -4587,6 +4971,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4602,7 +4987,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -4620,6 +5004,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4635,7 +5020,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -4653,6 +5037,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -4666,7 +5051,6 @@ iter(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AsyncIterator[AgentRun[AgentDepsT, Any]]
-
 ```
 
 A contextmanager which can be used to iterate over the agent graph's nodes as they are executed.
@@ -4707,6 +5091,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -4724,16 +5109,32 @@ async def main():
     '''
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
+| Type                                       | Description            |
+| ------------------------------------------ | ---------------------- |
+| `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -4752,6 +5153,7 @@ async def iter(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -4798,6 +5200,7 @@ async def iter(
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -4829,6 +5232,8 @@ async def iter(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -4853,13 +5258,13 @@ async def iter(
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
             **_deprecated_kwargs,
         ) as run:
             yield run
-
 ````
 
 #### override
@@ -4882,16 +5287,22 @@ override(
     ) = UNSET,
     instructions: Instructions[AgentDepsT] | Unset = UNSET
 ) -> Iterator[None]
-
 ```
 
 Context manager to temporarily override agent name, dependencies, model, toolsets, tools, or instructions.
 
-This is particularly useful when testing. You can find an example of this [here](../../testing/#overriding-model-via-pytest-fixtures).
+This is particularly useful when testing. You can find an example of this [here](https://ai.pydantic.dev/testing/#overriding-model-via-pytest-fixtures).
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str | Unset` | The name to use instead of the name passed to the agent constructor and agent run. | `UNSET` | | `deps` | `AgentDepsT | Unset` | The dependencies to use instead of the dependencies passed to the agent run. | `UNSET` | | `model` | `Model | KnownModelName | str | Unset` | The model to use instead of the model passed to the agent run. | `UNSET` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | Unset` | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. | `UNSET` | | `tools` | `Sequence[Tool[AgentDepsT] | ToolFuncEither[AgentDepsT, ...]] | Unset` | The tools to use instead of the tools registered with the agent. | `UNSET` | | `instructions` | `Instructions[AgentDepsT] | Unset` | The instructions to use instead of the instructions registered with the agent. | `UNSET` |
+| Name           | Type                                      | Description                       | Default                                                                                    |
+| -------------- | ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `name`         | \`str                                     | Unset\`                           | The name to use instead of the name passed to the agent constructor and agent run.         |
+| `deps`         | \`AgentDepsT                              | Unset\`                           | The dependencies to use instead of the dependencies passed to the agent run.               |
+| `model`        | \`Model                                   | KnownModelName                    | str                                                                                        |
+| `toolsets`     | \`Sequence\[AbstractToolset[AgentDepsT]\] | Unset\`                           | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. |
+| `tools`        | \`Sequence\[Tool[AgentDepsT]              | ToolFuncEither[AgentDepsT, ...]\] | Unset\`                                                                                    |
+| `instructions` | \`Instructions[AgentDepsT]                | Unset\`                           | The instructions to use instead of the instructions registered with the agent.             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_agent.py`
 
@@ -4934,7 +5345,6 @@ def override(
         instructions=instructions,
     ):
         yield
-
 ```
 
 ### DBOSMCPServer
@@ -4965,7 +5375,6 @@ class DBOSMCPServer(DBOSMCPToolset[AgentDepsT]):
     def tool_for_tool_def(self, tool_def: ToolDefinition) -> ToolsetTool[AgentDepsT]:
         assert isinstance(self.wrapped, MCPServer)
         return self.wrapped.tool_for_tool_def(tool_def)
-
 ```
 
 ### DBOSModel
@@ -5061,7 +5470,6 @@ class DBOSModel(WrapperModel):
             messages, model_settings, model_request_parameters, run_context
         )
         yield DBOSStreamedResponse(model_request_parameters, response)
-
 ```
 
 ### StepConfig
@@ -5080,7 +5488,6 @@ class StepConfig(TypedDict, total=False):
     interval_seconds: float
     max_attempts: int
     backoff_rate: float
-
 ```
 
 ### PrefectAgent
@@ -5236,6 +5643,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5256,6 +5664,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5275,6 +5684,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5310,6 +5720,8 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             event_stream_handler: Optional event stream handler to use for this run.
@@ -5336,6 +5748,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                         model_settings=model_settings,
                         usage_limits=usage_limits,
                         usage=usage,
+                        metadata=metadata,
                         infer_name=infer_name,
                         toolsets=toolsets,
                         event_stream_handler=event_stream_handler,
@@ -5360,6 +5773,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5380,6 +5794,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5399,6 +5814,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5433,6 +5849,8 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             event_stream_handler: Optional event stream handler to use for this run.
@@ -5461,6 +5879,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                             model_settings=model_settings,
                             usage_limits=usage_limits,
                             usage=usage,
+                            metadata=metadata,
                             infer_name=infer_name,
                             toolsets=toolsets,
                             event_stream_handler=event_stream_handler,
@@ -5486,6 +5905,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5506,6 +5926,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5526,6 +5947,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5558,6 +5980,8 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -5583,6 +6007,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             event_stream_handler=event_stream_handler,
@@ -5605,6 +6030,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5624,6 +6050,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5642,6 +6069,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5692,6 +6120,8 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -5717,6 +6147,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -5736,6 +6167,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5755,6 +6187,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5774,6 +6207,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
         model_settings: ModelSettings | None = None,
         usage_limits: _usage.UsageLimits | None = None,
         usage: _usage.RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -5819,6 +6253,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                                 timestamp=datetime.datetime(...),
                             )
                         ],
+                        timestamp=datetime.datetime(...),
                         run_id='...',
                     )
                 ),
@@ -5850,6 +6285,8 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools for this run.
@@ -5874,6 +6311,7 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
             ) as run:
@@ -5912,7 +6350,6 @@ class PrefectAgent(WrapperAgent[AgentDepsT, OutputDataT]):
             name=name, deps=deps, model=model, toolsets=toolsets, tools=tools, instructions=instructions
         ):
             yield
-
 ````
 
 #### __init__
@@ -5944,7 +6381,6 @@ __init__(
         AbstractToolset[AgentDepsT],
     ] = prefectify_toolset
 )
-
 ```
 
 Wrap an agent to enable it with Prefect durable flows, by automatically offloading model requests, tool calls, and MCP server communication to Prefect tasks.
@@ -5953,7 +6389,17 @@ After wrapping, the original agent can still be used as normal outside of the Pr
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `wrapped` | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to wrap. | *required* | | `name` | `str | None` | Optional unique agent name to use as the Prefect flow name prefix. If not provided, the agent's name will be used. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use instead of the one set on the wrapped agent. | `None` | | `mcp_task_config` | `TaskConfig | None` | The base Prefect task config to use for MCP server tasks. If no config is provided, use the default settings of Prefect. | `None` | | `model_task_config` | `TaskConfig | None` | The Prefect task config to use for model request tasks. If no config is provided, use the default settings of Prefect. | `None` | | `tool_task_config` | `TaskConfig | None` | The default Prefect task config to use for tool calls. If no config is provided, use the default settings of Prefect. | `None` | | `tool_task_config_by_name` | `dict[str, TaskConfig | None] | None` | Per-tool task configuration. Keys are tool names, values are TaskConfig or None (None disables task wrapping for that tool). | `None` | | `event_stream_handler_task_config` | `TaskConfig | None` | The Prefect task config to use for the event stream handler task. If no config is provided, use the default settings of Prefect. | `None` | | `prefectify_toolset_func` | `Callable[[AbstractToolset[AgentDepsT], TaskConfig, TaskConfig, dict[str, TaskConfig | None]], AbstractToolset[AgentDepsT]]` | Optional function to use to prepare toolsets for Prefect by wrapping them in a PrefectWrapperToolset that moves methods that require IO to Prefect tasks. If not provided, only FunctionToolset and MCPServer will be prepared for Prefect. The function takes the toolset, the task config, the tool-specific task config, and the tool-specific task config by name. | `prefectify_toolset` |
+| Name                               | Type                                                                                     | Description                               | Default                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrapped`                          | `AbstractAgent[AgentDepsT, OutputDataT]`                                                 | The agent to wrap.                        | *required*                                                                                                                                                                                                                                                                                                                                                             |
+| `name`                             | \`str                                                                                    | None\`                                    | Optional unique agent name to use as the Prefect flow name prefix. If not provided, the agent's name will be used.                                                                                                                                                                                                                                                     |
+| `event_stream_handler`             | \`EventStreamHandler[AgentDepsT]                                                         | None\`                                    | Optional event stream handler to use instead of the one set on the wrapped agent.                                                                                                                                                                                                                                                                                      |
+| `mcp_task_config`                  | \`TaskConfig                                                                             | None\`                                    | The base Prefect task config to use for MCP server tasks. If no config is provided, use the default settings of Prefect.                                                                                                                                                                                                                                               |
+| `model_task_config`                | \`TaskConfig                                                                             | None\`                                    | The Prefect task config to use for model request tasks. If no config is provided, use the default settings of Prefect.                                                                                                                                                                                                                                                 |
+| `tool_task_config`                 | \`TaskConfig                                                                             | None\`                                    | The default Prefect task config to use for tool calls. If no config is provided, use the default settings of Prefect.                                                                                                                                                                                                                                                  |
+| `tool_task_config_by_name`         | \`dict\[str, TaskConfig                                                                  | None\]                                    | None\`                                                                                                                                                                                                                                                                                                                                                                 |
+| `event_stream_handler_task_config` | \`TaskConfig                                                                             | None\`                                    | The Prefect task config to use for the event stream handler task. If no config is provided, use the default settings of Prefect.                                                                                                                                                                                                                                       |
+| `prefectify_toolset_func`          | \`Callable\[\[AbstractToolset[AgentDepsT], TaskConfig, TaskConfig, dict\[str, TaskConfig | None\]\], AbstractToolset[AgentDepsT]\]\` | Optional function to use to prepare toolsets for Prefect by wrapping them in a PrefectWrapperToolset that moves methods that require IO to Prefect tasks. If not provided, only FunctionToolset and MCPServer will be prepared for Prefect. The function takes the toolset, the task config, the tool-specific task config, and the tool-specific task config by name. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -6035,7 +6481,6 @@ def __init__(
     self._in_prefect_agent_flow: ContextVar[bool] = ContextVar(
         f'_in_prefect_agent_flow_{self._name}', default=False
     )
-
 ```
 
 #### run
@@ -6055,6 +6500,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6070,7 +6516,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -6088,6 +6533,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6103,7 +6549,6 @@ run(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -6121,6 +6566,7 @@ run(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6137,7 +6583,6 @@ run(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Run the agent with a user prompt in async mode.
@@ -6155,16 +6600,33 @@ async def main():
     agent_run = await agent.run('What is the capital of France?')
     print(agent_run.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -6182,6 +6644,7 @@ async def run(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -6217,6 +6680,8 @@ async def run(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         event_stream_handler: Optional event stream handler to use for this run.
@@ -6243,6 +6708,7 @@ async def run(
                     model_settings=model_settings,
                     usage_limits=usage_limits,
                     usage=usage,
+                    metadata=metadata,
                     infer_name=infer_name,
                     toolsets=toolsets,
                     event_stream_handler=event_stream_handler,
@@ -6252,7 +6718,6 @@ async def run(
             self._in_prefect_agent_flow.reset(token)
 
     return await wrapped_run_flow()
-
 ````
 
 #### run_sync
@@ -6272,6 +6737,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6287,7 +6753,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[OutputDataT]
-
 ```
 
 ```python
@@ -6305,6 +6770,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6320,7 +6786,6 @@ run_sync(
         EventStreamHandler[AgentDepsT] | None
     ) = None
 ) -> AgentRunResult[RunOutputDataT]
-
 ```
 
 ```python
@@ -6338,6 +6803,7 @@ run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6354,7 +6820,6 @@ run_sync(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AgentRunResult[Any]
-
 ```
 
 Synchronously run the agent with a user prompt.
@@ -6371,16 +6836,33 @@ agent = Agent('openai:gpt-4o')
 result_sync = agent.run_sync('What is the capital of Italy?')
 print(result_sync.output)
 #> The capital of Italy is Rome.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run.                                                                                                                                                |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentRunResult[Any]` | The result of the run. |
+| Type                  | Description            |
+| --------------------- | ---------------------- |
+| `AgentRunResult[Any]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -6398,6 +6880,7 @@ def run_sync(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -6432,6 +6915,8 @@ def run_sync(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         event_stream_handler: Optional event stream handler to use for this run.
@@ -6460,6 +6945,7 @@ def run_sync(
                         model_settings=model_settings,
                         usage_limits=usage_limits,
                         usage=usage,
+                        metadata=metadata,
                         infer_name=infer_name,
                         toolsets=toolsets,
                         event_stream_handler=event_stream_handler,
@@ -6470,7 +6956,6 @@ def run_sync(
             self._in_prefect_agent_flow.reset(token)
 
     return wrapped_run_sync_flow()
-
 ````
 
 #### run_stream
@@ -6490,6 +6975,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6507,7 +6993,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -6525,6 +7010,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6542,7 +7028,6 @@ run_stream(
 ) -> AbstractAsyncContextManager[
     StreamedRunResult[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -6560,6 +7045,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6576,7 +7062,6 @@ run_stream(
     ) = None,
     **_deprecated_kwargs: Never
 ) -> AsyncIterator[StreamedRunResult[AgentDepsT, Any]]
-
 ```
 
 Run the agent with a user prompt in async mode, returning a streamed response.
@@ -6592,16 +7077,33 @@ async def main():
     async with agent.run_stream('What is the capital of the UK?') as response:
         print(await response.get_output())
         #> The capital of the UK is London.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` | | `event_stream_handler` | `EventStreamHandler[AgentDepsT] | None` | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
+| `event_stream_handler`  | \`EventStreamHandler[AgentDepsT]          | None\`                                                                      | Optional event stream handler to use for this run. It will receive all the events up until the final result is found, which you can then read or stream from inside the context manager.          |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
+| Type                                                | Description            |
+| --------------------------------------------------- | ---------------------- |
+| `AsyncIterator[StreamedRunResult[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -6620,6 +7122,7 @@ async def run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -6652,6 +7155,8 @@ async def run_stream(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -6677,6 +7182,7 @@ async def run_stream(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         event_stream_handler=event_stream_handler,
@@ -6684,7 +7190,6 @@ async def run_stream(
         **_deprecated_kwargs,
     ) as result:
         yield result
-
 ````
 
 #### run_stream_events
@@ -6704,6 +7209,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6718,7 +7224,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[OutputDataT]
 ]
-
 ```
 
 ```python
@@ -6736,6 +7241,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6750,7 +7256,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -6768,6 +7273,7 @@ run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6782,7 +7288,6 @@ run_stream_events(
 ) -> AsyncIterator[
     AgentStreamEvent | AgentRunResultEvent[Any]
 ]
-
 ```
 
 Run the agent with a user prompt in async mode and stream events from the run.
@@ -6814,18 +7319,35 @@ async def main():
         ),
     ]
     '''
-
 ```
 
 Arguments are the same as for self.run, except that `event_stream_handler` is now allowed.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | An async iterable of stream events AgentStreamEvent and finally a AgentRunResultEvent with the final | | `AsyncIterator[AgentStreamEvent | AgentRunResultEvent[Any]]` | run result. |
+| Type                              | Description                  |
+| --------------------------------- | ---------------------------- |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
+| \`AsyncIterator\[AgentStreamEvent | AgentRunResultEvent[Any]\]\` |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -6843,6 +7365,7 @@ def run_stream_events(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -6893,6 +7416,8 @@ def run_stream_events(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -6918,11 +7443,11 @@ def run_stream_events(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
     )
-
 ````
 
 #### iter
@@ -6942,6 +7467,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6956,7 +7482,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, OutputDataT]
 ]
-
 ```
 
 ```python
@@ -6974,6 +7499,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -6988,7 +7514,6 @@ iter(
 ) -> AbstractAsyncContextManager[
     AgentRun[AgentDepsT, RunOutputDataT]
 ]
-
 ```
 
 ```python
@@ -7006,6 +7531,7 @@ iter(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -7018,7 +7544,6 @@ iter(
         | None
     ) = None
 ) -> AsyncIterator[AgentRun[AgentDepsT, Any]]
-
 ```
 
 A contextmanager which can be used to iterate over the agent graph's nodes as they are executed.
@@ -7059,6 +7584,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -7076,16 +7602,32 @@ async def main():
     '''
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `user_prompt` | `str | Sequence[UserContent] | None` | User input to start/continue the conversation. | `None` | | `output_type` | `OutputSpec[RunOutputDataT] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None` | Optional additional builtin tools for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_prompt`           | \`str                                     | Sequence[UserContent]                                                       | None\`                                                                                                                                                                                            |
+| `output_type`           | \`OutputSpec[RunOutputDataT]              | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence\[AbstractBuiltinTool           | BuiltinToolFunc[AgentDepsT]\]                                               | None\`                                                                                                                                                                                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
+| Type                                       | Description            |
+| ------------------------------------------ | ---------------------- |
+| `AsyncIterator[AgentRun[AgentDepsT, Any]]` | The result of the run. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -7104,6 +7646,7 @@ async def iter(
     model_settings: ModelSettings | None = None,
     usage_limits: _usage.UsageLimits | None = None,
     usage: _usage.RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool | BuiltinToolFunc[AgentDepsT]] | None = None,
@@ -7149,6 +7692,7 @@ async def iter(
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -7180,6 +7724,8 @@ async def iter(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools for this run.
@@ -7204,11 +7750,11 @@ async def iter(
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
         ) as run:
             yield run
-
 ````
 
 #### override
@@ -7231,16 +7777,22 @@ override(
     ) = UNSET,
     instructions: Instructions[AgentDepsT] | Unset = UNSET
 ) -> Iterator[None]
-
 ```
 
 Context manager to temporarily override agent dependencies, model, toolsets, tools, or instructions.
 
-This is particularly useful when testing. You can find an example of this [here](../../testing/#overriding-model-via-pytest-fixtures).
+This is particularly useful when testing. You can find an example of this [here](https://ai.pydantic.dev/testing/#overriding-model-via-pytest-fixtures).
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str | Unset` | The name to use instead of the name passed to the agent constructor and agent run. | `UNSET` | | `deps` | `AgentDepsT | Unset` | The dependencies to use instead of the dependencies passed to the agent run. | `UNSET` | | `model` | `Model | KnownModelName | str | Unset` | The model to use instead of the model passed to the agent run. | `UNSET` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | Unset` | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. | `UNSET` | | `tools` | `Sequence[Tool[AgentDepsT] | ToolFuncEither[AgentDepsT, ...]] | Unset` | The tools to use instead of the tools registered with the agent. | `UNSET` | | `instructions` | `Instructions[AgentDepsT] | Unset` | The instructions to use instead of the instructions registered with the agent. | `UNSET` |
+| Name           | Type                                      | Description                       | Default                                                                                    |
+| -------------- | ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `name`         | \`str                                     | Unset\`                           | The name to use instead of the name passed to the agent constructor and agent run.         |
+| `deps`         | \`AgentDepsT                              | Unset\`                           | The dependencies to use instead of the dependencies passed to the agent run.               |
+| `model`        | \`Model                                   | KnownModelName                    | str                                                                                        |
+| `toolsets`     | \`Sequence\[AbstractToolset[AgentDepsT]\] | Unset\`                           | The toolsets to use instead of the toolsets passed to the agent constructor and agent run. |
+| `tools`        | \`Sequence\[Tool[AgentDepsT]              | ToolFuncEither[AgentDepsT, ...]\] | Unset\`                                                                                    |
+| `instructions` | \`Instructions[AgentDepsT]                | Unset\`                           | The instructions to use instead of the instructions registered with the agent.             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py`
 
@@ -7278,7 +7830,6 @@ def override(
         name=name, deps=deps, model=model, toolsets=toolsets, tools=tools, instructions=instructions
     ):
         yield
-
 ```
 
 ### PrefectFunctionToolset
@@ -7335,7 +7886,6 @@ class PrefectFunctionToolset(PrefectWrapperToolset[AgentDepsT]):
         return await self._call_tool_task.with_options(name=f'Call Tool: {name}', **merged_config)(
             name, tool_args, ctx, tool
         )
-
 ```
 
 #### call_tool
@@ -7347,7 +7897,6 @@ call_tool(
     ctx: RunContext[AgentDepsT],
     tool: ToolsetTool[AgentDepsT],
 ) -> Any
-
 ```
 
 Call a tool, wrapped as a Prefect task with a descriptive name.
@@ -7375,7 +7924,6 @@ async def call_tool(
     return await self._call_tool_task.with_options(name=f'Call Tool: {name}', **merged_config)(
         name, tool_args, ctx, tool
     )
-
 ```
 
 ### PrefectMCPServer
@@ -7429,7 +7977,6 @@ class PrefectMCPServer(PrefectWrapperToolset[AgentDepsT], ABC):
         return await self._call_tool_task.with_options(name=f'Call MCP Tool: {name}', **self._task_config)(
             name, tool_args, ctx, tool
         )
-
 ```
 
 #### call_tool
@@ -7441,7 +7988,6 @@ call_tool(
     ctx: RunContext[AgentDepsT],
     tool: ToolsetTool[AgentDepsT],
 ) -> ToolResult
-
 ```
 
 Call an MCP tool, wrapped as a Prefect task with a descriptive name.
@@ -7460,7 +8006,6 @@ async def call_tool(
     return await self._call_tool_task.with_options(name=f'Call MCP Tool: {name}', **self._task_config)(
         name, tool_args, ctx, tool
     )
-
 ```
 
 ### PrefectModel
@@ -7562,7 +8107,6 @@ class PrefectModel(WrapperModel):
             name=f'Model Request (Streaming): {self.wrapped.model_name}', **self.task_config
         )(messages, model_settings, model_request_parameters, run_context)
         yield PrefectStreamedResponse(model_request_parameters, response)
-
 ```
 
 #### request
@@ -7573,7 +8117,6 @@ request(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> ModelResponse
-
 ```
 
 Make a model request, wrapped as a Prefect task when in a flow.
@@ -7591,7 +8134,6 @@ async def request(
     return await self._wrapped_request.with_options(
         name=f'Model Request: {self.wrapped.model_name}', **self.task_config
     )(messages, model_settings, model_request_parameters)
-
 ```
 
 #### request_stream
@@ -7603,7 +8145,6 @@ request_stream(
     model_request_parameters: ModelRequestParameters,
     run_context: RunContext[Any] | None = None,
 ) -> AsyncIterator[StreamedResponse]
-
 ```
 
 Make a streaming model request.
@@ -7642,7 +8183,6 @@ async def request_stream(
         name=f'Model Request (Streaming): {self.wrapped.model_name}', **self.task_config
     )(messages, model_settings, model_request_parameters, run_context)
     yield PrefectStreamedResponse(model_request_parameters, response)
-
 ```
 
 ### TaskConfig
@@ -7682,14 +8222,12 @@ class TaskConfig(TypedDict, total=False):
 
     log_prints: bool
     """Whether to log print statements from the task."""
-
 ```
 
 #### retries
 
 ```python
 retries: int
-
 ```
 
 Maximum number of retries for the task.
@@ -7698,7 +8236,6 @@ Maximum number of retries for the task.
 
 ```python
 retry_delay_seconds: float | list[float]
-
 ```
 
 Delay between retries in seconds. Can be a single value or a list for custom backoff.
@@ -7707,7 +8244,6 @@ Delay between retries in seconds. Can be a single value or a list for custom bac
 
 ```python
 timeout_seconds: float
-
 ```
 
 Maximum time in seconds for the task to complete.
@@ -7716,7 +8252,6 @@ Maximum time in seconds for the task to complete.
 
 ```python
 cache_policy: CachePolicy
-
 ```
 
 Prefect cache policy for the task.
@@ -7725,7 +8260,6 @@ Prefect cache policy for the task.
 
 ```python
 persist_result: bool
-
 ```
 
 Whether to persist the task result.
@@ -7734,7 +8268,6 @@ Whether to persist the task result.
 
 ```python
 result_storage: ResultStorage
-
 ```
 
 Prefect result storage for the task. Should be a storage block or a block slug like `s3-bucket/my-storage`.
@@ -7743,7 +8276,6 @@ Prefect result storage for the task. Should be a storage block or a block slug l
 
 ```python
 log_prints: bool
-
 ```
 
 Whether to log print statements from the task.

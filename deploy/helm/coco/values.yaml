@@ -1,0 +1,52 @@
+image:
+  api:
+    repository: coco-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  worker:
+    repository: coco-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+
+service:
+  api:
+    type: ClusterIP
+    port: 3456
+
+config:
+  cocoHost: 0.0.0.0
+  cocoPort: 3456
+  adminKey: admin
+  apiKey: api
+  openaiApiKey: ""
+  vectorBackend: pgvector
+  vectorDbUrl: ""
+  vectorDbCollectionPrefix: coco
+  dbUrl: ""
+  worker:
+    pollMs: 500
+    batchSize: 256
+    maxAttempts: 3
+    retryBackoffMs: 500
+
+postgres:
+  enabled: true
+  image: pgvector/pgvector:pg16
+  auth:
+    user: coco
+    password: coco
+    database: coco
+  persistence:
+    enabled: true
+    size: 8Gi
+  service:
+    port: 5432
+
+qdrant:
+  enabled: false
+  image: qdrant/qdrant:v1.9.0
+  persistence:
+    enabled: true
+    size: 8Gi
+  service:
+    port: 6333

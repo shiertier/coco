@@ -38,7 +38,6 @@ class Check42(BaseNode[MyState, None, int]):
             return End(ctx.state.number)
 
 never_42_graph = Graph(nodes=(Increment, Check42))
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -570,7 +569,6 @@ class Graph(Generic[StateT, DepsT, RunEndT]):
                     if item is self:
                         self.name = name
                         return
-
 ````
 
 #### __init__
@@ -584,14 +582,19 @@ __init__(
     run_end_type: type[RunEndT] | Unset = UNSET,
     auto_instrument: bool = True
 )
-
 ```
 
 Create a graph from a sequence of nodes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `nodes` | `Sequence[type[BaseNode[StateT, DepsT, RunEndT]]]` | The nodes which make up the graph, nodes need to be unique and all be generic in the same state type. | *required* | | `name` | `str | None` | Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method. | `None` | | `state_type` | `type[StateT] | Unset` | The type of the state for the graph, this can generally be inferred from nodes. | `UNSET` | | `run_end_type` | `type[RunEndT] | Unset` | The type of the result of running the graph, this can generally be inferred from nodes. | `UNSET` | | `auto_instrument` | `bool` | Whether to create a span for the graph run and the execution of each node's run method. | `True` |
+| Name              | Type                                               | Description                                                                                           | Default                                                                                                                            |
+| ----------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `nodes`           | `Sequence[type[BaseNode[StateT, DepsT, RunEndT]]]` | The nodes which make up the graph, nodes need to be unique and all be generic in the same state type. | *required*                                                                                                                         |
+| `name`            | \`str                                              | None\`                                                                                                | Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method. |
+| `state_type`      | \`type[StateT]                                     | Unset\`                                                                                               | The type of the state for the graph, this can generally be inferred from nodes.                                                    |
+| `run_end_type`    | \`type[RunEndT]                                    | Unset\`                                                                                               | The type of the result of running the graph, this can generally be inferred from nodes.                                            |
+| `auto_instrument` | `bool`                                             | Whether to create a span for the graph run and the execution of each node's run method.               | `True`                                                                                                                             |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -627,7 +630,6 @@ def __init__(
         self._register_node(node, parent_namespace)
 
     self._validate_edges()
-
 ```
 
 #### run
@@ -643,18 +645,25 @@ run(
     ) = None,
     infer_name: bool = True
 ) -> GraphRunResult[StateT, RunEndT]
-
 ```
 
 Run the graph from a starting node until it ends.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `start_node` | `BaseNode[StateT, DepsT, RunEndT]` | the first node to run, since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required* | | `state` | `StateT` | The initial state of the graph. | `None` | | `deps` | `DepsT` | The dependencies of the graph. | `None` | | `persistence` | `BaseStatePersistence[StateT, RunEndT] | None` | State persistence interface, defaults to SimpleStatePersistence if None. | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name          | Type                                    | Description                                                                                                                           | Default                                                                  |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `start_node`  | `BaseNode[StateT, DepsT, RunEndT]`      | the first node to run, since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required*                                                               |
+| `state`       | `StateT`                                | The initial state of the graph.                                                                                                       | `None`                                                                   |
+| `deps`        | `DepsT`                                 | The dependencies of the graph.                                                                                                        | `None`                                                                   |
+| `persistence` | \`BaseStatePersistence[StateT, RunEndT] | None\`                                                                                                                                | State persistence interface, defaults to SimpleStatePersistence if None. |
+| `infer_name`  | `bool`                                  | Whether to infer the graph name from the calling frame.                                                                               | `True`                                                                   |
 
 Returns:
 
-| Type | Description | | --- | --- | | `GraphRunResult[StateT, RunEndT]` | A GraphRunResult containing information about the run, including its final result. |
+| Type                              | Description                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
+| `GraphRunResult[StateT, RunEndT]` | A GraphRunResult containing information about the run, including its final result. |
 
 Here's an example of running the graph from above:
 
@@ -673,7 +682,6 @@ async def main():
     await never_42_graph.run(Increment(), state=state)
     print(state)
     #> MyState(number=43)
-
 ```
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
@@ -731,7 +739,6 @@ async def run(
     result = graph_run.result
     assert result is not None, 'GraphRun should have a result'
     return result
-
 ````
 
 #### run_sync
@@ -747,7 +754,6 @@ run_sync(
     ) = None,
     infer_name: bool = True
 ) -> GraphRunResult[StateT, RunEndT]
-
 ```
 
 Synchronously run the graph.
@@ -756,11 +762,19 @@ This is a convenience method that wraps self.run with `loop.run_until_complete(.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `start_node` | `BaseNode[StateT, DepsT, RunEndT]` | the first node to run, since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required* | | `state` | `StateT` | The initial state of the graph. | `None` | | `deps` | `DepsT` | The dependencies of the graph. | `None` | | `persistence` | `BaseStatePersistence[StateT, RunEndT] | None` | State persistence interface, defaults to SimpleStatePersistence if None. | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name          | Type                                    | Description                                                                                                                           | Default                                                                  |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `start_node`  | `BaseNode[StateT, DepsT, RunEndT]`      | the first node to run, since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required*                                                               |
+| `state`       | `StateT`                                | The initial state of the graph.                                                                                                       | `None`                                                                   |
+| `deps`        | `DepsT`                                 | The dependencies of the graph.                                                                                                        | `None`                                                                   |
+| `persistence` | \`BaseStatePersistence[StateT, RunEndT] | None\`                                                                                                                                | State persistence interface, defaults to SimpleStatePersistence if None. |
+| `infer_name`  | `bool`                                  | Whether to infer the graph name from the calling frame.                                                                               | `True`                                                                   |
 
 Returns:
 
-| Type | Description | | --- | --- | | `GraphRunResult[StateT, RunEndT]` | The result type from ending the run and the history of the run. |
+| Type                              | Description                                                     |
+| --------------------------------- | --------------------------------------------------------------- |
+| `GraphRunResult[StateT, RunEndT]` | The result type from ending the run and the history of the run. |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -797,7 +811,6 @@ def run_sync(
     return _utils.get_event_loop().run_until_complete(
         self.run(start_node, state=state, deps=deps, persistence=persistence, infer_name=False)
     )
-
 ```
 
 #### iter
@@ -816,7 +829,6 @@ iter(
     ) = None,
     infer_name: bool = True
 ) -> AsyncIterator[GraphRun[StateT, DepsT, RunEndT]]
-
 ```
 
 A contextmanager which can be used to iterate over the graph's nodes as they are executed.
@@ -831,7 +843,14 @@ For more details, see the API documentation of GraphRun.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `start_node` | `BaseNode[StateT, DepsT, RunEndT]` | the first node to run. Since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required* | | `state` | `StateT` | The initial state of the graph. | `None` | | `deps` | `DepsT` | The dependencies of the graph. | `None` | | `persistence` | `BaseStatePersistence[StateT, RunEndT] | None` | State persistence interface, defaults to SimpleStatePersistence if None. | `None` | | `span` | `AbstractContextManager[AbstractSpan] | None` | The span to use for the graph run. If not provided, a new span will be created. | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name          | Type                                    | Description                                                                                                                           | Default                                                                         |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `start_node`  | `BaseNode[StateT, DepsT, RunEndT]`      | the first node to run. Since the graph definition doesn't define the entry point in the graph, you need to provide the starting node. | *required*                                                                      |
+| `state`       | `StateT`                                | The initial state of the graph.                                                                                                       | `None`                                                                          |
+| `deps`        | `DepsT`                                 | The dependencies of the graph.                                                                                                        | `None`                                                                          |
+| `persistence` | \`BaseStatePersistence[StateT, RunEndT] | None\`                                                                                                                                | State persistence interface, defaults to SimpleStatePersistence if None.        |
+| `span`        | \`AbstractContextManager[AbstractSpan]  | None\`                                                                                                                                | The span to use for the graph run. If not provided, a new span will be created. |
+| `infer_name`  | `bool`                                  | Whether to infer the graph name from the calling frame.                                                                               | `True`                                                                          |
 
 Returns: A GraphRun that can be async iterated over to drive the graph to completion.
 
@@ -904,7 +923,6 @@ async def iter(
             deps=deps,
             traceparent=traceparent,
         )
-
 ```
 
 #### iter_from_persistence
@@ -919,7 +937,6 @@ iter_from_persistence(
     ) = None,
     infer_name: bool = True
 ) -> AsyncIterator[GraphRun[StateT, DepsT, RunEndT]]
-
 ```
 
 A contextmanager to iterate over the graph's nodes as they are executed, created from a persistence object.
@@ -928,7 +945,12 @@ This method has similar functionality to iter, but instead of passing the node t
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `persistence` | `BaseStatePersistence[StateT, RunEndT]` | The state persistence interface to use. | *required* | | `deps` | `DepsT` | The dependencies of the graph. | `None` | | `span` | `AbstractContextManager[AbstractSpan] | None` | The span to use for the graph run. If not provided, a new span will be created. | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name          | Type                                    | Description                                             | Default                                                                         |
+| ------------- | --------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `persistence` | `BaseStatePersistence[StateT, RunEndT]` | The state persistence interface to use.                 | *required*                                                                      |
+| `deps`        | `DepsT`                                 | The dependencies of the graph.                          | `None`                                                                          |
+| `span`        | \`AbstractContextManager[AbstractSpan]  | None\`                                                  | The span to use for the graph run. If not provided, a new span will be created. |
+| `infer_name`  | `bool`                                  | Whether to infer the graph name from the calling frame. | `True`                                                                          |
 
 Returns: A GraphRun that can be async iterated over to drive the graph to completion.
 
@@ -985,7 +1007,6 @@ async def iter_from_persistence(
             snapshot_id=snapshot.id,
             traceparent=traceparent,
         )
-
 ```
 
 #### initialize
@@ -998,7 +1019,6 @@ initialize(
     state: StateT = None,
     infer_name: bool = True
 ) -> None
-
 ```
 
 Initialize a new graph run in persistence without running it.
@@ -1007,7 +1027,12 @@ This is useful if you want to set up a graph run to be run later, e.g. via iter_
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `node` | `BaseNode[StateT, DepsT, RunEndT]` | The node to run first. | *required* | | `persistence` | `BaseStatePersistence[StateT, RunEndT]` | State persistence interface. | *required* | | `state` | `StateT` | The start state of the graph. | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name          | Type                                    | Description                                             | Default    |
+| ------------- | --------------------------------------- | ------------------------------------------------------- | ---------- |
+| `node`        | `BaseNode[StateT, DepsT, RunEndT]`      | The node to run first.                                  | *required* |
+| `persistence` | `BaseStatePersistence[StateT, RunEndT]` | State persistence interface.                            | *required* |
+| `state`       | `StateT`                                | The start state of the graph.                           | `None`     |
+| `infer_name`  | `bool`                                  | Whether to infer the graph name from the calling frame. | `True`     |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -1036,7 +1061,6 @@ async def initialize(
 
     persistence.set_graph_types(self)
     await persistence.snapshot_node(state, node)
-
 ```
 
 #### mermaid_code
@@ -1057,7 +1081,6 @@ mermaid_code(
     infer_name: bool = True,
     direction: StateDiagramDirection | None = None
 ) -> str
-
 ```
 
 Generate a diagram representing the graph as [mermaid](https://mermaid.js.org/) diagram.
@@ -1066,11 +1089,22 @@ This method calls pydantic_graph.mermaid.generate_code.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `start_node` | `Sequence[NodeIdent] | NodeIdent | None` | The node or nodes which can start the graph. | `None` | | `title` | `str | None | Literal[False]` | The title of the diagram, use False to not include a title. | `None` | | `edge_labels` | `bool` | Whether to include edge labels. | `True` | | `notes` | `bool` | Whether to include notes on each node. | `True` | | `highlighted_nodes` | `Sequence[NodeIdent] | NodeIdent | None` | Optional node or nodes to highlight. | `None` | | `highlight_css` | `str` | The CSS to use for highlighting nodes. | `DEFAULT_HIGHLIGHT_CSS` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` | | `direction` | `StateDiagramDirection | None` | The direction of flow. | `None` |
+| Name                | Type                    | Description                                             | Default                 |
+| ------------------- | ----------------------- | ------------------------------------------------------- | ----------------------- |
+| `start_node`        | \`Sequence[NodeIdent]   | NodeIdent                                               | None\`                  |
+| `title`             | \`str                   | None                                                    | Literal[False]\`        |
+| `edge_labels`       | `bool`                  | Whether to include edge labels.                         | `True`                  |
+| `notes`             | `bool`                  | Whether to include notes on each node.                  | `True`                  |
+| `highlighted_nodes` | \`Sequence[NodeIdent]   | NodeIdent                                               | None\`                  |
+| `highlight_css`     | `str`                   | The CSS to use for highlighting nodes.                  | `DEFAULT_HIGHLIGHT_CSS` |
+| `infer_name`        | `bool`                  | Whether to infer the graph name from the calling frame. | `True`                  |
+| `direction`         | \`StateDiagramDirection | None\`                                                  | The direction of flow.  |
 
 Returns:
 
-| Type | Description | | --- | --- | | `str` | The mermaid code for the graph, which can then be rendered as a diagram. |
+| Type  | Description                                                              |
+| ----- | ------------------------------------------------------------------------ |
+| `str` | The mermaid code for the graph, which can then be rendered as a diagram. |
 
 Here's an example of generating a diagram for the graph from above:
 
@@ -1090,7 +1124,6 @@ stateDiagram-v2
   Check42 --> Increment
   Check42 --> [*]
 '''
-
 ```
 
 The rendered diagram will look like this:
@@ -1183,7 +1216,6 @@ def mermaid_code(
         notes=notes,
         direction=direction,
     )
-
 ````
 
 #### mermaid_image
@@ -1192,7 +1224,6 @@ def mermaid_code(
 mermaid_image(
     infer_name: bool = True, **kwargs: Unpack[MermaidConfig]
 ) -> bytes
-
 ```
 
 Generate a diagram representing the graph as an image.
@@ -1205,11 +1236,16 @@ This method makes a request to [mermaid.ink](https://mermaid.ink) to render the 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` | | `**kwargs` | `Unpack[MermaidConfig]` | Additional arguments to pass to mermaid.request_image. | `{}` |
+| Name         | Type                    | Description                                             | Default |
+| ------------ | ----------------------- | ------------------------------------------------------- | ------- |
+| `infer_name` | `bool`                  | Whether to infer the graph name from the calling frame. | `True`  |
+| `**kwargs`   | `Unpack[MermaidConfig]` | Additional arguments to pass to mermaid.request_image.  | `{}`    |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | The image bytes. |
+| Type    | Description      |
+| ------- | ---------------- |
+| `bytes` | The image bytes. |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -1238,7 +1274,6 @@ def mermaid_image(
     if 'title' not in kwargs and self.name:
         kwargs['title'] = self.name
     return mermaid.request_image(self, **kwargs)
-
 ```
 
 #### mermaid_save
@@ -1251,7 +1286,6 @@ mermaid_save(
     infer_name: bool = True,
     **kwargs: Unpack[MermaidConfig],
 ) -> None
-
 ```
 
 Generate a diagram representing the graph and save it as an image.
@@ -1264,7 +1298,11 @@ This method makes a request to [mermaid.ink](https://mermaid.ink) to render the 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `path` | `Path | str` | The path to save the image to. | *required* | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` | | `**kwargs` | `Unpack[MermaidConfig]` | Additional arguments to pass to mermaid.save_image. | `{}` |
+| Name         | Type                    | Description                                             | Default                        |
+| ------------ | ----------------------- | ------------------------------------------------------- | ------------------------------ |
+| `path`       | \`Path                  | str\`                                                   | The path to save the image to. |
+| `infer_name` | `bool`                  | Whether to infer the graph name from the calling frame. | `True`                         |
+| `**kwargs`   | `Unpack[MermaidConfig]` | Additional arguments to pass to mermaid.save_image.     | `{}`                           |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -1291,7 +1329,6 @@ def mermaid_save(
     if 'title' not in kwargs and self.name:
         kwargs['title'] = self.name
     mermaid.save_image(path, self, **kwargs)
-
 ```
 
 #### get_nodes
@@ -1300,7 +1337,6 @@ def mermaid_save(
 get_nodes() -> (
     Sequence[type[BaseNode[StateT, DepsT, RunEndT]]]
 )
-
 ```
 
 Get the nodes in the graph.
@@ -1311,7 +1347,6 @@ Source code in `pydantic_graph/pydantic_graph/graph.py`
 def get_nodes(self) -> Sequence[type[BaseNode[StateT, DepsT, RunEndT]]]:
     """Get the nodes in the graph."""
     return [node_def.node for node_def in self.node_defs.values()]
-
 ```
 
 ### GraphRun
@@ -1322,7 +1357,9 @@ A stateful, async-iterable run of a Graph.
 
 You typically get a `GraphRun` instance from calling `async with [my_graph.iter(...)][pydantic_graph.graph.Graph.iter] as graph_run:`. That gives you the ability to iterate through nodes as they run, either by `async for` iteration or by repeatedly calling `.next(...)`.
 
-Here's an example of iterating over the graph from above: iter_never_42.py
+Here's an example of iterating over the graph from above:
+
+iter_never_42.py
 
 ```py
 from copy import deepcopy
@@ -1360,7 +1397,6 @@ async def main():
             (End(data=43), MyState(number=43)),
         ]
         '''
-
 ```
 
 See the GraphRun.next documentation for an example of how to manually drive the graph run.
@@ -1590,7 +1626,6 @@ class GraphRun(Generic[StateT, DepsT, RunEndT]):
 
     def __repr__(self) -> str:
         return f'<GraphRun graph={self.graph.name or "[unnamed]"}>'
-
 ````
 
 #### __init__
@@ -1606,7 +1641,6 @@ __init__(
     traceparent: str | None,
     snapshot_id: str | None = None
 )
-
 ```
 
 Create a new run for a given graph, starting at the specified node.
@@ -1615,7 +1649,15 @@ Typically, you'll use Graph.iter rather than calling this directly.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `graph` | `Graph[StateT, DepsT, RunEndT]` | The Graph to run. | *required* | | `start_node` | `BaseNode[StateT, DepsT, RunEndT]` | The node where execution will begin. | *required* | | `persistence` | `BaseStatePersistence[StateT, RunEndT]` | State persistence interface. | *required* | | `state` | `StateT` | A shared state object or primitive (like a counter, dataclass, etc.) that is available to all nodes via ctx.state. | *required* | | `deps` | `DepsT` | Optional dependencies that each node can access via ctx.deps, e.g. database connections, configuration, or logging clients. | *required* | | `traceparent` | `str | None` | The traceparent for the span used for the graph run. | *required* | | `snapshot_id` | `str | None` | The ID of the snapshot the node came from. | `None` |
+| Name          | Type                                    | Description                                                                                                                 | Default                                              |
+| ------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `graph`       | `Graph[StateT, DepsT, RunEndT]`         | The Graph to run.                                                                                                           | *required*                                           |
+| `start_node`  | `BaseNode[StateT, DepsT, RunEndT]`      | The node where execution will begin.                                                                                        | *required*                                           |
+| `persistence` | `BaseStatePersistence[StateT, RunEndT]` | State persistence interface.                                                                                                | *required*                                           |
+| `state`       | `StateT`                                | A shared state object or primitive (like a counter, dataclass, etc.) that is available to all nodes via ctx.state.          | *required*                                           |
+| `deps`        | `DepsT`                                 | Optional dependencies that each node can access via ctx.deps, e.g. database connections, configuration, or logging clients. | *required*                                           |
+| `traceparent` | \`str                                   | None\`                                                                                                                      | The traceparent for the span used for the graph run. |
+| `snapshot_id` | \`str                                   | None\`                                                                                                                      | The ID of the snapshot the node came from.           |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -1655,14 +1697,12 @@ def __init__(
     self.__traceparent = traceparent
     self._next_node: BaseNode[StateT, DepsT, RunEndT] | End[RunEndT] = start_node
     self._is_started: bool = False
-
 ```
 
 #### next_node
 
 ```python
 next_node: BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]
-
 ```
 
 The next node that will be run in the graph.
@@ -1673,7 +1713,6 @@ This is the next node that will be used during async iteration, or if a node is 
 
 ```python
 result: GraphRunResult[StateT, RunEndT] | None
-
 ```
 
 The final result of the graph run if the run is completed, otherwise `None`.
@@ -1684,14 +1723,15 @@ The final result of the graph run if the run is completed, otherwise `None`.
 next(
     node: BaseNode[StateT, DepsT, RunEndT] | None = None,
 ) -> BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]
-
 ```
 
 Manually drive the graph run by passing in the node you want to run next.
 
 This lets you inspect or mutate the node before continuing execution, or skip certain nodes under dynamic conditions. The graph run should stop when you return an End node.
 
-Here's an example of using `next` to drive the graph from above: next_never_42.py
+Here's an example of using `next` to drive the graph from above:
+
+next_never_42.py
 
 ```py
 from copy import deepcopy
@@ -1718,16 +1758,20 @@ async def main():
             (End(data=49), MyState(number=49)),
         ]
         '''
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `node` | `BaseNode[StateT, DepsT, RunEndT] | None` | The node to run next in the graph. If not specified, uses self.next_node, which is initialized to the start_node of the run and updated each time a new node is returned. | `None` |
+| Name   | Type                               | Description | Default                                                                                                                                                                   |
+| ------ | ---------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node` | \`BaseNode[StateT, DepsT, RunEndT] | None\`      | The node to run next in the graph. If not specified, uses self.next_node, which is initialized to the start_node of the run and updated each time a new node is returned. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]` | The next node returned by the graph logic, or an End node if | | `BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]` | the run has completed. |
+| Type                               | Description    |
+| ---------------------------------- | -------------- |
+| \`BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]\` |
+| \`BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]\` |
 
 Source code in `pydantic_graph/pydantic_graph/graph.py`
 
@@ -1822,7 +1866,6 @@ async def next(
         )
 
     return self._next_node
-
 ````
 
 #### __anext__
@@ -1831,7 +1874,6 @@ async def next(
 __anext__() -> (
     BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]
 )
-
 ```
 
 Use the last returned node as the input to `Graph.next`.
@@ -1849,7 +1891,6 @@ async def __anext__(self) -> BaseNode[StateT, DepsT, RunEndT] | End[RunEndT]:
         raise StopAsyncIteration
 
     return await self.next(self._next_node)
-
 ```
 
 ### GraphRunResult
@@ -1889,5 +1930,4 @@ class GraphRunResult(Generic[StateT, RunEndT]):
         if self.__traceparent is None and required:
             raise exceptions.GraphRuntimeError('No span was created for this graph run.')
         return self.__traceparent
-
 ```

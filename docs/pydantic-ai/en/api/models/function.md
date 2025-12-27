@@ -2,13 +2,13 @@
 
 A model controlled by a local function.
 
-FunctionModel is similar to [`TestModel`](../test/), but allows greater control over the model's behavior.
+FunctionModel is similar to [`TestModel`](https://ai.pydantic.dev/api/models/test/index.md), but allows greater control over the model's behavior.
 
 Its primary use case is for more advanced unit testing than is possible with `TestModel`.
 
 Here's a minimal example:
 
-[Learn about Gateway](../../../gateway) function_model_usage.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) function_model_usage.py
 
 ```python
 from pydantic_ai import Agent
@@ -31,6 +31,7 @@ async def model_function(
                     timestamp=datetime.datetime(...),
                 )
             ],
+            timestamp=datetime.datetime(...),
             run_id='...',
         )
     ]
@@ -56,7 +57,6 @@ async def test_my_agent():
     with my_agent.override(model=FunctionModel(model_function)):
         result = await my_agent.run('Testing my agent...')
         assert result.output == 'hello world'
-
 ```
 
 function_model_usage.py
@@ -82,6 +82,7 @@ async def model_function(
                     timestamp=datetime.datetime(...),
                 )
             ],
+            timestamp=datetime.datetime(...),
             run_id='...',
         )
     ]
@@ -107,10 +108,9 @@ async def test_my_agent():
     with my_agent.override(model=FunctionModel(model_function)):
         result = await my_agent.run('Testing my agent...')
         assert result.output == 'hello world'
-
 ```
 
-See [Unit testing with `FunctionModel`](../../../testing/#unit-testing-with-functionmodel) for detailed documentation.
+See [Unit testing with `FunctionModel`](https://ai.pydantic.dev/testing/#unit-testing-with-functionmodel) for detailed documentation.
 
 ### FunctionModel
 
@@ -291,7 +291,6 @@ class FunctionModel(Model):
         from ..builtin_tools import SUPPORTED_BUILTIN_TOOLS
 
         return SUPPORTED_BUILTIN_TOOLS
-
 ```
 
 #### __init__
@@ -304,7 +303,6 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 ) -> None
-
 ```
 
 ```python
@@ -315,7 +313,6 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 ) -> None
-
 ```
 
 ```python
@@ -327,7 +324,6 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 ) -> None
-
 ```
 
 ```python
@@ -339,7 +335,6 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize a `FunctionModel`.
@@ -348,7 +343,13 @@ Either `function` or `stream_function` must be provided, providing both is allow
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `function` | `FunctionDef | None` | The function to call for non-streamed requests. | `None` | | `stream_function` | `StreamFunctionDef | None` | The function to call for streamed requests. | `None` | | `model_name` | `str | None` | The name of the model. If not provided, a name is generated from the function names. | `None` | | `profile` | `ModelProfileSpec | None` | The model profile to use. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name              | Type                | Description | Default                                                                              |
+| ----------------- | ------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `function`        | \`FunctionDef       | None\`      | The function to call for non-streamed requests.                                      |
+| `stream_function` | \`StreamFunctionDef | None\`      | The function to call for streamed requests.                                          |
+| `model_name`      | \`str               | None\`      | The name of the model. If not provided, a name is generated from the function names. |
+| `profile`         | \`ModelProfileSpec  | None\`      | The model profile to use.                                                            |
+| `settings`        | \`ModelSettings     | None\`      | Model-specific settings that will be used as defaults for this model.                |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/function.py`
 
@@ -390,14 +391,12 @@ def __init__(
             supports_json_object_output=True,
         )
     super().__init__(settings=settings, profile=profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -406,7 +405,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The system / model provider.
@@ -417,7 +415,6 @@ The system / model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 FunctionModel supports all builtin tools for testing flexibility.
@@ -431,7 +428,6 @@ def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     from ..builtin_tools import SUPPORTED_BUILTIN_TOOLS
 
     return SUPPORTED_BUILTIN_TOOLS
-
 ```
 
 ### AgentInfo
@@ -466,14 +462,12 @@ class AgentInfo:
     """The model request parameters passed to the run call."""
     instructions: str | None
     """The instructions passed to model."""
-
 ```
 
 #### function_tools
 
 ```python
 function_tools: list[ToolDefinition]
-
 ```
 
 The function tools available on this agent.
@@ -484,7 +478,6 @@ These are the tools registered via the tool and tool_plain decorators.
 
 ```python
 allow_text_output: bool
-
 ```
 
 Whether a plain text output is allowed.
@@ -493,7 +486,6 @@ Whether a plain text output is allowed.
 
 ```python
 output_tools: list[ToolDefinition]
-
 ```
 
 The tools that can called to produce the final output of the run.
@@ -502,7 +494,6 @@ The tools that can called to produce the final output of the run.
 
 ```python
 model_settings: ModelSettings | None
-
 ```
 
 The model settings passed to the run call.
@@ -511,7 +502,6 @@ The model settings passed to the run call.
 
 ```python
 model_request_parameters: ModelRequestParameters
-
 ```
 
 The model request parameters passed to the run call.
@@ -520,7 +510,6 @@ The model request parameters passed to the run call.
 
 ```python
 instructions: str | None
-
 ```
 
 The instructions passed to model.
@@ -551,14 +540,12 @@ class DeltaToolCall:
 
     tool_call_id: str | None = None
     """Incremental change to the tool call ID."""
-
 ```
 
 #### name
 
 ```python
 name: str | None = None
-
 ```
 
 Incremental change to the name of the tool.
@@ -567,7 +554,6 @@ Incremental change to the name of the tool.
 
 ```python
 json_args: str | None = None
-
 ```
 
 Incremental change to the arguments as JSON
@@ -576,7 +562,6 @@ Incremental change to the arguments as JSON
 
 ```python
 tool_call_id: str | None = None
-
 ```
 
 Incremental change to the tool call ID.
@@ -601,14 +586,12 @@ class DeltaThinkingPart:
     """Incremental change to the thinking content."""
     signature: str | None = None
     """Incremental change to the thinking signature."""
-
 ```
 
 #### content
 
 ```python
 content: str | None = None
-
 ```
 
 Incremental change to the thinking content.
@@ -617,7 +600,6 @@ Incremental change to the thinking content.
 
 ```python
 signature: str | None = None
-
 ```
 
 Incremental change to the thinking signature.
@@ -626,7 +608,6 @@ Incremental change to the thinking signature.
 
 ```python
 DeltaToolCalls: TypeAlias = dict[int, DeltaToolCall]
-
 ```
 
 A mapping of tool call IDs to incremental changes.
@@ -635,7 +616,6 @@ A mapping of tool call IDs to incremental changes.
 
 ```python
 DeltaThinkingCalls: TypeAlias = dict[int, DeltaThinkingPart]
-
 ```
 
 A mapping of thinking call IDs to incremental changes.
@@ -647,7 +627,6 @@ FunctionDef: TypeAlias = Callable[
     [list[ModelMessage], AgentInfo],
     ModelResponse | Awaitable[ModelResponse],
 ]
-
 ```
 
 A function used to generate a non-streamed response.
@@ -664,7 +643,6 @@ StreamFunctionDef: TypeAlias = Callable[
         | BuiltinToolCallsReturns
     ],
 ]
-
 ```
 
 A function used to generate a streamed response.
@@ -757,14 +735,12 @@ class FunctionStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -773,7 +749,6 @@ Get the model name of the response.
 
 ```python
 provider_name: None
-
 ```
 
 Get the provider name.
@@ -782,7 +757,6 @@ Get the provider name.
 
 ```python
 provider_url: None
-
 ```
 
 Get the provider base URL.
@@ -791,7 +765,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

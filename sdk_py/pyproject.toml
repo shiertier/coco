@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coco-sdk"
+version = "0.2.0"
+description = "CoCo Python SDK"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "UNLICENSED" }
+authors = [
+  { name = "CoCo" }
+]
+
+[tool.setuptools]
+packages = ["coco_sdk"]

@@ -2,38 +2,38 @@
 
 Pydantic AI is model-agnostic and has built-in support for multiple model providers:
 
-- [OpenAI](../openai/)
-- [Anthropic](../anthropic/)
-- [Gemini](../google/) (via two different APIs: Generative Language API and VertexAI API)
-- [Bedrock](../bedrock/)
-- [Cerebras](../cerebras/)
-- [Cohere](../cohere/)
-- [Groq](../groq/)
-- [Hugging Face](../huggingface/)
-- [Mistral](../mistral/)
-- [OpenRouter](../openrouter/)
-- [Outlines](../outlines/)
+- [OpenAI](https://ai.pydantic.dev/models/openai/index.md)
+- [Anthropic](https://ai.pydantic.dev/models/anthropic/index.md)
+- [Gemini](https://ai.pydantic.dev/models/google/index.md) (via two different APIs: Generative Language API and VertexAI API)
+- [Bedrock](https://ai.pydantic.dev/models/bedrock/index.md)
+- [Cerebras](https://ai.pydantic.dev/models/cerebras/index.md)
+- [Cohere](https://ai.pydantic.dev/models/cohere/index.md)
+- [Groq](https://ai.pydantic.dev/models/groq/index.md)
+- [Hugging Face](https://ai.pydantic.dev/models/huggingface/index.md)
+- [Mistral](https://ai.pydantic.dev/models/mistral/index.md)
+- [OpenRouter](https://ai.pydantic.dev/models/openrouter/index.md)
+- [Outlines](https://ai.pydantic.dev/models/outlines/index.md)
 
 ## OpenAI-compatible Providers
 
 In addition, many providers are compatible with the OpenAI API, and can be used with `OpenAIChatModel` in Pydantic AI:
 
-- [Alibaba Cloud Model Studio (DashScope)](../openai/#alibaba-cloud-model-studio-dashscope)
-- [Azure AI Foundry](../openai/#azure-ai-foundry)
-- [DeepSeek](../openai/#deepseek)
-- [Fireworks AI](../openai/#fireworks-ai)
-- [GitHub Models](../openai/#github-models)
-- [Grok (xAI)](../openai/#grok-xai)
-- [Heroku](../openai/#heroku-ai)
-- [LiteLLM](../openai/#litellm)
-- [Nebius AI Studio](../openai/#nebius-ai-studio)
-- [Ollama](../openai/#ollama)
-- [OVHcloud AI Endpoints](../openai/#ovhcloud-ai-endpoints)
-- [Perplexity](../openai/#perplexity)
-- [Together AI](../openai/#together-ai)
-- [Vercel AI Gateway](../openai/#vercel-ai-gateway)
+- [Alibaba Cloud Model Studio (DashScope)](https://ai.pydantic.dev/models/openai/#alibaba-cloud-model-studio-dashscope)
+- [Azure AI Foundry](https://ai.pydantic.dev/models/openai/#azure-ai-foundry)
+- [DeepSeek](https://ai.pydantic.dev/models/openai/#deepseek)
+- [Fireworks AI](https://ai.pydantic.dev/models/openai/#fireworks-ai)
+- [GitHub Models](https://ai.pydantic.dev/models/openai/#github-models)
+- [Grok (xAI)](https://ai.pydantic.dev/models/openai/#grok-xai)
+- [Heroku](https://ai.pydantic.dev/models/openai/#heroku-ai)
+- [LiteLLM](https://ai.pydantic.dev/models/openai/#litellm)
+- [Nebius AI Studio](https://ai.pydantic.dev/models/openai/#nebius-ai-studio)
+- [Ollama](https://ai.pydantic.dev/models/openai/#ollama)
+- [OVHcloud AI Endpoints](https://ai.pydantic.dev/models/openai/#ovhcloud-ai-endpoints)
+- [Perplexity](https://ai.pydantic.dev/models/openai/#perplexity)
+- [Together AI](https://ai.pydantic.dev/models/openai/#together-ai)
+- [Vercel AI Gateway](https://ai.pydantic.dev/models/openai/#vercel-ai-gateway)
 
-Pydantic AI also comes with [`TestModel`](../../api/models/test/) and [`FunctionModel`](../../api/models/function/) for testing and development.
+Pydantic AI also comes with [`TestModel`](https://ai.pydantic.dev/api/models/test/index.md) and [`FunctionModel`](https://ai.pydantic.dev/api/models/function/index.md) for testing and development.
 
 To use each model provider, you need to configure your local environment and make sure you have the right packages installed. If you try to use the model without having done so, you'll be told what to install.
 
@@ -51,13 +51,13 @@ When you instantiate an Agent with just a name formatted as `<provider>:<model>`
 
 Note
 
-If a model API is compatible with the OpenAI API, you do not need a custom model class and can provide your own [custom provider](../openai/#openai-compatible-models) instead.
+If a model API is compatible with the OpenAI API, you do not need a custom model class and can provide your own [custom provider](https://ai.pydantic.dev/models/openai/#openai-compatible-models) instead.
 
 To implement support for a model API that's not already supported, you will need to subclass the Model abstract base class. For streaming, you'll also need to implement the StreamedResponse abstract base class.
 
 The best place to start is to review the source code for existing implementations, e.g. [`OpenAIChatModel`](https://github.com/pydantic/pydantic-ai/blob/main/pydantic_ai_slim/pydantic_ai/models/openai.py).
 
-For details on when we'll accept contributions adding new models to Pydantic AI, see the [contributing guidelines](../../contributing/#new-model-rules).
+For details on when we'll accept contributions adding new models to Pydantic AI, see the [contributing guidelines](https://ai.pydantic.dev/contributing/#new-model-rules).
 
 ## Fallback Model
 
@@ -67,7 +67,7 @@ Note
 
 The provider SDKs on which Models are based (like OpenAI, Anthropic, etc.) often have built-in retry logic that can delay the `FallbackModel` from activating.
 
-When using `FallbackModel`, it's recommended to disable provider SDK retries to ensure immediate fallback, for example by setting `max_retries=0` on a [custom OpenAI client](../openai/#custom-openai-client).
+When using `FallbackModel`, it's recommended to disable provider SDK retries to ensure immediate fallback, for example by setting `max_retries=0` on a [custom OpenAI client](https://ai.pydantic.dev/models/openai/#custom-openai-client).
 
 In the following example, the agent first makes a request to the OpenAI model (which fails due to an invalid API key), and then falls back to the Anthropic model.
 
@@ -110,7 +110,6 @@ print(response.all_messages())
     ),
 ]
 """
-
 ```
 
 The `ModelResponse` message above indicates in the `model_name` field that the output was returned by the Anthropic model, which is the second model specified in the `FallbackModel`.
@@ -149,7 +148,6 @@ print(result.output)
 """
 In the year 2157, Captain Maya Chen piloted her spacecraft through the vast expanse of the Andromeda Galaxy. As she discovered a planet with crystalline mountains that sang in harmony with the cosmic winds, she realized that space exploration was not just about finding new worlds, but about finding new ways to understand the universe and our place within it.
 """
-
 ```
 
 In this example, if the OpenAI model fails, the agent will automatically fall back to the Anthropic model with its own configured settings. The `FallbackModel` itself doesn't have settings - it uses the individual settings of whichever model successfully handles the request.
@@ -176,7 +174,6 @@ try:
 except* ModelAPIError as exc_group:
     for exc in exc_group.exceptions:
         print(exc)
-
 ```
 
 Since [`except*`](https://docs.python.org/3/reference/compound_stmts.html#except-star) is only supported in Python 3.11+, we use the [`exceptiongroup`](https://github.com/agronholm/exceptiongroup) backport package for earlier Python versions:
@@ -204,11 +201,10 @@ fallback_model = FallbackModel(openai_model, anthropic_model)
 agent = Agent(fallback_model)
 with catch({ModelAPIError: model_status_error_handler}):
     response = agent.run_sync('What is the capital of France?')
-
 ```
 
 By default, the `FallbackModel` only moves on to the next model if the current model raises a ModelAPIError, which includes ModelHTTPError. You can customize this behavior by passing a custom `fallback_on` argument to the `FallbackModel` constructor.
 
 Note
 
-Validation errors (from [structured output](../../output/#structured-output) or [tool parameters](../../tools/)) do **not** trigger fallback. These errors use the [retry mechanism](../../agents/#reflection-and-self-correction) instead, which re-prompts the same model to try again. This is intentional: validation errors stem from the non-deterministic nature of LLMs and may succeed on retry, whereas API errors (4xx/5xx) generally indicate issues that won't resolve by retrying the same request.
+Validation errors (from [structured output](https://ai.pydantic.dev/output/#structured-output) or [tool parameters](https://ai.pydantic.dev/tools/index.md)) do **not** trigger fallback. These errors use the [retry mechanism](https://ai.pydantic.dev/agents/#reflection-and-self-correction) instead, which re-prompts the same model to try again. This is intentional: validation errors stem from the non-deterministic nature of LLMs and may succeed on retry, whereas API errors (4xx/5xx) generally indicate issues that won't resolve by retrying the same request.

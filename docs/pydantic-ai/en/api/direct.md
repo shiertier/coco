@@ -19,7 +19,6 @@ model_request(
     ) = None,
     instrument: InstrumentationSettings | bool | None = None
 ) -> ModelResponse
-
 ```
 
 Make a non-streamed request to a model.
@@ -45,18 +44,25 @@ async def main():
         timestamp=datetime.datetime(...),
     )
     '''
-
 ```
 
 1. See ModelRequest.user_text_prompt for details.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model` | `Model | KnownModelName | str` | The model to make a request to. We allow str here since the actual list of allowed models changes frequently. | *required* | | `messages` | `Sequence[ModelMessage]` | Messages to send to the model | *required* | | `model_settings` | `ModelSettings | None` | optional model settings | `None` | | `model_request_parameters` | `ModelRequestParameters | None` | optional model request parameters | `None` | | `instrument` | `InstrumentationSettings | bool | None` | Whether to instrument the request with OpenTelemetry/Logfire, if None the value from logfire.instrument_pydantic_ai is used. | `None` |
+| Name                       | Type                      | Description                   | Default                           |
+| -------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `model`                    | \`Model                   | KnownModelName                | str\`                             |
+| `messages`                 | `Sequence[ModelMessage]`  | Messages to send to the model | *required*                        |
+| `model_settings`           | \`ModelSettings           | None\`                        | optional model settings           |
+| `model_request_parameters` | \`ModelRequestParameters  | None\`                        | optional model request parameters |
+| `instrument`               | \`InstrumentationSettings | bool                          | None\`                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ModelResponse` | The model response and token usage associated with the request. |
+| Type            | Description                                                     |
+| --------------- | --------------------------------------------------------------- |
+| `ModelResponse` | The model response and token usage associated with the request. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 
@@ -111,7 +117,6 @@ async def model_request(
         model_settings,
         model_request_parameters or models.ModelRequestParameters(),
     )
-
 ````
 
 ### model_request_sync
@@ -127,7 +132,6 @@ model_request_sync(
     ) = None,
     instrument: InstrumentationSettings | bool | None = None
 ) -> ModelResponse
-
 ```
 
 Make a Synchronous, non-streamed request to a model.
@@ -153,18 +157,25 @@ ModelResponse(
     timestamp=datetime.datetime(...),
 )
 '''
-
 ```
 
 1. See ModelRequest.user_text_prompt for details.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model` | `Model | KnownModelName | str` | The model to make a request to. We allow str here since the actual list of allowed models changes frequently. | *required* | | `messages` | `Sequence[ModelMessage]` | Messages to send to the model | *required* | | `model_settings` | `ModelSettings | None` | optional model settings | `None` | | `model_request_parameters` | `ModelRequestParameters | None` | optional model request parameters | `None` | | `instrument` | `InstrumentationSettings | bool | None` | Whether to instrument the request with OpenTelemetry/Logfire, if None the value from logfire.instrument_pydantic_ai is used. | `None` |
+| Name                       | Type                      | Description                   | Default                           |
+| -------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `model`                    | \`Model                   | KnownModelName                | str\`                             |
+| `messages`                 | `Sequence[ModelMessage]`  | Messages to send to the model | *required*                        |
+| `model_settings`           | \`ModelSettings           | None\`                        | optional model settings           |
+| `model_request_parameters` | \`ModelRequestParameters  | None\`                        | optional model request parameters |
+| `instrument`               | \`InstrumentationSettings | bool                          | None\`                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ModelResponse` | The model response and token usage associated with the request. |
+| Type            | Description                                                     |
+| --------------- | --------------------------------------------------------------- |
+| `ModelResponse` | The model response and token usage associated with the request. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 
@@ -223,7 +234,6 @@ def model_request_sync(
             instrument=instrument,
         )
     )
-
 ````
 
 ### model_request_stream
@@ -239,7 +249,6 @@ model_request_stream(
     ) = None,
     instrument: InstrumentationSettings | bool | None = None
 ) -> AbstractAsyncContextManager[StreamedResponse]
-
 ```
 
 Make a streamed async request to a model.
@@ -274,18 +283,25 @@ async def main():
             ),
         ]
         '''
-
 ```
 
 1. See ModelRequest.user_text_prompt for details.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model` | `Model | KnownModelName | str` | The model to make a request to. We allow str here since the actual list of allowed models changes frequently. | *required* | | `messages` | `Sequence[ModelMessage]` | Messages to send to the model | *required* | | `model_settings` | `ModelSettings | None` | optional model settings | `None` | | `model_request_parameters` | `ModelRequestParameters | None` | optional model request parameters | `None` | | `instrument` | `InstrumentationSettings | bool | None` | Whether to instrument the request with OpenTelemetry/Logfire, if None the value from logfire.instrument_pydantic_ai is used. | `None` |
+| Name                       | Type                      | Description                   | Default                           |
+| -------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `model`                    | \`Model                   | KnownModelName                | str\`                             |
+| `messages`                 | `Sequence[ModelMessage]`  | Messages to send to the model | *required*                        |
+| `model_settings`           | \`ModelSettings           | None\`                        | optional model settings           |
+| `model_request_parameters` | \`ModelRequestParameters  | None\`                        | optional model request parameters |
+| `instrument`               | \`InstrumentationSettings | bool                          | None\`                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AbstractAsyncContextManager[StreamedResponse]` | A stream response async context manager. |
+| Type                                            | Description                              |
+| ----------------------------------------------- | ---------------------------------------- |
+| `AbstractAsyncContextManager[StreamedResponse]` | A stream response async context manager. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 
@@ -350,7 +366,6 @@ def model_request_stream(
         model_settings,
         model_request_parameters or models.ModelRequestParameters(),
     )
-
 ````
 
 ### model_request_stream_sync
@@ -366,7 +381,6 @@ model_request_stream_sync(
     ) = None,
     instrument: InstrumentationSettings | bool | None = None
 ) -> StreamedResponseSync
-
 ```
 
 Make a streamed synchronous request to a model.
@@ -401,16 +415,23 @@ with model_request_stream_sync('openai:gpt-4.1-mini', messages) as stream:
         ),
     ]
     '''
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model` | `Model | KnownModelName | str` | The model to make a request to. We allow str here since the actual list of allowed models changes frequently. | *required* | | `messages` | `Sequence[ModelMessage]` | Messages to send to the model | *required* | | `model_settings` | `ModelSettings | None` | optional model settings | `None` | | `model_request_parameters` | `ModelRequestParameters | None` | optional model request parameters | `None` | | `instrument` | `InstrumentationSettings | bool | None` | Whether to instrument the request with OpenTelemetry/Logfire, if None the value from logfire.instrument_pydantic_ai is used. | `None` |
+| Name                       | Type                      | Description                   | Default                           |
+| -------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `model`                    | \`Model                   | KnownModelName                | str\`                             |
+| `messages`                 | `Sequence[ModelMessage]`  | Messages to send to the model | *required*                        |
+| `model_settings`           | \`ModelSettings           | None\`                        | optional model settings           |
+| `model_request_parameters` | \`ModelRequestParameters  | None\`                        | optional model request parameters |
+| `instrument`               | \`InstrumentationSettings | bool                          | None\`                            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `StreamedResponseSync` | A sync stream response context manager. |
+| Type                   | Description                             |
+| ---------------------- | --------------------------------------- |
+| `StreamedResponseSync` | A sync stream response context manager. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 
@@ -477,7 +498,6 @@ def model_request_stream_sync(
     )
 
     return StreamedResponseSync(async_stream_cm)
-
 ````
 
 ### StreamedResponseSync
@@ -610,14 +630,12 @@ class StreamedResponseSync:
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._ensure_stream_ready().timestamp
-
 ```
 
 #### __iter__
 
 ```python
 __iter__() -> Iterator[ModelResponseStreamEvent]
-
 ```
 
 Stream the response as an iterable of ModelResponseStreamEvents.
@@ -637,14 +655,12 @@ def __iter__(self) -> Iterator[messages.ModelResponseStreamEvent]:
             raise item
         else:
             yield item
-
 ```
 
 #### get
 
 ```python
 get() -> ModelResponse
-
 ```
 
 Build a ModelResponse from the data received from the stream so far.
@@ -655,14 +671,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 def get(self) -> messages.ModelResponse:
     """Build a ModelResponse from the data received from the stream so far."""
     return self._ensure_stream_ready().get()
-
 ```
 
 #### response
 
 ```python
 response: ModelResponse
-
 ```
 
 Get the current state of the response.
@@ -671,7 +685,6 @@ Get the current state of the response.
 
 ```python
 usage() -> RequestUsage
-
 ```
 
 Get the usage of the response so far.
@@ -682,14 +695,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/direct.py`
 def usage(self) -> RequestUsage:
     """Get the usage of the response so far."""
     return self._ensure_stream_ready().usage()
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -698,7 +709,6 @@ Get the model name of the response.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

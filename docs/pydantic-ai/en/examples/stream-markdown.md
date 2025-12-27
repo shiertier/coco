@@ -4,20 +4,18 @@ It'll run the example with both OpenAI and Google Gemini models if the required 
 
 Demonstrates:
 
-- [streaming text responses](../../output/#streaming-text)
+- [streaming text responses](https://ai.pydantic.dev/output/#streaming-text)
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.stream_markdown
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.stream_markdown
-
 ```
 
 ## Example Code
@@ -102,5 +100,4 @@ def prettier_code_blocks():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
 ```

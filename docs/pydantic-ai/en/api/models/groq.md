@@ -2,23 +2,20 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Groq](../../../models/groq/).
+For details on how to set up authentication with this model, see [model configuration for Groq](https://ai.pydantic.dev/models/groq/index.md).
 
 ### ProductionGroqModelNames
 
 ```python
 ProductionGroqModelNames = Literal[
-    "distil-whisper-large-v3-en",
-    "gemma2-9b-it",
-    "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
-    "llama-guard-3-8b",
-    "llama3-70b-8192",
-    "llama3-8b-8192",
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-guard-4-12b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
     "whisper-large-v3",
     "whisper-large-v3-turbo",
 ]
-
 ```
 
 Production Groq models from <https://console.groq.com/docs/models#production-models>.
@@ -27,22 +24,16 @@ Production Groq models from <https://console.groq.com/docs/models#production-mod
 
 ```python
 PreviewGroqModelNames = Literal[
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "meta-llama/llama-prompt-guard-2-22m",
+    "meta-llama/llama-prompt-guard-2-86m",
+    "moonshotai/kimi-k2-instruct-0905",
+    "openai/gpt-oss-safeguard-20b",
     "playai-tts",
     "playai-tts-arabic",
-    "qwen-qwq-32b",
-    "mistral-saba-24b",
-    "qwen-2.5-coder-32b",
-    "qwen-2.5-32b",
-    "deepseek-r1-distill-qwen-32b",
-    "deepseek-r1-distill-llama-70b",
-    "llama-3.3-70b-specdec",
-    "llama-3.2-1b-preview",
-    "llama-3.2-3b-preview",
-    "llama-3.2-11b-vision-preview",
-    "llama-3.2-90b-vision-preview",
-    "moonshotai/kimi-k2-instruct",
+    "qwen/qwen-3-32b",
 ]
-
 ```
 
 Preview Groq models from <https://console.groq.com/docs/models#preview-models>.
@@ -53,7 +44,6 @@ Preview Groq models from <https://console.groq.com/docs/models#preview-models>.
 GroqModelName = (
     str | ProductionGroqModelNames | PreviewGroqModelNames
 )
-
 ```
 
 Possible Groq model names.
@@ -81,14 +71,12 @@ class GroqModelSettings(ModelSettings, total=False):
 
     See [the Groq docs](https://console.groq.com/docs/reasoning#reasoning-format) for more details.
     """
-
 ```
 
 #### groq_reasoning_format
 
 ```python
 groq_reasoning_format: Literal['hidden', 'raw', 'parsed']
-
 ```
 
 The format of the reasoning output.
@@ -197,7 +185,6 @@ class GroqModel(Model):
                     return ModelResponse(
                         parts=[tool_call_part],
                         model_name=e.model_name,
-                        timestamp=_utils.now_utc(),
                         provider_name=self._provider.name,
                         provider_url=self.base_url,
                         finish_reason='error',
@@ -311,7 +298,6 @@ class GroqModel(Model):
 
     def _process_response(self, response: chat.ChatCompletion) -> ModelResponse:
         """Process a non-streamed response, and prepare a message to return."""
-        timestamp = number_to_datetime(response.created)
         choice = response.choices[0]
         items: list[ModelResponsePart] = []
         if choice.message.reasoning is not None:
@@ -331,13 +317,14 @@ class GroqModel(Model):
                 items.append(ToolCallPart(tool_name=c.function.name, args=c.function.arguments, tool_call_id=c.id))
 
         raw_finish_reason = choice.finish_reason
-        provider_details = {'finish_reason': raw_finish_reason}
+        provider_details: dict[str, Any] = {'finish_reason': raw_finish_reason}
+        if response.created:  # pragma: no branch
+            provider_details['timestamp'] = number_to_datetime(response.created)
         finish_reason = _FINISH_REASON_MAP.get(raw_finish_reason)
         return ModelResponse(
             parts=items,
             usage=_map_usage(response),
             model_name=response.model,
-            timestamp=timestamp,
             provider_response_id=response.id,
             provider_name=self._provider.name,
             provider_url=self.base_url,
@@ -361,9 +348,9 @@ class GroqModel(Model):
             _response=peekable_response,
             _model_name=first_chunk.model,
             _model_profile=self.profile,
-            _timestamp=number_to_datetime(first_chunk.created),
             _provider_name=self._provider.name,
             _provider_url=self.base_url,
+            _provider_timestamp=number_to_datetime(first_chunk.created),
         )
 
     def _get_tools(self, model_request_parameters: ModelRequestParameters) -> list[chat.ChatCompletionToolParam]:
@@ -509,7 +496,6 @@ class GroqModel(Model):
                     raise RuntimeError(f'Unsupported content type: {type(item)}')
 
         return chat.ChatCompletionUserMessageParam(role='user', content=content)
-
 ```
 
 #### __init__
@@ -524,14 +510,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize a Groq model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `GroqModelName` | The name of the Groq model to use. List of model names available here. | *required* | | `provider` | `Literal['groq', 'gateway'] | Provider[AsyncGroq]` | The provider to use for authentication and API access. Can be either the string 'groq' or an instance of Provider[AsyncGroq]. If not provided, a new provider will be created using the other parameters. | `'groq'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                         | Description                                                            | Default                                                                                                                                                                                                   |
+| ------------ | ---------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name` | `GroqModelName`              | The name of the Groq model to use. List of model names available here. | *required*                                                                                                                                                                                                |
+| `provider`   | \`Literal['groq', 'gateway'] | Provider[AsyncGroq]\`                                                  | The provider to use for authentication and API access. Can be either the string 'groq' or an instance of Provider[AsyncGroq]. If not provided, a new provider will be created using the other parameters. |
+| `profile`    | \`ModelProfileSpec           | None\`                                                                 | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                                                                           |
+| `settings`   | \`ModelSettings              | None\`                                                                 | Model-specific settings that will be used as defaults for this model.                                                                                                                                     |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/groq.py`
 
@@ -563,14 +553,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: GroqModelName
-
 ```
 
 The model name.
@@ -579,7 +567,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -590,7 +577,6 @@ The model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 Return the set of builtin tool types this model can handle.
@@ -602,7 +588,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/groq.py`
 def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     """Return the set of builtin tool types this model can handle."""
     return frozenset({WebSearchTool})
-
 ```
 
 ### GroqStreamedResponse
@@ -621,15 +606,18 @@ class GroqStreamedResponse(StreamedResponse):
     _model_name: GroqModelName
     _model_profile: ModelProfile
     _response: AsyncIterable[chat.ChatCompletionChunk]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _provider_timestamp: datetime | None = None
+    _timestamp: datetime = field(default_factory=_utils.now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:  # noqa: C901
         try:
             executed_tool_call_id: str | None = None
             reasoning_index = 0
             reasoning = False
+            if self._provider_timestamp is not None:  # pragma: no branch
+                self.provider_details = {'timestamp': self._provider_timestamp}
             async for chunk in self._response:
                 self._usage += _map_usage(chunk)
 
@@ -642,7 +630,7 @@ class GroqStreamedResponse(StreamedResponse):
                     continue
 
                 if raw_finish_reason := choice.finish_reason:
-                    self.provider_details = {'finish_reason': raw_finish_reason}
+                    self.provider_details = {**(self.provider_details or {}), 'finish_reason': raw_finish_reason}
                     self.finish_reason = _FINISH_REASON_MAP.get(raw_finish_reason)
 
                 if choice.delta.reasoning is not None:
@@ -730,14 +718,12 @@ class GroqStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: GroqModelName
-
 ```
 
 Get the model name of the response.
@@ -746,7 +732,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -755,7 +740,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -764,7 +748,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

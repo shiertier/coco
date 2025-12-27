@@ -41,6 +41,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     )
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ),
@@ -58,7 +59,6 @@ async def main():
     '''
     print(agent_run.result.output)
     #> The capital of France is Paris.
-
 ```
 
 You can also manually drive the iteration using the next method for more granular control.
@@ -106,6 +106,7 @@ class AgentRun(Generic[AgentDepsT, OutputDataT]):
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -285,6 +286,7 @@ class AgentRun(Generic[AgentDepsT, OutputDataT]):
                                     timestamp=datetime.datetime(...),
                                 )
                             ],
+                            timestamp=datetime.datetime(...),
                             run_id='...',
                         )
                     ),
@@ -326,6 +328,11 @@ class AgentRun(Generic[AgentDepsT, OutputDataT]):
         return self._graph_run.state.usage
 
     @property
+    def metadata(self) -> dict[str, Any] | None:
+        """Metadata associated with this agent run, if configured."""
+        return self._graph_run.state.metadata
+
+    @property
     def run_id(self) -> str:
         """The unique identifier for the agent run."""
         return self._graph_run.state.run_id
@@ -334,7 +341,6 @@ class AgentRun(Generic[AgentDepsT, OutputDataT]):
         result = self._graph_run.output
         result_repr = '<run not finished>' if result is None else repr(result.output)
         return f'<{type(self).__name__} result={result_repr} usage={self.usage()}>'
-
 ````
 
 #### ctx
@@ -343,7 +349,6 @@ class AgentRun(Generic[AgentDepsT, OutputDataT]):
 ctx: GraphRunContext[
     GraphAgentState, GraphAgentDeps[AgentDepsT, Any]
 ]
-
 ```
 
 The current context of the agent run.
@@ -355,7 +360,6 @@ next_node: (
     AgentNode[AgentDepsT, OutputDataT]
     | End[FinalResult[OutputDataT]]
 )
-
 ```
 
 The next node that will be run in the agent graph.
@@ -366,7 +370,6 @@ This is the next node that will be used during async iteration, or if a node is 
 
 ```python
 result: AgentRunResult[OutputDataT] | None
-
 ```
 
 The final result of the run if it has ended, otherwise `None`.
@@ -377,7 +380,6 @@ Once the run returns an End node, `result` is populated with an AgentRunResult.
 
 ```python
 all_messages() -> list[ModelMessage]
-
 ```
 
 Return all messages for the run so far.
@@ -393,7 +395,6 @@ def all_messages(self) -> list[_messages.ModelMessage]:
     Messages from older runs are included.
     """
     return self.ctx.state.message_history
-
 ```
 
 #### all_messages_json
@@ -402,14 +403,15 @@ def all_messages(self) -> list[_messages.ModelMessage]:
 all_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return all messages from all_messages as JSON bytes.
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the messages. |
+| Type    | Description                           |
+| ------- | ------------------------------------- |
+| `bytes` | JSON bytes representing the messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -421,14 +423,12 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
         JSON bytes representing the messages.
     """
     return _messages.ModelMessagesTypeAdapter.dump_json(self.all_messages())
-
 ```
 
 #### new_messages
 
 ```python
 new_messages() -> list[ModelMessage]
-
 ```
 
 Return new messages for the run so far.
@@ -444,21 +444,21 @@ def new_messages(self) -> list[_messages.ModelMessage]:
     Messages from older runs are excluded.
     """
     return self.all_messages()[self.ctx.deps.new_message_index :]
-
 ```
 
 #### new_messages_json
 
 ```python
 new_messages_json() -> bytes
-
 ```
 
 Return new messages from new_messages as JSON bytes.
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the new messages. |
+| Type    | Description                               |
+| ------- | ----------------------------------------- |
+| `bytes` | JSON bytes representing the new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -470,7 +470,6 @@ def new_messages_json(self) -> bytes:
         JSON bytes representing the new messages.
     """
     return _messages.ModelMessagesTypeAdapter.dump_json(self.new_messages())
-
 ```
 
 #### __aiter__
@@ -482,7 +481,6 @@ __aiter__() -> (
         | End[FinalResult[OutputDataT]]
     ]
 )
-
 ```
 
 Provide async-iteration over the nodes in the agent run.
@@ -495,7 +493,6 @@ def __aiter__(
 ) -> AsyncIterator[_agent_graph.AgentNode[AgentDepsT, OutputDataT] | End[FinalResult[OutputDataT]]]:
     """Provide async-iteration over the nodes in the agent run."""
     return self
-
 ```
 
 #### __anext__
@@ -505,7 +502,6 @@ __anext__() -> (
     AgentNode[AgentDepsT, OutputDataT]
     | End[FinalResult[OutputDataT]]
 )
-
 ```
 
 Advance to the next node automatically based on the last returned node.
@@ -519,7 +515,6 @@ async def __anext__(
     """Advance to the next node automatically based on the last returned node."""
     task = await anext(self._graph_run)
     return self._task_to_node(task)
-
 ```
 
 #### next
@@ -531,7 +526,6 @@ next(
     AgentNode[AgentDepsT, OutputDataT]
     | End[FinalResult[OutputDataT]]
 )
-
 ```
 
 Manually drive the agent run by passing in the node you want to run next.
@@ -572,6 +566,7 @@ async def main():
                             timestamp=datetime.datetime(...),
                         )
                     ],
+                    timestamp=datetime.datetime(...),
                     run_id='...',
                 )
             ),
@@ -589,16 +584,20 @@ async def main():
         '''
         print('Final result:', agent_run.result.output)
         #> Final result: The capital of France is Paris.
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `node` | `AgentNode[AgentDepsT, OutputDataT]` | The node to run next in the graph. | *required* |
+| Name   | Type                                 | Description                        | Default    |
+| ------ | ------------------------------------ | ---------------------------------- | ---------- |
+| `node` | `AgentNode[AgentDepsT, OutputDataT]` | The node to run next in the graph. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AgentNode[AgentDepsT, OutputDataT] | End[FinalResult[OutputDataT]]` | The next node returned by the graph logic, or an End node if | | `AgentNode[AgentDepsT, OutputDataT] | End[FinalResult[OutputDataT]]` | the run has completed. |
+| Type                                 | Description                       |
+| ------------------------------------ | --------------------------------- |
+| \`AgentNode[AgentDepsT, OutputDataT] | End\[FinalResult[OutputDataT]\]\` |
+| \`AgentNode[AgentDepsT, OutputDataT] | End\[FinalResult[OutputDataT]\]\` |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -646,6 +645,7 @@ async def next(
                                 timestamp=datetime.datetime(...),
                             )
                         ],
+                        timestamp=datetime.datetime(...),
                         run_id='...',
                     )
                 ),
@@ -680,14 +680,12 @@ async def next(
     except StopAsyncIteration:
         pass
     return self._task_to_node(task)
-
 ````
 
 #### usage
 
 ```python
 usage() -> RunUsage
-
 ```
 
 Get usage statistics for the run so far, including token usage, model requests, and so on.
@@ -698,14 +696,20 @@ Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 def usage(self) -> _usage.RunUsage:
     """Get usage statistics for the run so far, including token usage, model requests, and so on."""
     return self._graph_run.state.usage
-
 ```
+
+#### metadata
+
+```python
+metadata: dict[str, Any] | None
+```
+
+Metadata associated with this agent run, if configured.
 
 #### run_id
 
 ```python
 run_id: str
-
 ```
 
 The unique identifier for the agent run.
@@ -848,17 +852,20 @@ class AgentRunResult(Generic[OutputDataT]):
         return self.response.timestamp
 
     @property
+    def metadata(self) -> dict[str, Any] | None:
+        """Metadata associated with this agent run, if configured."""
+        return self._state.metadata
+
+    @property
     def run_id(self) -> str:
         """The unique identifier for the agent run."""
         return self._state.run_id
-
 ```
 
 #### output
 
 ```python
 output: OutputDataT
-
 ```
 
 The output data from the agent run.
@@ -869,18 +876,21 @@ The output data from the agent run.
 all_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return the history of \_messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of messages. |
+| Type                 | Description       |
+| -------------------- | ----------------- |
+| `list[ModelMessage]` | List of messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -901,7 +911,6 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
         return self._set_output_tool_return(output_tool_return_content)
     else:
         return self._state.message_history
-
 ```
 
 #### all_messages_json
@@ -910,18 +919,21 @@ def all_messages(self, *, output_tool_return_content: str | None = None) -> list
 all_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return all messages from all_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the messages. |
+| Type    | Description                           |
+| ------- | ------------------------------------- |
+| `bytes` | JSON bytes representing the messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -941,7 +953,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
     return _messages.ModelMessagesTypeAdapter.dump_json(
         self.all_messages(output_tool_return_content=output_tool_return_content)
     )
-
 ```
 
 #### new_messages
@@ -950,7 +961,6 @@ def all_messages_json(self, *, output_tool_return_content: str | None = None) ->
 new_messages(
     *, output_tool_return_content: str | None = None
 ) -> list[ModelMessage]
-
 ```
 
 Return new messages associated with this run.
@@ -959,11 +969,15 @@ Messages from older runs are excluded.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[ModelMessage]` | List of new messages. |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| `list[ModelMessage]` | List of new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -983,7 +997,6 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
         List of new messages.
     """
     return self.all_messages(output_tool_return_content=output_tool_return_content)[self._new_message_index :]
-
 ```
 
 #### new_messages_json
@@ -992,18 +1005,21 @@ def new_messages(self, *, output_tool_return_content: str | None = None) -> list
 new_messages_json(
     *, output_tool_return_content: str | None = None
 ) -> bytes
-
 ```
 
 Return new messages from new_messages as JSON bytes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_tool_return_content` | `str | None` | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. | `None` |
+| Name                         | Type  | Description | Default                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_tool_return_content` | \`str | None\`      | The return content of the tool call to set in the last message. This provides a convenient way to modify the content of the output tool call if you want to continue the conversation and want to set the response to the output tool call. If None, the last message will not be modified. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bytes` | JSON bytes representing the new messages. |
+| Type    | Description                               |
+| ------- | ----------------------------------------- |
+| `bytes` | JSON bytes representing the new messages. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 
@@ -1023,14 +1039,12 @@ def new_messages_json(self, *, output_tool_return_content: str | None = None) ->
     return _messages.ModelMessagesTypeAdapter.dump_json(
         self.new_messages(output_tool_return_content=output_tool_return_content)
     )
-
 ```
 
 #### response
 
 ```python
 response: ModelResponse
-
 ```
 
 Return the last response from the message history.
@@ -1039,7 +1053,6 @@ Return the last response from the message history.
 
 ```python
 usage() -> RunUsage
-
 ```
 
 Return the usage of the whole run.
@@ -1050,14 +1063,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 def usage(self) -> _usage.RunUsage:
     """Return the usage of the whole run."""
     return self._state.usage
-
 ```
 
 #### timestamp
 
 ```python
 timestamp() -> datetime
-
 ```
 
 Return the timestamp of last response.
@@ -1068,14 +1079,20 @@ Source code in `pydantic_ai_slim/pydantic_ai/run.py`
 def timestamp(self) -> datetime:
     """Return the timestamp of last response."""
     return self.response.timestamp
-
 ```
+
+#### metadata
+
+```python
+metadata: dict[str, Any] | None
+```
+
+Metadata associated with this agent run, if configured.
 
 #### run_id
 
 ```python
 run_id: str
-
 ```
 
 The unique identifier for the agent run.
@@ -1102,14 +1119,12 @@ class AgentRunResultEvent(Generic[OutputDataT]):
     """Event type identifier, used as a discriminator."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### result
 
 ```python
 result: AgentRunResult[OutputDataT]
-
 ```
 
 The result of the run.
@@ -1118,7 +1133,6 @@ The result of the run.
 
 ```python
 event_kind: Literal["agent_run_result"] = "agent_run_result"
-
 ```
 
 Event type identifier, used as a discriminator.

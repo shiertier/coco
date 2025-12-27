@@ -48,14 +48,12 @@ class MCPError(RuntimeError):
         if self.data:
             return f'{self.message} (code: {self.code}, data: {self.data})'
         return f'{self.message} (code: {self.code})'
-
 ```
 
 #### message
 
 ```python
 message: str = message
-
 ```
 
 The error message.
@@ -64,7 +62,6 @@ The error message.
 
 ```python
 code: int = code
-
 ```
 
 The error code returned by the server.
@@ -73,7 +70,6 @@ The error code returned by the server.
 
 ```python
 data: dict[str, Any] | None = data
-
 ```
 
 Additional information about the error, if provided by the server.
@@ -82,14 +78,15 @@ Additional information about the error, if provided by the server.
 
 ```python
 from_mcp_sdk(error: McpError) -> MCPError
-
 ```
 
 Create an MCPError from an MCP SDK McpError.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `error` | `McpError` | An McpError from the MCP SDK. | *required* |
+| Name    | Type       | Description                   | Default    |
+| ------- | ---------- | ----------------------------- | ---------- |
+| `error` | `McpError` | An McpError from the MCP SDK. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -104,7 +101,6 @@ def from_mcp_sdk(cls, error: mcp_exceptions.McpError) -> MCPError:
     # Extract error data from the McpError.error attribute
     error_data = error.error
     return cls(message=error_data.message, code=error_data.code, data=error_data.data)
-
 ```
 
 ### ResourceAnnotations
@@ -139,14 +135,12 @@ class ResourceAnnotations:
             mcp_annotations: The MCP SDK annotations object.
         """
         return cls(audience=mcp_annotations.audience, priority=mcp_annotations.priority)
-
 ```
 
 #### audience
 
 ```python
 audience: list[Role] | None = None
-
 ```
 
 Intended audience for this entity.
@@ -157,7 +151,6 @@ Intended audience for this entity.
 priority: Annotated[float, Field(ge=0.0, le=1.0)] | None = (
     None
 )
-
 ```
 
 Priority level for this entity, ranging from 0.0 to 1.0.
@@ -168,14 +161,15 @@ Priority level for this entity, ranging from 0.0 to 1.0.
 from_mcp_sdk(
     mcp_annotations: Annotations,
 ) -> ResourceAnnotations
-
 ```
 
 Convert from MCP SDK Annotations to ResourceAnnotations.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `mcp_annotations` | `Annotations` | The MCP SDK annotations object. | *required* |
+| Name              | Type          | Description                     | Default    |
+| ----------------- | ------------- | ------------------------------- | ---------- |
+| `mcp_annotations` | `Annotations` | The MCP SDK annotations object. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -188,7 +182,6 @@ def from_mcp_sdk(cls, mcp_annotations: mcp_types.Annotations) -> ResourceAnnotat
         mcp_annotations: The MCP SDK annotations object.
     """
     return cls(audience=mcp_annotations.audience, priority=mcp_annotations.priority)
-
 ```
 
 ### BaseResource
@@ -223,14 +216,12 @@ class BaseResource(ABC):
     """Optional metadata for the resource."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The programmatic name of the resource.
@@ -239,7 +230,6 @@ The programmatic name of the resource.
 
 ```python
 title: str | None = None
-
 ```
 
 Human-readable title for UI contexts.
@@ -248,7 +238,6 @@ Human-readable title for UI contexts.
 
 ```python
 description: str | None = None
-
 ```
 
 A description of what this resource represents.
@@ -257,7 +246,6 @@ A description of what this resource represents.
 
 ```python
 mime_type: str | None = None
-
 ```
 
 The MIME type of the resource, if known.
@@ -266,7 +254,6 @@ The MIME type of the resource, if known.
 
 ```python
 annotations: ResourceAnnotations | None = None
-
 ```
 
 Optional annotations for the resource.
@@ -275,7 +262,6 @@ Optional annotations for the resource.
 
 ```python
 metadata: dict[str, Any] | None = None
-
 ```
 
 Optional metadata for the resource.
@@ -323,14 +309,12 @@ class Resource(BaseResource):
             else None,
             metadata=mcp_resource.meta,
         )
-
 ```
 
 #### uri
 
 ```python
 uri: str
-
 ```
 
 The URI of the resource.
@@ -339,7 +323,6 @@ The URI of the resource.
 
 ```python
 size: int | None = None
-
 ```
 
 The size of the raw resource content in bytes (before base64 encoding), if known.
@@ -348,14 +331,15 @@ The size of the raw resource content in bytes (before base64 encoding), if known
 
 ```python
 from_mcp_sdk(mcp_resource: Resource) -> Resource
-
 ```
 
 Convert from MCP SDK Resource to PydanticAI Resource.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `mcp_resource` | `Resource` | The MCP SDK Resource object. | *required* |
+| Name           | Type       | Description                  | Default    |
+| -------------- | ---------- | ---------------------------- | ---------- |
+| `mcp_resource` | `Resource` | The MCP SDK Resource object. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -379,7 +363,6 @@ def from_mcp_sdk(cls, mcp_resource: mcp_types.Resource) -> Resource:
         else None,
         metadata=mcp_resource.meta,
     )
-
 ```
 
 ### ResourceTemplate
@@ -421,14 +404,12 @@ class ResourceTemplate(BaseResource):
             else None,
             metadata=mcp_template.meta,
         )
-
 ```
 
 #### uri_template
 
 ```python
 uri_template: str
-
 ```
 
 URI template (RFC 6570) for constructing resource URIs.
@@ -439,14 +420,15 @@ URI template (RFC 6570) for constructing resource URIs.
 from_mcp_sdk(
     mcp_template: ResourceTemplate,
 ) -> ResourceTemplate
-
 ```
 
 Convert from MCP SDK ResourceTemplate to PydanticAI ResourceTemplate.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `mcp_template` | `ResourceTemplate` | The MCP SDK ResourceTemplate object. | *required* |
+| Name           | Type               | Description                          | Default    |
+| -------------- | ------------------ | ------------------------------------ | ---------- |
+| `mcp_template` | `ResourceTemplate` | The MCP SDK ResourceTemplate object. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -469,7 +451,6 @@ def from_mcp_sdk(cls, mcp_template: mcp_types.ResourceTemplate) -> ResourceTempl
         else None,
         metadata=mcp_template.meta,
     )
-
 ```
 
 ### ServerCapabilities
@@ -533,14 +514,12 @@ class ServerCapabilities:
             tools_list_changed=bool(tools_cap.listChanged) if tools_cap else False,
             completions=mcp_capabilities.completions is not None,
         )
-
 ```
 
 #### experimental
 
 ```python
 experimental: list[str] | None = None
-
 ```
 
 Experimental, non-standard capabilities that the server supports.
@@ -549,7 +528,6 @@ Experimental, non-standard capabilities that the server supports.
 
 ```python
 logging: bool = False
-
 ```
 
 Whether the server supports sending log messages to the client.
@@ -558,7 +536,6 @@ Whether the server supports sending log messages to the client.
 
 ```python
 prompts: bool = False
-
 ```
 
 Whether the server offers any prompt templates.
@@ -567,7 +544,6 @@ Whether the server offers any prompt templates.
 
 ```python
 prompts_list_changed: bool = False
-
 ```
 
 Whether the server will emit notifications when the list of prompts changes.
@@ -576,7 +552,6 @@ Whether the server will emit notifications when the list of prompts changes.
 
 ```python
 resources: bool = False
-
 ```
 
 Whether the server offers any resources to read.
@@ -585,7 +560,6 @@ Whether the server offers any resources to read.
 
 ```python
 resources_list_changed: bool = False
-
 ```
 
 Whether the server will emit notifications when the list of resources changes.
@@ -594,7 +568,6 @@ Whether the server will emit notifications when the list of resources changes.
 
 ```python
 tools: bool = False
-
 ```
 
 Whether the server offers any tools to call.
@@ -603,7 +576,6 @@ Whether the server offers any tools to call.
 
 ```python
 tools_list_changed: bool = False
-
 ```
 
 Whether the server will emit notifications when the list of tools changes.
@@ -612,7 +584,6 @@ Whether the server will emit notifications when the list of tools changes.
 
 ```python
 completions: bool = False
-
 ```
 
 Whether the server offers autocompletion suggestions for prompts and resources.
@@ -623,14 +594,15 @@ Whether the server offers autocompletion suggestions for prompts and resources.
 from_mcp_sdk(
     mcp_capabilities: ServerCapabilities,
 ) -> ServerCapabilities
-
 ```
 
 Convert from MCP SDK ServerCapabilities to PydanticAI ServerCapabilities.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `mcp_capabilities` | `ServerCapabilities` | The MCP SDK ServerCapabilities object. | *required* |
+| Name               | Type                 | Description                            | Default    |
+| ------------------ | -------------------- | -------------------------------------- | ---------- |
+| `mcp_capabilities` | `ServerCapabilities` | The MCP SDK ServerCapabilities object. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -656,7 +628,6 @@ def from_mcp_sdk(cls, mcp_capabilities: mcp_types.ServerCapabilities) -> ServerC
         tools_list_changed=bool(tools_cap.listChanged) if tools_cap else False,
         completions=mcp_capabilities.completions is not None,
     )
-
 ```
 
 ### MCPServer
@@ -1195,14 +1166,12 @@ class MCPServer(AbstractToolset[Any], ABC):
 
     def __eq__(self, value: object, /) -> bool:
         return isinstance(value, MCPServer) and self.id == value.id and self.tool_prefix == value.tool_prefix
-
 ```
 
 #### tool_prefix
 
 ```python
 tool_prefix: str | None = tool_prefix
-
 ```
 
 A prefix to add to all tools that are registered with the server.
@@ -1215,7 +1184,6 @@ e.g. if `tool_prefix='foo'`, then a tool named `bar` will be registered as `foo_
 
 ```python
 log_level: LoggingLevel | None = log_level
-
 ```
 
 The log level to set when connecting to the server, if any.
@@ -1228,7 +1196,6 @@ If `None`, no log level will be set.
 
 ```python
 log_handler: LoggingFnT | None = log_handler
-
 ```
 
 A handler for logging messages from the server.
@@ -1237,7 +1204,6 @@ A handler for logging messages from the server.
 
 ```python
 timeout: float = timeout
-
 ```
 
 The timeout in seconds to wait for the client to initialize.
@@ -1246,7 +1212,6 @@ The timeout in seconds to wait for the client to initialize.
 
 ```python
 read_timeout: float = read_timeout
-
 ```
 
 Maximum time in seconds to wait for new messages before timing out.
@@ -1259,7 +1224,6 @@ This timeout applies to the long-lived connection after it's established. If no 
 process_tool_call: ProcessToolCallback | None = (
     process_tool_call
 )
-
 ```
 
 Hook to customize tool calling and optionally pass extra metadata.
@@ -1268,7 +1232,6 @@ Hook to customize tool calling and optionally pass extra metadata.
 
 ```python
 allow_sampling: bool = allow_sampling
-
 ```
 
 Whether to allow MCP sampling through this client.
@@ -1277,7 +1240,6 @@ Whether to allow MCP sampling through this client.
 
 ```python
 sampling_model: Model | None = sampling_model
-
 ```
 
 The model to use for sampling.
@@ -1286,7 +1248,6 @@ The model to use for sampling.
 
 ```python
 max_retries: int = max_retries
-
 ```
 
 The maximum number of times to retry a tool call.
@@ -1297,7 +1258,6 @@ The maximum number of times to retry a tool call.
 elicitation_callback: ElicitationFnT | None = (
     elicitation_callback
 )
-
 ```
 
 Callback function to handle elicitation requests from the server.
@@ -1306,7 +1266,6 @@ Callback function to handle elicitation requests from the server.
 
 ```python
 cache_tools: bool = cache_tools
-
 ```
 
 Whether to cache the list of tools.
@@ -1322,7 +1281,6 @@ Set to `False` for servers that change tools dynamically without sending notific
 
 ```python
 cache_resources: bool = cache_resources
-
 ```
 
 Whether to cache the list of resources.
@@ -1345,7 +1303,6 @@ client_streams() -> AsyncIterator[
         MemoryObjectSendStream[SessionMessage],
     ]
 ]
-
 ```
 
 Create the streams for the MCP server.
@@ -1366,14 +1323,12 @@ async def client_streams(
     """Create the streams for the MCP server."""
     raise NotImplementedError('MCP Server subclasses must implement this method.')
     yield
-
 ```
 
 #### server_info
 
 ```python
 server_info: Implementation
-
 ```
 
 Access the information send by the MCP server during initialization.
@@ -1382,7 +1337,6 @@ Access the information send by the MCP server during initialization.
 
 ```python
 capabilities: ServerCapabilities
-
 ```
 
 Access the capabilities advertised by the MCP server during initialization.
@@ -1391,7 +1345,6 @@ Access the capabilities advertised by the MCP server during initialization.
 
 ```python
 instructions: str | None
-
 ```
 
 Access the instructions sent by the MCP server during initialization.
@@ -1400,7 +1353,6 @@ Access the instructions sent by the MCP server during initialization.
 
 ```python
 list_tools() -> list[Tool]
-
 ```
 
 Retrieve tools that are currently active on the server.
@@ -1434,7 +1386,6 @@ async def list_tools(self) -> list[mcp_types.Tool]:
         else:
             result = await self._client.list_tools()
             return result.tools
-
 ```
 
 #### direct_call_tool
@@ -1445,22 +1396,29 @@ direct_call_tool(
     args: dict[str, Any],
     metadata: dict[str, Any] | None = None,
 ) -> ToolResult
-
 ```
 
 Call a tool on the server.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str` | The name of the tool to call. | *required* | | `args` | `dict[str, Any]` | The arguments to pass to the tool. | *required* | | `metadata` | `dict[str, Any] | None` | Request-level metadata (optional) | `None` |
+| Name       | Type             | Description                        | Default                           |
+| ---------- | ---------------- | ---------------------------------- | --------------------------------- |
+| `name`     | `str`            | The name of the tool to call.      | *required*                        |
+| `args`     | `dict[str, Any]` | The arguments to pass to the tool. | *required*                        |
+| `metadata` | \`dict[str, Any] | None\`                             | Request-level metadata (optional) |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ToolResult` | The result of the tool call. |
+| Type         | Description                  |
+| ------------ | ---------------------------- |
+| `ToolResult` | The result of the tool call. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ModelRetry` | If the tool call fails. |
+| Type         | Description             |
+| ------------ | ----------------------- |
+| `ModelRetry` | If the tool call fails. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -1523,14 +1481,12 @@ async def direct_call_tool(
 
     mapped = [await self._map_tool_result_part(part) for part in result.content]
     return mapped[0] if len(mapped) == 1 else mapped
-
 ```
 
 #### list_resources
 
 ```python
 list_resources() -> list[Resource]
-
 ```
 
 Retrieve resources that are currently present on the server.
@@ -1544,7 +1500,9 @@ Set `cache_resources=False` for servers that change resources without sending no
 
 Raises:
 
-| Type | Description | | --- | --- | | `MCPError` | If the server returns an error. |
+| Type       | Description                     |
+| ---------- | ------------------------------- |
+| `MCPError` | If the server returns an error. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -1577,21 +1535,21 @@ async def list_resources(self) -> list[Resource]:
                 return [Resource.from_mcp_sdk(r) for r in result.resources]
         except mcp_exceptions.McpError as e:
             raise MCPError.from_mcp_sdk(e) from e
-
 ```
 
 #### list_resource_templates
 
 ```python
 list_resource_templates() -> list[ResourceTemplate]
-
 ```
 
 Retrieve resource templates that are currently present on the server.
 
 Raises:
 
-| Type | Description | | --- | --- | | `MCPError` | If the server returns an error. |
+| Type       | Description                     |
+| ---------- | ------------------------------- |
+| `MCPError` | If the server returns an error. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -1610,7 +1568,6 @@ async def list_resource_templates(self) -> list[ResourceTemplate]:
         except mcp_exceptions.McpError as e:
             raise MCPError.from_mcp_sdk(e) from e
     return [ResourceTemplate.from_mcp_sdk(t) for t in result.resourceTemplates]
-
 ```
 
 #### read_resource
@@ -1619,36 +1576,40 @@ async def list_resource_templates(self) -> list[ResourceTemplate]:
 read_resource(
     uri: str,
 ) -> str | BinaryContent | list[str | BinaryContent]
-
 ```
 
 ```python
 read_resource(
     uri: Resource,
 ) -> str | BinaryContent | list[str | BinaryContent]
-
 ```
 
 ```python
 read_resource(
     uri: str | Resource,
 ) -> str | BinaryContent | list[str | BinaryContent]
-
 ```
 
 Read the contents of a specific resource by URI.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `uri` | `str | Resource` | The URI of the resource to read, or a Resource object. | *required* |
+| Name  | Type  | Description | Default                                                |
+| ----- | ----- | ----------- | ------------------------------------------------------ |
+| `uri` | \`str | Resource\`  | The URI of the resource to read, or a Resource object. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `str | BinaryContent | list[str | BinaryContent]` | The resource contents. If the resource has a single content item, returns that item directly. | | `str | BinaryContent | list[str | BinaryContent]` | If the resource has multiple content items, returns a list of items. |
+| Type  | Description   |
+| ----- | ------------- |
+| \`str | BinaryContent |
+| \`str | BinaryContent |
 
 Raises:
 
-| Type | Description | | --- | --- | | `MCPError` | If the server returns an error. |
+| Type       | Description                     |
+| ---------- | ------------------------------- |
+| `MCPError` | If the server returns an error. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -1680,14 +1641,12 @@ async def read_resource(
         if len(result.contents) == 1
         else [self._get_content(resource) for resource in result.contents]
     )
-
 ```
 
 #### __aenter__
 
 ```python
 __aenter__() -> Self
-
 ```
 
 Enter the MCP server context.
@@ -1735,14 +1694,12 @@ async def __aenter__(self) -> Self:
                 self._exit_stack = exit_stack.pop_all()
         self._running_count += 1
     return self
-
 ```
 
 #### is_running
 
 ```python
 is_running: bool
-
 ```
 
 Check if the MCP server is running.
@@ -1769,7 +1726,6 @@ server = MCPServerStdio(  # (1)!
     'uv', args=['run', 'mcp-run-python', 'stdio'], timeout=10
 )
 agent = Agent('openai:gpt-4o', toolsets=[server])
-
 ```
 
 1. See [MCP Run Python](https://github.com/pydantic/mcp-run-python) for more information.
@@ -1946,7 +1902,6 @@ class MCPServerStdio(MCPServer):
             and self.env == value.env
             and self.cwd == value.cwd
         )
-
 ````
 
 #### __init__
@@ -1973,14 +1928,32 @@ __init__(
     id: str | None = None,
     client_info: Implementation | None = None
 )
-
 ```
 
 Build a new MCP server.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `command` | `str` | The command to run. | *required* | | `args` | `Sequence[str]` | The arguments to pass to the command. | *required* | | `env` | `dict[str, str] | None` | The environment variables to set in the subprocess. | `None` | | `cwd` | `str | Path | None` | The working directory to use when spawning the process. | `None` | | `tool_prefix` | `str | None` | A prefix to add to all tools that are registered with the server. | `None` | | `log_level` | `LoggingLevel | None` | The log level to set when connecting to the server, if any. | `None` | | `log_handler` | `LoggingFnT | None` | A handler for logging messages from the server. | `None` | | `timeout` | `float` | The timeout in seconds to wait for the client to initialize. | `5` | | `read_timeout` | `float` | Maximum time in seconds to wait for new messages before timing out. | `5 * 60` | | `process_tool_call` | `ProcessToolCallback | None` | Hook to customize tool calling and optionally pass extra metadata. | `None` | | `allow_sampling` | `bool` | Whether to allow MCP sampling through this client. | `True` | | `sampling_model` | `Model | None` | The model to use for sampling. | `None` | | `max_retries` | `int` | The maximum number of times to retry a tool call. | `1` | | `elicitation_callback` | `ElicitationFnT | None` | Callback function to handle elicitation requests from the server. | `None` | | `cache_tools` | `bool` | Whether to cache the list of tools. See MCPServer.cache_tools. | `True` | | `cache_resources` | `bool` | Whether to cache the list of resources. See MCPServer.cache_resources. | `True` | | `id` | `str | None` | An optional unique ID for the MCP server. An MCP server needs to have an ID in order to be used in a durable execution environment like Temporal, in which case the ID will be used to identify the server's activities within the workflow. | `None` | | `client_info` | `Implementation | None` | Information describing the MCP client implementation. | `None` |
+| Name                   | Type                  | Description                                                            | Default                                                                                                                                                                                                                                      |
+| ---------------------- | --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`              | `str`                 | The command to run.                                                    | *required*                                                                                                                                                                                                                                   |
+| `args`                 | `Sequence[str]`       | The arguments to pass to the command.                                  | *required*                                                                                                                                                                                                                                   |
+| `env`                  | \`dict[str, str]      | None\`                                                                 | The environment variables to set in the subprocess.                                                                                                                                                                                          |
+| `cwd`                  | \`str                 | Path                                                                   | None\`                                                                                                                                                                                                                                       |
+| `tool_prefix`          | \`str                 | None\`                                                                 | A prefix to add to all tools that are registered with the server.                                                                                                                                                                            |
+| `log_level`            | \`LoggingLevel        | None\`                                                                 | The log level to set when connecting to the server, if any.                                                                                                                                                                                  |
+| `log_handler`          | \`LoggingFnT          | None\`                                                                 | A handler for logging messages from the server.                                                                                                                                                                                              |
+| `timeout`              | `float`               | The timeout in seconds to wait for the client to initialize.           | `5`                                                                                                                                                                                                                                          |
+| `read_timeout`         | `float`               | Maximum time in seconds to wait for new messages before timing out.    | `5 * 60`                                                                                                                                                                                                                                     |
+| `process_tool_call`    | \`ProcessToolCallback | None\`                                                                 | Hook to customize tool calling and optionally pass extra metadata.                                                                                                                                                                           |
+| `allow_sampling`       | `bool`                | Whether to allow MCP sampling through this client.                     | `True`                                                                                                                                                                                                                                       |
+| `sampling_model`       | \`Model               | None\`                                                                 | The model to use for sampling.                                                                                                                                                                                                               |
+| `max_retries`          | `int`                 | The maximum number of times to retry a tool call.                      | `1`                                                                                                                                                                                                                                          |
+| `elicitation_callback` | \`ElicitationFnT      | None\`                                                                 | Callback function to handle elicitation requests from the server.                                                                                                                                                                            |
+| `cache_tools`          | `bool`                | Whether to cache the list of tools. See MCPServer.cache_tools.         | `True`                                                                                                                                                                                                                                       |
+| `cache_resources`      | `bool`                | Whether to cache the list of resources. See MCPServer.cache_resources. | `True`                                                                                                                                                                                                                                       |
+| `id`                   | \`str                 | None\`                                                                 | An optional unique ID for the MCP server. An MCP server needs to have an ID in order to be used in a durable execution environment like Temporal, in which case the ID will be used to identify the server's activities within the workflow. |
+| `client_info`          | \`Implementation      | None\`                                                                 | Information describing the MCP client implementation.                                                                                                                                                                                        |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -2052,14 +2025,12 @@ def __init__(
         id=id,
         client_info=client_info,
     )
-
 ```
 
 #### command
 
 ```python
 command: str = command
-
 ```
 
 The command to run.
@@ -2068,7 +2039,6 @@ The command to run.
 
 ```python
 args: Sequence[str] = args
-
 ```
 
 The arguments to pass to the command.
@@ -2077,7 +2047,6 @@ The arguments to pass to the command.
 
 ```python
 env: dict[str, str] | None = env
-
 ```
 
 The environment variables the CLI server will have access to.
@@ -2088,7 +2057,6 @@ By default the subprocess will not inherit any environment variables from the pa
 
 ```python
 cwd: str | Path | None = cwd
-
 ```
 
 The working directory to use when spawning the process.
@@ -2113,7 +2081,6 @@ from pydantic_ai.mcp import MCPServerSSE
 
 server = MCPServerSSE('http://localhost:3001/sse')
 agent = Agent('openai:gpt-4o', toolsets=[server])
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
@@ -2159,7 +2126,6 @@ class MCPServerSSE(_MCPServerHTTP):
 
     def __eq__(self, value: object, /) -> bool:
         return super().__eq__(value) and isinstance(value, MCPServerSSE) and self.url == value.url
-
 ````
 
 ### MCPServerHTTP
@@ -2186,7 +2152,6 @@ from pydantic_ai.mcp import MCPServerHTTP
 
 server = MCPServerHTTP('http://localhost:3001/sse')
 agent = Agent('openai:gpt-4o', toolsets=[server])
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
@@ -2212,7 +2177,6 @@ class MCPServerHTTP(MCPServerSSE):
     agent = Agent('openai:gpt-4o', toolsets=[server])
     ```
     """
-
 ````
 
 ### MCPServerStreamableHTTP
@@ -2235,7 +2199,6 @@ from pydantic_ai.mcp import MCPServerStreamableHTTP
 
 server = MCPServerStreamableHTTP('http://localhost:8000/mcp')
 agent = Agent('openai:gpt-4o', toolsets=[server])
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
@@ -2281,7 +2244,6 @@ class MCPServerStreamableHTTP(_MCPServerHTTP):
 
     def __eq__(self, value: object, /) -> bool:
         return super().__eq__(value) and isinstance(value, MCPServerStreamableHTTP) and self.url == value.url
-
 ````
 
 ### ToolResult
@@ -2296,7 +2258,6 @@ ToolResult = (
         str | BinaryContent | dict[str, Any] | list[Any]
     ]
 )
-
 ```
 
 The result type of an MCP tool call.
@@ -2308,7 +2269,6 @@ CallToolFunc = Callable[
     [str, dict[str, Any], dict[str, Any] | None],
     Awaitable[ToolResult],
 ]
-
 ```
 
 A function type that represents a tool call.
@@ -2320,7 +2280,6 @@ ProcessToolCallback = Callable[
     [RunContext[Any], CallToolFunc, str, dict[str, Any]],
     Awaitable[ToolResult],
 ]
-
 ```
 
 A process tool callback.
@@ -2353,7 +2312,6 @@ class MCPServerConfig(BaseModel):
         ],
         Field(alias='mcpServers'),
     ]
-
 ```
 
 ### load_mcp_servers
@@ -2364,7 +2322,6 @@ load_mcp_servers(
 ) -> list[
     MCPServerStdio | MCPServerStreamableHTTP | MCPServerSSE
 ]
-
 ```
 
 Load MCP servers from a configuration file.
@@ -2376,15 +2333,23 @@ Environment variables can be referenced in the configuration file using:
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `config_path` | `str | Path` | The path to the configuration file. | *required* |
+| Name          | Type  | Description | Default                             |
+| ------------- | ----- | ----------- | ----------------------------------- |
+| `config_path` | \`str | Path\`      | The path to the configuration file. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[MCPServerStdio | MCPServerStreamableHTTP | MCPServerSSE]` | A list of MCP servers. |
+| Type                   | Description             |
+| ---------------------- | ----------------------- |
+| \`list\[MCPServerStdio | MCPServerStreamableHTTP |
 
 Raises:
 
-| Type | Description | | --- | --- | | `FileNotFoundError` | If the configuration file does not exist. | | `ValidationError` | If the configuration file does not match the schema. | | `ValueError` | If an environment variable referenced in the configuration is not defined and no default value is provided. |
+| Type                | Description                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `FileNotFoundError` | If the configuration file does not exist.                                                                   |
+| `ValidationError`   | If the configuration file does not match the schema.                                                        |
+| `ValueError`        | If an environment variable referenced in the configuration is not defined and no default value is provided. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/mcp.py`
 
@@ -2423,5 +2388,4 @@ def load_mcp_servers(config_path: str | Path) -> list[MCPServerStdio | MCPServer
         servers.append(server)
 
     return servers
-
 ```

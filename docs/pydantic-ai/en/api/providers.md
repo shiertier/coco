@@ -49,14 +49,12 @@ class Provider(ABC, Generic[InterfaceClient]):
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(name={self.name}, base_url={self.base_url})'  # pragma: lax no cover
-
 ```
 
 ### name
 
 ```python
 name: str
-
 ```
 
 The provider name.
@@ -65,7 +63,6 @@ The provider name.
 
 ```python
 base_url: str
-
 ```
 
 The base URL for the provider API.
@@ -74,7 +71,6 @@ The base URL for the provider API.
 
 ```python
 client: InterfaceClient
-
 ```
 
 The client for the provider.
@@ -83,7 +79,6 @@ The client for the provider.
 
 ```python
 model_profile(model_name: str) -> ModelProfile | None
-
 ```
 
 The model profile for the named model, if available.
@@ -94,14 +89,19 @@ Source code in `pydantic_ai_slim/pydantic_ai/providers/__init__.py`
 def model_profile(self, model_name: str) -> ModelProfile | None:
     """The model profile for the named model, if available."""
     return None  # pragma: no cover
-
 ```
 
 Create a new Gateway provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `upstream_provider` | `UpstreamProvider | str` | The upstream provider to use. | *required* | | `route` | `str | None` | The name of the provider or routing group to use to handle the request. If not provided, the default routing group for the API format will be used. | `None` | | `api_key` | `str | None` | The API key to use for authentication. If not provided, the PYDANTIC_AI_GATEWAY_API_KEY environment variable will be used if available. | `None` | | `base_url` | `str | None` | The base URL to use for the Gateway. If not provided, the PYDANTIC_AI_GATEWAY_BASE_URL environment variable will be used if available. Otherwise, defaults to https://gateway.pydantic.dev/proxy. | `None` | | `http_client` | `AsyncClient | None` | The HTTP client to use for the Gateway. | `None` |
+| Name                | Type               | Description | Default                                                                                                                                                                                           |
+| ------------------- | ------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upstream_provider` | \`UpstreamProvider | str\`       | The upstream provider to use.                                                                                                                                                                     |
+| `route`             | \`str              | None\`      | The name of the provider or routing group to use to handle the request. If not provided, the default routing group for the API format will be used.                                               |
+| `api_key`           | \`str              | None\`      | The API key to use for authentication. If not provided, the PYDANTIC_AI_GATEWAY_API_KEY environment variable will be used if available.                                                           |
+| `base_url`          | \`str              | None\`      | The base URL to use for the Gateway. If not provided, the PYDANTIC_AI_GATEWAY_BASE_URL environment variable will be used if available. Otherwise, defaults to https://gateway.pydantic.dev/proxy. |
+| `http_client`       | \`AsyncClient      | None\`      | The HTTP client to use for the Gateway.                                                                                                                                                           |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/gateway.py`
 
@@ -176,7 +176,161 @@ def gateway_provider(
         return GoogleProvider(vertexai=True, api_key=api_key, base_url=base_url, http_client=http_client)
     else:
         raise UserError(f'Unknown upstream provider: {upstream_provider}')
+```
 
+Bases: `Provider[AsyncAnthropicClient]`
+
+Provider for Anthropic API.
+
+Source code in `pydantic_ai_slim/pydantic_ai/providers/anthropic.py`
+
+```python
+class AnthropicProvider(Provider[AsyncAnthropicClient]):
+    """Provider for Anthropic API."""
+
+    @property
+    def name(self) -> str:
+        return 'anthropic'
+
+    @property
+    def base_url(self) -> str:
+        return str(self._client.base_url)
+
+    @property
+    def client(self) -> AsyncAnthropicClient:
+        return self._client
+
+    def model_profile(self, model_name: str) -> ModelProfile | None:
+        profile = anthropic_model_profile(model_name)
+        return ModelProfile(json_schema_transformer=AnthropicJsonSchemaTransformer).update(profile)
+
+    @overload
+    def __init__(self, *, anthropic_client: AsyncAnthropicClient | None = None) -> None: ...
+
+    @overload
+    def __init__(
+        self, *, api_key: str | None = None, base_url: str | None = None, http_client: httpx.AsyncClient | None = None
+    ) -> None: ...
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        anthropic_client: AsyncAnthropicClient | None = None,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        """Create a new Anthropic provider.
+
+        Args:
+            api_key: The API key to use for authentication, if not provided, the `ANTHROPIC_API_KEY` environment variable
+                will be used if available.
+            base_url: The base URL to use for the Anthropic API.
+            anthropic_client: An existing Anthropic client to use. Accepts
+                [`AsyncAnthropic`](https://github.com/anthropics/anthropic-sdk-python),
+                [`AsyncAnthropicBedrock`](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock),
+                [`AsyncAnthropicFoundry`](https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry), or
+                [`AsyncAnthropicVertex`](https://docs.anthropic.com/en/api/claude-on-vertex-ai).
+                If provided, the `api_key` and `http_client` arguments will be ignored.
+            http_client: An existing `httpx.AsyncClient` to use for making HTTP requests.
+        """
+        if anthropic_client is not None:
+            assert http_client is None, 'Cannot provide both `anthropic_client` and `http_client`'
+            assert api_key is None, 'Cannot provide both `anthropic_client` and `api_key`'
+            self._client = anthropic_client
+        else:
+            api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+            if not api_key:
+                raise UserError(
+                    'Set the `ANTHROPIC_API_KEY` environment variable or pass it via `AnthropicProvider(api_key=...)`'
+                    'to use the Anthropic provider.'
+                )
+            if http_client is not None:
+                self._client = AsyncAnthropic(api_key=api_key, base_url=base_url, http_client=http_client)
+            else:
+                http_client = cached_async_http_client(provider='anthropic')
+                self._client = AsyncAnthropic(api_key=api_key, base_url=base_url, http_client=http_client)
+```
+
+### __init__
+
+```python
+__init__(
+    *, anthropic_client: AsyncAnthropicClient | None = None
+) -> None
+```
+
+```python
+__init__(
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    http_client: AsyncClient | None = None
+) -> None
+```
+
+```python
+__init__(
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    anthropic_client: AsyncAnthropicClient | None = None,
+    http_client: AsyncClient | None = None
+) -> None
+```
+
+Create a new Anthropic provider.
+
+Parameters:
+
+| Name               | Type                   | Description | Default                                                                                                                                                                                                 |
+| ------------------ | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`          | \`str                  | None\`      | The API key to use for authentication, if not provided, the ANTHROPIC_API_KEY environment variable will be used if available.                                                                           |
+| `base_url`         | \`str                  | None\`      | The base URL to use for the Anthropic API.                                                                                                                                                              |
+| `anthropic_client` | \`AsyncAnthropicClient | None\`      | An existing Anthropic client to use. Accepts AsyncAnthropic, AsyncAnthropicBedrock, AsyncAnthropicFoundry, or AsyncAnthropicVertex. If provided, the api_key and http_client arguments will be ignored. |
+| `http_client`      | \`AsyncClient          | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                                                                                                          |
+
+Source code in `pydantic_ai_slim/pydantic_ai/providers/anthropic.py`
+
+```python
+def __init__(
+    self,
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    anthropic_client: AsyncAnthropicClient | None = None,
+    http_client: httpx.AsyncClient | None = None,
+) -> None:
+    """Create a new Anthropic provider.
+
+    Args:
+        api_key: The API key to use for authentication, if not provided, the `ANTHROPIC_API_KEY` environment variable
+            will be used if available.
+        base_url: The base URL to use for the Anthropic API.
+        anthropic_client: An existing Anthropic client to use. Accepts
+            [`AsyncAnthropic`](https://github.com/anthropics/anthropic-sdk-python),
+            [`AsyncAnthropicBedrock`](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock),
+            [`AsyncAnthropicFoundry`](https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry), or
+            [`AsyncAnthropicVertex`](https://docs.anthropic.com/en/api/claude-on-vertex-ai).
+            If provided, the `api_key` and `http_client` arguments will be ignored.
+        http_client: An existing `httpx.AsyncClient` to use for making HTTP requests.
+    """
+    if anthropic_client is not None:
+        assert http_client is None, 'Cannot provide both `anthropic_client` and `http_client`'
+        assert api_key is None, 'Cannot provide both `anthropic_client` and `api_key`'
+        self._client = anthropic_client
+    else:
+        api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise UserError(
+                'Set the `ANTHROPIC_API_KEY` environment variable or pass it via `AnthropicProvider(api_key=...)`'
+                'to use the Anthropic provider.'
+            )
+        if http_client is not None:
+            self._client = AsyncAnthropic(api_key=api_key, base_url=base_url, http_client=http_client)
+        else:
+            http_client = cached_async_http_client(provider='anthropic')
+            self._client = AsyncAnthropic(api_key=api_key, base_url=base_url, http_client=http_client)
 ```
 
 ### GoogleProvider
@@ -311,7 +465,6 @@ class GoogleProvider(Provider[Client]):
                 )
         else:
             self._client = client  # pragma: no cover
-
 ```
 
 #### __init__
@@ -323,7 +476,6 @@ __init__(
     http_client: AsyncClient | None = None,
     base_url: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -337,12 +489,10 @@ __init__(
     http_client: AsyncClient | None = None,
     base_url: str | None = None
 ) -> None
-
 ```
 
 ```python
 __init__(*, client: Client) -> None
-
 ```
 
 ```python
@@ -353,7 +503,6 @@ __init__(
     http_client: AsyncClient | None = None,
     base_url: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -370,14 +519,22 @@ __init__(
     http_client: AsyncClient | None = None,
     base_url: str | None = None
 ) -> None
-
 ```
 
 Create a new Google provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The API key <https://ai.google.dev/gemini-api/docs/api-key>\_ to use for authentication. It can also be set via the GOOGLE_API_KEY environment variable. | `None` | | `credentials` | `Credentials | None` | The credentials to use for authentication when calling the Vertex AI APIs. Credentials can be obtained from environment variables and default credentials. For more information, see Set up Application Default Credentials. Applies to the Vertex AI API only. | `None` | | `project` | `str | None` | The Google Cloud project ID to use for quota. Can be obtained from environment variables (for example, GOOGLE_CLOUD_PROJECT). Applies to the Vertex AI API only. | `None` | | `location` | `VertexAILocation | Literal['global'] | str | None` | The location to send API requests to (for example, us-central1). Can be obtained from environment variables. Applies to the Vertex AI API only. | `None` | | `vertexai` | `bool | None` | Force the use of the Vertex AI API. If False, the Google Generative Language API will be used. Defaults to False unless location, project, or credentials are provided. | `None` | | `client` | `Client | None` | A pre-initialized client to use. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` | | `base_url` | `str | None` | The base URL for the Google API. | `None` |
+| Name          | Type               | Description       | Default                                                                                                                                                                                                                                                         |
+| ------------- | ------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`     | \`str              | None\`            | The API key <https://ai.google.dev/gemini-api/docs/api-key>\_ to use for authentication. It can also be set via the GOOGLE_API_KEY environment variable.                                                                                                        |
+| `credentials` | \`Credentials      | None\`            | The credentials to use for authentication when calling the Vertex AI APIs. Credentials can be obtained from environment variables and default credentials. For more information, see Set up Application Default Credentials. Applies to the Vertex AI API only. |
+| `project`     | \`str              | None\`            | The Google Cloud project ID to use for quota. Can be obtained from environment variables (for example, GOOGLE_CLOUD_PROJECT). Applies to the Vertex AI API only.                                                                                                |
+| `location`    | \`VertexAILocation | Literal['global'] | str                                                                                                                                                                                                                                                             |
+| `vertexai`    | \`bool             | None\`            | Force the use of the Vertex AI API. If False, the Google Generative Language API will be used. Defaults to False unless location, project, or credentials are provided.                                                                                         |
+| `client`      | \`Client           | None\`            | A pre-initialized client to use.                                                                                                                                                                                                                                |
+| `http_client` | \`AsyncClient      | None\`            | An existing httpx.AsyncClient to use for making HTTP requests.                                                                                                                                                                                                  |
+| `base_url`    | \`str              | None\`            | The base URL for the Google API.                                                                                                                                                                                                                                |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/google.py`
 
@@ -458,7 +615,6 @@ def __init__(
             )
     else:
         self._client = client  # pragma: no cover
-
 ```
 
 ### VertexAILocation
@@ -495,7 +651,6 @@ VertexAILocation = Literal[
     "us-west1",
     "us-west4",
 ]
-
 ```
 
 Regions available for Vertex AI. More details [here](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations#genai-locations).
@@ -573,14 +728,12 @@ class OpenAIProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='openai')
             self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 #### __init__
 
 ```python
 __init__(*, openai_client: AsyncOpenAI) -> None
-
 ```
 
 ```python
@@ -590,7 +743,6 @@ __init__(
     openai_client: None = None,
     http_client: AsyncClient | None = None,
 ) -> None
-
 ```
 
 ```python
@@ -600,14 +752,18 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None,
 ) -> None
-
 ```
 
 Create a new OpenAI provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `base_url` | `str | None` | The base url for the OpenAI requests. If not provided, the OPENAI_BASE_URL environment variable will be used if available. Otherwise, defaults to OpenAI's base url. | `None` | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the OPENAI_API_KEY environment variable will be used if available. | `None` | | `openai_client` | `AsyncOpenAI | None` | An existing AsyncOpenAI client to use. If provided, base_url, api_key, and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name            | Type          | Description | Default                                                                                                                                                              |
+| --------------- | ------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_url`      | \`str         | None\`      | The base url for the OpenAI requests. If not provided, the OPENAI_BASE_URL environment variable will be used if available. Otherwise, defaults to OpenAI's base url. |
+| `api_key`       | \`str         | None\`      | The API key to use for authentication, if not provided, the OPENAI_API_KEY environment variable will be used if available.                                           |
+| `openai_client` | \`AsyncOpenAI | None\`      | An existing AsyncOpenAI client to use. If provided, base_url, api_key, and http_client must be None.                                                                 |
+| `http_client`   | \`AsyncClient | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                                                                       |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/openai.py`
 
@@ -646,7 +802,6 @@ def __init__(
     else:
         http_client = cached_async_http_client(provider='openai')
         self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 ### DeepSeekProvider
@@ -723,7 +878,6 @@ class DeepSeekProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='deepseek')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 ### BedrockModelProfile
@@ -749,7 +903,6 @@ class BedrockModelProfile(ModelProfile):
     bedrock_send_back_thinking_parts: bool = False
     bedrock_supports_prompt_caching: bool = False
     bedrock_supports_tool_caching: bool = False
-
 ```
 
 ### bedrock_amazon_model_profile
@@ -758,7 +911,6 @@ class BedrockModelProfile(ModelProfile):
 bedrock_amazon_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for an Amazon model used via Bedrock.
@@ -775,7 +927,6 @@ def bedrock_amazon_model_profile(model_name: str) -> ModelProfile | None:
             bedrock_supports_prompt_caching=True,
         ).update(profile)
     return profile
-
 ```
 
 ### bedrock_deepseek_model_profile
@@ -784,7 +935,6 @@ def bedrock_amazon_model_profile(model_name: str) -> ModelProfile | None:
 bedrock_deepseek_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for a DeepSeek model used via Bedrock.
@@ -798,7 +948,6 @@ def bedrock_deepseek_model_profile(model_name: str) -> ModelProfile | None:
     if 'r1' in model_name:
         return BedrockModelProfile(bedrock_send_back_thinking_parts=True).update(profile)
     return profile  # pragma: no cover
-
 ```
 
 ### BedrockProvider
@@ -957,14 +1106,12 @@ class BedrockProvider(Provider[BaseClient]):
                 )
             except NoRegionError as exc:  # pragma: no cover
                 raise UserError('You must provide a `region_name` or a boto3 client for Bedrock Runtime.') from exc
-
 ```
 
 #### __init__
 
 ```python
 __init__(*, bedrock_client: BaseClient) -> None
-
 ```
 
 ```python
@@ -977,7 +1124,6 @@ __init__(
     aws_read_timeout: float | None = None,
     aws_connect_timeout: float | None = None
 ) -> None
-
 ```
 
 ```python
@@ -992,7 +1138,6 @@ __init__(
     aws_read_timeout: float | None = None,
     aws_connect_timeout: float | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1009,14 +1154,24 @@ __init__(
     aws_read_timeout: float | None = None,
     aws_connect_timeout: float | None = None
 ) -> None
-
 ```
 
 Initialize the Bedrock provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `bedrock_client` | `BaseClient | None` | A boto3 client for Bedrock Runtime. If provided, other arguments are ignored. | `None` | | `aws_access_key_id` | `str | None` | The AWS access key ID. If not set, the AWS_ACCESS_KEY_ID environment variable will be used if available. | `None` | | `aws_secret_access_key` | `str | None` | The AWS secret access key. If not set, the AWS_SECRET_ACCESS_KEY environment variable will be used if available. | `None` | | `aws_session_token` | `str | None` | The AWS session token. If not set, the AWS_SESSION_TOKEN environment variable will be used if available. | `None` | | `api_key` | `str | None` | The API key for Bedrock client. Can be used instead of aws_access_key_id, aws_secret_access_key, and aws_session_token. If not set, the AWS_BEARER_TOKEN_BEDROCK environment variable will be used if available. | `None` | | `base_url` | `str | None` | The base URL for the Bedrock client. | `None` | | `region_name` | `str | None` | The AWS region name. If not set, the AWS_DEFAULT_REGION environment variable will be used if available. | `None` | | `profile_name` | `str | None` | The AWS profile name. | `None` | | `aws_read_timeout` | `float | None` | The read timeout for Bedrock client. | `None` | | `aws_connect_timeout` | `float | None` | The connect timeout for Bedrock client. | `None` |
+| Name                    | Type         | Description | Default                                                                                                                                                                                                          |
+| ----------------------- | ------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bedrock_client`        | \`BaseClient | None\`      | A boto3 client for Bedrock Runtime. If provided, other arguments are ignored.                                                                                                                                    |
+| `aws_access_key_id`     | \`str        | None\`      | The AWS access key ID. If not set, the AWS_ACCESS_KEY_ID environment variable will be used if available.                                                                                                         |
+| `aws_secret_access_key` | \`str        | None\`      | The AWS secret access key. If not set, the AWS_SECRET_ACCESS_KEY environment variable will be used if available.                                                                                                 |
+| `aws_session_token`     | \`str        | None\`      | The AWS session token. If not set, the AWS_SESSION_TOKEN environment variable will be used if available.                                                                                                         |
+| `api_key`               | \`str        | None\`      | The API key for Bedrock client. Can be used instead of aws_access_key_id, aws_secret_access_key, and aws_session_token. If not set, the AWS_BEARER_TOKEN_BEDROCK environment variable will be used if available. |
+| `base_url`              | \`str        | None\`      | The base URL for the Bedrock client.                                                                                                                                                                             |
+| `region_name`           | \`str        | None\`      | The AWS region name. If not set, the AWS_DEFAULT_REGION environment variable will be used if available.                                                                                                          |
+| `profile_name`          | \`str        | None\`      | The AWS profile name.                                                                                                                                                                                            |
+| `aws_read_timeout`      | \`float      | None\`      | The read timeout for Bedrock client.                                                                                                                                                                             |
+| `aws_connect_timeout`   | \`float      | None\`      | The connect timeout for Bedrock client.                                                                                                                                                                          |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/bedrock.py`
 
@@ -1081,7 +1236,6 @@ def __init__(
             )
         except NoRegionError as exc:  # pragma: no cover
             raise UserError('You must provide a `region_name` or a boto3 client for Bedrock Runtime.') from exc
-
 ```
 
 ### groq_moonshotai_model_profile
@@ -1090,7 +1244,6 @@ def __init__(
 groq_moonshotai_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for an MoonshotAI model used with the Groq provider.
@@ -1103,7 +1256,6 @@ def groq_moonshotai_model_profile(model_name: str) -> ModelProfile | None:
     return ModelProfile(supports_json_object_output=True, supports_json_schema_output=True).update(
         moonshotai_model_profile(model_name)
     )
-
 ```
 
 ### meta_groq_model_profile
@@ -1112,7 +1264,6 @@ def groq_moonshotai_model_profile(model_name: str) -> ModelProfile | None:
 meta_groq_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Meta model used with the Groq provider.
@@ -1128,7 +1279,6 @@ def meta_groq_model_profile(model_name: str) -> ModelProfile | None:
         )
     else:
         return meta_model_profile(model_name)
-
 ```
 
 ### GroqProvider
@@ -1224,14 +1374,12 @@ class GroqProvider(Provider[AsyncGroq]):
             else:
                 http_client = cached_async_http_client(provider='groq')
                 self._client = AsyncGroq(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 #### __init__
 
 ```python
 __init__(*, groq_client: AsyncGroq | None = None) -> None
-
 ```
 
 ```python
@@ -1241,7 +1389,6 @@ __init__(
     base_url: str | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1252,14 +1399,18 @@ __init__(
     groq_client: AsyncGroq | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new Groq provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the GROQ_API_KEY environment variable will be used if available. | `None` | | `base_url` | `str | None` | The base url for the Groq requests. If not provided, the GROQ_BASE_URL environment variable will be used if available. Otherwise, defaults to Groq's base url. | `None` | | `groq_client` | `AsyncGroq | None` | An existing AsyncGroq client to use. If provided, api_key and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing AsyncClient to use for making HTTP requests. | `None` |
+| Name          | Type          | Description | Default                                                                                                                                                        |
+| ------------- | ------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`     | \`str         | None\`      | The API key to use for authentication, if not provided, the GROQ_API_KEY environment variable will be used if available.                                       |
+| `base_url`    | \`str         | None\`      | The base url for the Groq requests. If not provided, the GROQ_BASE_URL environment variable will be used if available. Otherwise, defaults to Groq's base url. |
+| `groq_client` | \`AsyncGroq   | None\`      | An existing AsyncGroq client to use. If provided, api_key and http_client must be None.                                                                        |
+| `http_client` | \`AsyncClient | None\`      | An existing AsyncClient to use for making HTTP requests.                                                                                                       |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/groq.py`
 
@@ -1303,7 +1454,6 @@ def __init__(
         else:
             http_client = cached_async_http_client(provider='groq')
             self._client = AsyncGroq(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 ### AzureProvider
@@ -1430,14 +1580,12 @@ class AzureProvider(Provider[AsyncOpenAI]):
                 http_client=http_client,
             )
             self._base_url = str(self._client.base_url)
-
 ```
 
 #### __init__
 
 ```python
 __init__(*, openai_client: AsyncAzureOpenAI) -> None
-
 ```
 
 ```python
@@ -1448,7 +1596,6 @@ __init__(
     api_key: str | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1460,14 +1607,19 @@ __init__(
     openai_client: AsyncAzureOpenAI | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new Azure provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `azure_endpoint` | `str | None` | The Azure endpoint to use for authentication, if not provided, the AZURE_OPENAI_ENDPOINT environment variable will be used if available. | `None` | | `api_version` | `str | None` | The API version to use for authentication, if not provided, the OPENAI_API_VERSION environment variable will be used if available. | `None` | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the AZURE_OPENAI_API_KEY environment variable will be used if available. | `None` | | `openai_client` | `AsyncAzureOpenAI | None` | An existing AsyncAzureOpenAI client to use. If provided, base_url, api_key, and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name             | Type               | Description | Default                                                                                                                                  |
+| ---------------- | ------------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `azure_endpoint` | \`str              | None\`      | The Azure endpoint to use for authentication, if not provided, the AZURE_OPENAI_ENDPOINT environment variable will be used if available. |
+| `api_version`    | \`str              | None\`      | The API version to use for authentication, if not provided, the OPENAI_API_VERSION environment variable will be used if available.       |
+| `api_key`        | \`str              | None\`      | The API key to use for authentication, if not provided, the AZURE_OPENAI_API_KEY environment variable will be used if available.         |
+| `openai_client`  | \`AsyncAzureOpenAI | None\`      | An existing AsyncAzureOpenAI client to use. If provided, base_url, api_key, and http_client must be None.                                |
+| `http_client`    | \`AsyncClient      | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                                           |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/azure.py`
 
@@ -1526,7 +1678,6 @@ def __init__(
             http_client=http_client,
         )
         self._base_url = str(self._client.base_url)
-
 ```
 
 ### CohereProvider
@@ -1554,6 +1705,10 @@ class CohereProvider(Provider[AsyncClientV2]):
     def client(self) -> AsyncClientV2:
         return self._client
 
+    @property
+    def v1_client(self) -> AsyncClient | None:
+        return self._v1_client
+
     def model_profile(self, model_name: str) -> ModelProfile | None:
         return cohere_model_profile(model_name)
 
@@ -1578,6 +1733,7 @@ class CohereProvider(Provider[AsyncClientV2]):
             assert http_client is None, 'Cannot provide both `cohere_client` and `http_client`'
             assert api_key is None, 'Cannot provide both `cohere_client` and `api_key`'
             self._client = cohere_client
+            self._v1_client = None
         else:
             api_key = api_key or os.getenv('CO_API_KEY')
             if not api_key:
@@ -1589,10 +1745,11 @@ class CohereProvider(Provider[AsyncClientV2]):
             base_url = os.getenv('CO_BASE_URL')
             if http_client is not None:
                 self._client = AsyncClientV2(api_key=api_key, httpx_client=http_client, base_url=base_url)
+                self._v1_client = AsyncClient(api_key=api_key, httpx_client=http_client, base_url=base_url)
             else:
                 http_client = cached_async_http_client(provider='cohere')
                 self._client = AsyncClientV2(api_key=api_key, httpx_client=http_client, base_url=base_url)
-
+                self._v1_client = AsyncClient(api_key=api_key, httpx_client=http_client, base_url=base_url)
 ```
 
 #### __init__
@@ -1604,14 +1761,17 @@ __init__(
     cohere_client: AsyncClientV2 | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new Cohere provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the CO_API_KEY environment variable will be used if available. | `None` | | `cohere_client` | `AsyncClientV2 | None` | An existing AsyncClientV2 client to use. If provided, api_key and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name            | Type            | Description | Default                                                                                                                |
+| --------------- | --------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `api_key`       | \`str           | None\`      | The API key to use for authentication, if not provided, the CO_API_KEY environment variable will be used if available. |
+| `cohere_client` | \`AsyncClientV2 | None\`      | An existing AsyncClientV2 client to use. If provided, api_key and http_client must be None.                            |
+| `http_client`   | \`AsyncClient   | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                         |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/cohere.py`
 
@@ -1637,6 +1797,7 @@ def __init__(
         assert http_client is None, 'Cannot provide both `cohere_client` and `http_client`'
         assert api_key is None, 'Cannot provide both `cohere_client` and `api_key`'
         self._client = cohere_client
+        self._v1_client = None
     else:
         api_key = api_key or os.getenv('CO_API_KEY')
         if not api_key:
@@ -1648,10 +1809,11 @@ def __init__(
         base_url = os.getenv('CO_BASE_URL')
         if http_client is not None:
             self._client = AsyncClientV2(api_key=api_key, httpx_client=http_client, base_url=base_url)
+            self._v1_client = AsyncClient(api_key=api_key, httpx_client=http_client, base_url=base_url)
         else:
             http_client = cached_async_http_client(provider='cohere')
             self._client = AsyncClientV2(api_key=api_key, httpx_client=http_client, base_url=base_url)
-
+            self._v1_client = AsyncClient(api_key=api_key, httpx_client=http_client, base_url=base_url)
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -1756,36 +1918,30 @@ class CerebrasProvider(Provider[AsyncOpenAI]):
             self._client = AsyncOpenAI(
                 base_url=self.base_url, api_key=api_key, http_client=http_client, default_headers=default_headers
             )
-
 ```
 
 ### __init__
 
 ```python
 __init__() -> None
-
 ```
 
 ```python
 __init__(*, api_key: str) -> None
-
 ```
 
 ```python
 __init__(*, api_key: str, http_client: AsyncClient) -> None
-
 ```
 
 ```python
 __init__(*, http_client: AsyncClient) -> None
-
 ```
 
 ```python
 __init__(
     *, openai_client: AsyncOpenAI | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1795,14 +1951,17 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new Cerebras provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the CEREBRAS_API_KEY environment variable will be used if available. | `None` | | `openai_client` | `AsyncOpenAI | None` | An existing AsyncOpenAI client to use. If provided, api_key and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name            | Type          | Description | Default                                                                                                                      |
+| --------------- | ------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`       | \`str         | None\`      | The API key to use for authentication, if not provided, the CEREBRAS_API_KEY environment variable will be used if available. |
+| `openai_client` | \`AsyncOpenAI | None\`      | An existing AsyncOpenAI client to use. If provided, api_key and http_client must be None.                                    |
+| `http_client`   | \`AsyncClient | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/cerebras.py`
 
@@ -1842,7 +2001,6 @@ def __init__(
         self._client = AsyncOpenAI(
             base_url=self.base_url, api_key=api_key, http_client=http_client, default_headers=default_headers
         )
-
 ```
 
 Bases: `Provider[Mistral]`
@@ -1911,14 +2069,12 @@ class MistralProvider(Provider[Mistral]):
             else:
                 http_client = cached_async_http_client(provider='mistral')
                 self._client = Mistral(api_key=api_key, async_client=http_client, server_url=base_url)
-
 ```
 
 ### __init__
 
 ```python
 __init__(*, mistral_client: Mistral | None = None) -> None
-
 ```
 
 ```python
@@ -1927,7 +2083,6 @@ __init__(
     api_key: str | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 ```python
@@ -1938,14 +2093,18 @@ __init__(
     base_url: str | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new Mistral provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the MISTRAL_API_KEY environment variable will be used if available. | `None` | | `mistral_client` | `Mistral | None` | An existing Mistral client to use, if provided, api_key and http_client must be None. | `None` | | `base_url` | `str | None` | The base url for the Mistral requests. | `None` | | `http_client` | `AsyncClient | None` | An existing async client to use for making HTTP requests. | `None` |
+| Name             | Type          | Description | Default                                                                                                                     |
+| ---------------- | ------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`        | \`str         | None\`      | The API key to use for authentication, if not provided, the MISTRAL_API_KEY environment variable will be used if available. |
+| `mistral_client` | \`Mistral     | None\`      | An existing Mistral client to use, if provided, api_key and http_client must be None.                                       |
+| `base_url`       | \`str         | None\`      | The base url for the Mistral requests.                                                                                      |
+| `http_client`    | \`AsyncClient | None\`      | An existing async client to use for making HTTP requests.                                                                   |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/mistral.py`
 
@@ -1985,7 +2144,6 @@ def __init__(
         else:
             http_client = cached_async_http_client(provider='mistral')
             self._client = Mistral(api_key=api_key, async_client=http_client, server_url=base_url)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2066,7 +2224,6 @@ class FireworksProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='fireworks')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2134,7 +2291,6 @@ class GrokProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='grok')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2212,7 +2368,6 @@ class TogetherProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='together')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2281,7 +2436,6 @@ class HerokuProvider(Provider[AsyncOpenAI]):
             else:
                 http_client = cached_async_http_client(provider='heroku')
                 self._client = AsyncOpenAI(api_key=api_key, http_client=http_client, base_url=base_url)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2378,31 +2532,26 @@ class GitHubProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='github')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 ### __init__
 
 ```python
 __init__() -> None
-
 ```
 
 ```python
 __init__(*, api_key: str) -> None
-
 ```
 
 ```python
 __init__(*, api_key: str, http_client: AsyncClient) -> None
-
 ```
 
 ```python
 __init__(
     *, openai_client: AsyncOpenAI | None = None
 ) -> None
-
 ```
 
 ```python
@@ -2412,14 +2561,17 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Create a new GitHub Models provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | The GitHub token to use for authentication. If not provided, the GITHUB_API_KEY environment variable will be used if available. | `None` | | `openai_client` | `AsyncOpenAI | None` | An existing AsyncOpenAI client to use. If provided, api_key and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name            | Type          | Description | Default                                                                                                                         |
+| --------------- | ------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`       | \`str         | None\`      | The GitHub token to use for authentication. If not provided, the GITHUB_API_KEY environment variable will be used if available. |
+| `openai_client` | \`AsyncOpenAI | None\`      | An existing AsyncOpenAI client to use. If provided, api_key and http_client must be None.                                       |
+| `http_client`   | \`AsyncClient | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                                  |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/github.py`
 
@@ -2453,7 +2605,6 @@ def __init__(
     else:
         http_client = cached_async_http_client(provider='github')
         self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2573,14 +2724,12 @@ class OpenRouterProvider(Provider[AsyncOpenAI]):
             self._client = AsyncOpenAI(
                 base_url=self.base_url, api_key=api_key, http_client=http_client, default_headers=attribution_headers
             )
-
 ```
 
 ### __init__
 
 ```python
 __init__(*, openai_client: AsyncOpenAI) -> None
-
 ```
 
 ```python
@@ -2592,7 +2741,6 @@ __init__(
     openai_client: None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 ```python
@@ -2604,18 +2752,25 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Configure the provider with either an API key or prebuilt client.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | OpenRouter API key. Falls back to OPENROUTER_API_KEY when omitted and required unless openai_client is provided. | `None` | | `app_url` | `str | None` | Optional url for app attribution. Falls back to OPENROUTER_APP_URL when omitted. | `None` | | `app_title` | `str | None` | Optional title for app attribution. Falls back to OPENROUTER_APP_TITLE when omitted. | `None` | | `openai_client` | `AsyncOpenAI | None` | Existing AsyncOpenAI client to reuse instead of creating one internally. | `None` | | `http_client` | `AsyncClient | None` | Custom httpx.AsyncClient to pass into the AsyncOpenAI constructor when building a client. | `None` |
+| Name            | Type          | Description | Default                                                                                                          |
+| --------------- | ------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| `api_key`       | \`str         | None\`      | OpenRouter API key. Falls back to OPENROUTER_API_KEY when omitted and required unless openai_client is provided. |
+| `app_url`       | \`str         | None\`      | Optional url for app attribution. Falls back to OPENROUTER_APP_URL when omitted.                                 |
+| `app_title`     | \`str         | None\`      | Optional title for app attribution. Falls back to OPENROUTER_APP_TITLE when omitted.                             |
+| `openai_client` | \`AsyncOpenAI | None\`      | Existing AsyncOpenAI client to reuse instead of creating one internally.                                         |
+| `http_client`   | \`AsyncClient | None\`      | Custom httpx.AsyncClient to pass into the AsyncOpenAI constructor when building a client.                        |
 
 Raises:
 
-| Type | Description | | --- | --- | | `UserError` | If no API key is available and no openai_client is provided. |
+| Type        | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| `UserError` | If no API key is available and no openai_client is provided. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/openrouter.py`
 
@@ -2671,7 +2826,6 @@ def __init__(
         self._client = AsyncOpenAI(
             base_url=self.base_url, api_key=api_key, http_client=http_client, default_headers=attribution_headers
         )
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -2765,7 +2919,6 @@ class VercelProvider(Provider[AsyncOpenAI]):
             self._client = AsyncOpenAI(
                 base_url=self.base_url, api_key=api_key, http_client=http_client, default_headers=default_headers
             )
-
 ```
 
 Bases: `Provider[AsyncInferenceClient]`
@@ -2863,7 +3016,6 @@ class HuggingFaceProvider(Provider[AsyncInferenceClient]):
             self._client = AsyncInferenceClient(api_key=api_key, provider=provider_name, base_url=base_url)  # type: ignore
         else:
             self._client = hf_client
-
 ```
 
 ### __init__
@@ -2872,14 +3024,12 @@ class HuggingFaceProvider(Provider[AsyncInferenceClient]):
 __init__(
     *, base_url: str, api_key: str | None = None
 ) -> None
-
 ```
 
 ```python
 __init__(
     *, provider_name: str, api_key: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -2888,7 +3038,6 @@ __init__(
     hf_client: AsyncInferenceClient,
     api_key: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -2898,7 +3047,6 @@ __init__(
     base_url: str,
     api_key: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -2908,12 +3056,10 @@ __init__(
     provider_name: str,
     api_key: str | None = None
 ) -> None
-
 ```
 
 ```python
 __init__(*, api_key: str | None = None) -> None
-
 ```
 
 ```python
@@ -2924,14 +3070,19 @@ __init__(
     http_client: AsyncClient | None = None,
     provider_name: str | None = None,
 ) -> None
-
 ```
 
 Create a new Hugging Face provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `base_url` | `str | None` | The base url for the Hugging Face requests. | `None` | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the HF_TOKEN environment variable will be used if available. | `None` | | `hf_client` | `AsyncInferenceClient | None` | An existing AsyncInferenceClient client to use. If not provided, a new instance will be created. | `None` | | `http_client` | `AsyncClient | None` | (currently ignored) An existing httpx.AsyncClient to use for making HTTP requests. | `None` | | `provider_name` | `str | None` | Name of the provider to use for inference. available providers can be found in the HF Inference Providers documentation. defaults to "auto", which will select the first available provider for the model, the first of the providers available for the model, sorted by the user's order in https://hf.co/settings/inference-providers. If base_url is passed, then provider_name is not used. | `None` |
+| Name            | Type                   | Description | Default                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------- | ---------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_url`      | \`str                  | None\`      | The base url for the Hugging Face requests.                                                                                                                                                                                                                                                                                                                                                     |
+| `api_key`       | \`str                  | None\`      | The API key to use for authentication, if not provided, the HF_TOKEN environment variable will be used if available.                                                                                                                                                                                                                                                                            |
+| `hf_client`     | \`AsyncInferenceClient | None\`      | An existing AsyncInferenceClient client to use. If not provided, a new instance will be created.                                                                                                                                                                                                                                                                                                |
+| `http_client`   | \`AsyncClient          | None\`      | (currently ignored) An existing httpx.AsyncClient to use for making HTTP requests.                                                                                                                                                                                                                                                                                                              |
+| `provider_name` | \`str                  | None\`      | Name of the provider to use for inference. available providers can be found in the HF Inference Providers documentation. defaults to "auto", which will select the first available provider for the model, the first of the providers available for the model, sorted by the user's order in https://hf.co/settings/inference-providers. If base_url is passed, then provider_name is not used. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/huggingface.py`
 
@@ -2976,7 +3127,6 @@ def __init__(
         self._client = AsyncInferenceClient(api_key=api_key, provider=provider_name, base_url=base_url)  # type: ignore
     else:
         self._client = hf_client
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3051,7 +3201,6 @@ class MoonshotAIProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='moonshotai')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3143,7 +3292,6 @@ class OllamaProvider(Provider[AsyncOpenAI]):
             else:
                 http_client = cached_async_http_client(provider='ollama')
                 self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 ### __init__
@@ -3155,14 +3303,18 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None,
 ) -> None
-
 ```
 
 Create a new Ollama provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `base_url` | `str | None` | The base url for the Ollama requests. If not provided, the OLLAMA_BASE_URL environment variable will be used if available. | `None` | | `api_key` | `str | None` | The API key to use for authentication, if not provided, the OLLAMA_API_KEY environment variable will be used if available. | `None` | | `openai_client` | `AsyncOpenAI | None` | An existing AsyncOpenAI client to use. If provided, base_url, api_key, and http_client must be None. | `None` | | `http_client` | `AsyncClient | None` | An existing httpx.AsyncClient to use for making HTTP requests. | `None` |
+| Name            | Type          | Description | Default                                                                                                                    |
+| --------------- | ------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `base_url`      | \`str         | None\`      | The base url for the Ollama requests. If not provided, the OLLAMA_BASE_URL environment variable will be used if available. |
+| `api_key`       | \`str         | None\`      | The API key to use for authentication, if not provided, the OLLAMA_API_KEY environment variable will be used if available. |
+| `openai_client` | \`AsyncOpenAI | None\`      | An existing AsyncOpenAI client to use. If provided, base_url, api_key, and http_client must be None.                       |
+| `http_client`   | \`AsyncClient | None\`      | An existing httpx.AsyncClient to use for making HTTP requests.                                                             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/ollama.py`
 
@@ -3208,7 +3360,6 @@ def __init__(
         else:
             http_client = cached_async_http_client(provider='ollama')
             self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3320,7 +3471,6 @@ class LiteLLMProvider(Provider[AsyncOpenAI]):
             self._client = AsyncOpenAI(
                 base_url=api_base, api_key=api_key or 'litellm-placeholder', http_client=http_client
             )
-
 ```
 
 ### __init__
@@ -3331,7 +3481,6 @@ __init__(
     api_key: str | None = None,
     api_base: str | None = None
 ) -> None
-
 ```
 
 ```python
@@ -3341,12 +3490,10 @@ __init__(
     api_base: str | None = None,
     http_client: AsyncClient
 ) -> None
-
 ```
 
 ```python
 __init__(*, openai_client: AsyncOpenAI) -> None
-
 ```
 
 ```python
@@ -3357,14 +3504,18 @@ __init__(
     openai_client: AsyncOpenAI | None = None,
     http_client: AsyncClient | None = None
 ) -> None
-
 ```
 
 Initialize a LiteLLM provider.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `api_key` | `str | None` | API key for the model provider. If None, LiteLLM will try to get it from environment variables. | `None` | | `api_base` | `str | None` | Base URL for the model provider. Use this for custom endpoints or self-hosted models. | `None` | | `openai_client` | `AsyncOpenAI | None` | Pre-configured OpenAI client. If provided, other parameters are ignored. | `None` | | `http_client` | `AsyncClient | None` | Custom HTTP client to use. | `None` |
+| Name            | Type          | Description | Default                                                                                         |
+| --------------- | ------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| `api_key`       | \`str         | None\`      | API key for the model provider. If None, LiteLLM will try to get it from environment variables. |
+| `api_base`      | \`str         | None\`      | Base URL for the model provider. Use this for custom endpoints or self-hosted models.           |
+| `openai_client` | \`AsyncOpenAI | None\`      | Pre-configured OpenAI client. If provided, other parameters are ignored.                        |
+| `http_client`   | \`AsyncClient | None\`      | Custom HTTP client to use.                                                                      |
 
 Source code in `pydantic_ai_slim/pydantic_ai/providers/litellm.py`
 
@@ -3400,7 +3551,6 @@ def __init__(
         self._client = AsyncOpenAI(
             base_url=api_base, api_key=api_key or 'litellm-placeholder', http_client=http_client
         )
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3483,7 +3633,6 @@ class NebiusProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='nebius')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3561,7 +3710,6 @@ class OVHcloudProvider(Provider[AsyncOpenAI]):
         else:
             http_client = cached_async_http_client(provider='ovhcloud')
             self._client = AsyncOpenAI(base_url=self.base_url, api_key=api_key, http_client=http_client)
-
 ```
 
 Bases: `Provider[AsyncOpenAI]`
@@ -3636,5 +3784,4 @@ class AlibabaProvider(Provider[AsyncOpenAI]):
                 http_client = cached_async_http_client(provider='alibaba')
 
             self._client = AsyncOpenAI(base_url=self._base_url, api_key=api_key, http_client=http_client)
-
 ```

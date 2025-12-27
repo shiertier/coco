@@ -4,7 +4,7 @@ Utility model for quickly testing apps built with Pydantic AI.
 
 Here's a minimal example:
 
-[Learn about Gateway](../../../gateway) test_model_usage.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) test_model_usage.py
 
 ```python
 from pydantic_ai import Agent
@@ -20,7 +20,6 @@ async def test_my_agent():
         result = await my_agent.run('Testing my agent...')
         assert result.output == 'success (no tool calls)'
     assert m.last_model_request_parameters.function_tools == []
-
 ```
 
 test_model_usage.py
@@ -39,10 +38,9 @@ async def test_my_agent():
         result = await my_agent.run('Testing my agent...')
         assert result.output == 'success (no tool calls)'
     assert m.last_model_request_parameters.function_tools == []
-
 ```
 
-See [Unit testing with `TestModel`](../../../testing/#unit-testing-with-testmodel) for detailed documentation.
+See [Unit testing with `TestModel`](https://ai.pydantic.dev/testing/#unit-testing-with-testmodel) for detailed documentation.
 
 ### TestModel
 
@@ -298,7 +296,6 @@ class TestModel(Model):
                     ],
                     model_name=self._model_name,
                 )
-
 ```
 
 #### __init__
@@ -314,7 +311,6 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize TestModel with optional settings and profile.
@@ -342,14 +338,12 @@ def __init__(
     self._model_name = model_name
     self._system = 'test'
     super().__init__(settings=settings, profile=profile)
-
 ```
 
 #### call_tools
 
 ```python
 call_tools: list[str] | Literal['all'] = call_tools
-
 ```
 
 List of tools to call. If `'all'`, all tools will be called.
@@ -358,7 +352,6 @@ List of tools to call. If `'all'`, all tools will be called.
 
 ```python
 custom_output_text: str | None = custom_output_text
-
 ```
 
 If set, this text is returned as the final output.
@@ -367,7 +360,6 @@ If set, this text is returned as the final output.
 
 ```python
 custom_output_args: Any | None = custom_output_args
-
 ```
 
 If set, these args will be passed to the output tool.
@@ -376,7 +368,6 @@ If set, these args will be passed to the output tool.
 
 ```python
 seed: int = seed
-
 ```
 
 Seed for generating random data.
@@ -387,7 +378,6 @@ Seed for generating random data.
 last_model_request_parameters: (
     ModelRequestParameters | None
 ) = None
-
 ```
 
 The last ModelRequestParameters passed to the model in a request.
@@ -400,7 +390,6 @@ This is set when a request is made, so will reflect the function tools from the 
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -409,7 +398,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -420,7 +408,6 @@ The model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 TestModel supports all builtin tools for testing flexibility.
@@ -432,7 +419,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/test.py`
 def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     """TestModel supports all builtin tools for testing flexibility."""
     return SUPPORTED_BUILTIN_TOOLS
-
 ```
 
 ### TestStreamedResponse
@@ -510,14 +496,12 @@ class TestStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -526,7 +510,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -535,7 +518,6 @@ Get the provider name.
 
 ```python
 provider_url: str | None
-
 ```
 
 Get the provider base URL.
@@ -544,7 +526,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

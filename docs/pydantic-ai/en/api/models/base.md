@@ -187,29 +187,22 @@ KnownModelName = TypeAliasType(
         "gateway/google-vertex:gemini-3-pro-preview",
         "gateway/google-vertex:gemini-flash-latest",
         "gateway/google-vertex:gemini-flash-lite-latest",
-        "gateway/groq:deepseek-r1-distill-llama-70b",
-        "gateway/groq:deepseek-r1-distill-qwen-32b",
-        "gateway/groq:distil-whisper-large-v3-en",
-        "gateway/groq:gemma2-9b-it",
         "gateway/groq:llama-3.1-8b-instant",
-        "gateway/groq:llama-3.2-11b-vision-preview",
-        "gateway/groq:llama-3.2-1b-preview",
-        "gateway/groq:llama-3.2-3b-preview",
-        "gateway/groq:llama-3.2-90b-vision-preview",
-        "gateway/groq:llama-3.3-70b-specdec",
         "gateway/groq:llama-3.3-70b-versatile",
-        "gateway/groq:llama-guard-3-8b",
-        "gateway/groq:llama3-70b-8192",
-        "gateway/groq:llama3-8b-8192",
-        "gateway/groq:mistral-saba-24b",
-        "gateway/groq:moonshotai/kimi-k2-instruct",
-        "gateway/groq:playai-tts-arabic",
-        "gateway/groq:playai-tts",
-        "gateway/groq:qwen-2.5-32b",
-        "gateway/groq:qwen-2.5-coder-32b",
-        "gateway/groq:qwen-qwq-32b",
-        "gateway/groq:whisper-large-v3-turbo",
+        "gateway/groq:meta-llama/llama-guard-4-12b",
+        "gateway/groq:openai/gpt-oss-120b",
+        "gateway/groq:openai/gpt-oss-20b",
         "gateway/groq:whisper-large-v3",
+        "gateway/groq:whisper-large-v3-turbo",
+        "gateway/groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+        "gateway/groq:meta-llama/llama-4-scout-17b-16e-instruct",
+        "gateway/groq:meta-llama/llama-prompt-guard-2-22m",
+        "gateway/groq:meta-llama/llama-prompt-guard-2-86m",
+        "gateway/groq:moonshotai/kimi-k2-instruct-0905",
+        "gateway/groq:openai/gpt-oss-safeguard-20b",
+        "gateway/groq:playai-tts",
+        "gateway/groq:playai-tts-arabic",
+        "gateway/groq:qwen/qwen-3-32b",
         "gateway/openai:chatgpt-4o-latest",
         "gateway/openai:codex-mini-latest",
         "gateway/openai:computer-use-preview-2025-03-11",
@@ -337,30 +330,22 @@ KnownModelName = TypeAliasType(
         "grok:grok-4-fast",
         "grok:grok-4",
         "grok:grok-code-fast-1",
-        "groq:deepseek-r1-distill-llama-70b",
-        "groq:deepseek-r1-distill-qwen-32b",
-        "groq:distil-whisper-large-v3-en",
-        "groq:gemma2-9b-it",
         "groq:llama-3.1-8b-instant",
-        "groq:llama-3.2-11b-vision-preview",
-        "groq:llama-3.2-1b-preview",
-        "groq:llama-3.2-3b-preview",
-        "groq:llama-3.2-90b-vision-preview",
-        "groq:llama-3.3-70b-specdec",
         "groq:llama-3.3-70b-versatile",
-        "groq:llama-guard-3-8b",
-        "groq:llama3-70b-8192",
-        "groq:llama3-8b-8192",
-        "groq:mistral-saba-24b",
-        "groq:moonshotai/kimi-k2-instruct",
-        "groq:playai-tts-arabic",
-        "groq:playai-tts",
-        "groq:qwen-2.5-32b",
-        "groq:qwen-2.5-coder-32b",
-        "groq:qwen-qwq-32b",
-        "groq:whisper-large-v3-turbo",
+        "groq:meta-llama/llama-guard-4-12b",
+        "groq:openai/gpt-oss-120b",
+        "groq:openai/gpt-oss-20b",
         "groq:whisper-large-v3",
-        "heroku:amazon-rerank-1-0",
+        "groq:whisper-large-v3-turbo",
+        "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+        "groq:meta-llama/llama-4-scout-17b-16e-instruct",
+        "groq:meta-llama/llama-prompt-guard-2-22m",
+        "groq:meta-llama/llama-prompt-guard-2-86m",
+        "groq:moonshotai/kimi-k2-instruct-0905",
+        "groq:openai/gpt-oss-safeguard-20b",
+        "groq:playai-tts",
+        "groq:playai-tts-arabic",
+        "groq:qwen/qwen-3-32b",
         "heroku:claude-3-5-haiku",
         "heroku:claude-3-5-sonnet-latest",
         "heroku:claude-3-7-sonnet",
@@ -368,8 +353,13 @@ KnownModelName = TypeAliasType(
         "heroku:claude-4-5-haiku",
         "heroku:claude-4-5-sonnet",
         "heroku:claude-4-sonnet",
-        "heroku:cohere-rerank-3-5",
+        "heroku:claude-opus-4-5",
         "heroku:gpt-oss-120b",
+        "heroku:kimi-k2-thinking",
+        "heroku:minimax-m2",
+        "heroku:qwen3-235b",
+        "heroku:qwen3-coder-480b",
+        "heroku:nova-2-lite",
         "heroku:nova-lite",
         "heroku:nova-pro",
         "huggingface:deepseek-ai/DeepSeek-R1",
@@ -482,7 +472,6 @@ KnownModelName = TypeAliasType(
         "test",
     ],
 )
-
 ```
 
 Known model names that can be used with the `model` parameter of Agent.
@@ -516,12 +505,11 @@ class ModelRequestParameters:
 
     @cached_property
     def prompted_output_instructions(self) -> str | None:
-        if self.output_mode == 'prompted' and self.prompted_output_template and self.output_object:
-            return PromptedOutputSchema.build_instructions(self.prompted_output_template, self.output_object)
+        if self.prompted_output_template and self.output_object:
+            return StructuredTextOutputSchema.build_instructions(self.prompted_output_template, self.output_object)
         return None
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 ### Model
@@ -655,11 +643,14 @@ class Model(ABC):
             params = replace(params, output_tools=[])
         if params.output_object and params.output_mode not in ('native', 'prompted'):
             params = replace(params, output_object=None)
-        if params.prompted_output_template and params.output_mode != 'prompted':
+        if params.prompted_output_template and params.output_mode not in ('prompted', 'native'):
             params = replace(params, prompted_output_template=None)  # pragma: no cover
 
         # Set default prompted output template
-        if params.output_mode == 'prompted' and not params.prompted_output_template:
+        if (
+            params.output_mode == 'prompted'
+            or (params.output_mode == 'native' and self.profile.native_output_requires_schema_in_instructions)
+        ) and not params.prompted_output_template:
             params = replace(params, prompted_output_template=self.profile.prompted_output_template)
 
         # Check if output mode is supported
@@ -822,7 +813,6 @@ class Model(ABC):
                 instructions = output_instructions
 
         return instructions
-
 ```
 
 #### __init__
@@ -833,14 +823,16 @@ __init__(
     settings: ModelSettings | None = None,
     profile: ModelProfileSpec | None = None
 ) -> None
-
 ```
 
 Initialize the model with optional settings and profile.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` | | `profile` | `ModelProfileSpec | None` | The model profile to use. | `None` |
+| Name       | Type               | Description | Default                                                               |
+| ---------- | ------------------ | ----------- | --------------------------------------------------------------------- |
+| `settings` | \`ModelSettings    | None\`      | Model-specific settings that will be used as defaults for this model. |
+| `profile`  | \`ModelProfileSpec | None\`      | The model profile to use.                                             |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/__init__.py`
 
@@ -859,14 +851,12 @@ def __init__(
     """
     self._settings = settings
     self._profile = profile
-
 ```
 
 #### settings
 
 ```python
 settings: ModelSettings | None
-
 ```
 
 Get the model settings.
@@ -879,7 +869,6 @@ request(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> ModelResponse
-
 ```
 
 Make a request to the model.
@@ -901,7 +890,6 @@ async def request(
     This is ultimately called by `pydantic_ai._agent_graph.ModelRequestNode._make_request(...)`.
     """
     raise NotImplementedError()
-
 ```
 
 #### count_tokens
@@ -912,7 +900,6 @@ count_tokens(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> RequestUsage
-
 ```
 
 Make a request to the model for counting tokens.
@@ -929,7 +916,6 @@ async def count_tokens(
     """Make a request to the model for counting tokens."""
     # This method is not required, but you need to implement it if you want to support `UsageLimits.count_tokens_before_request`.
     raise NotImplementedError(f'Token counting ahead of the request is not supported by {self.__class__.__name__}')
-
 ```
 
 #### request_stream
@@ -941,7 +927,6 @@ request_stream(
     model_request_parameters: ModelRequestParameters,
     run_context: RunContext[Any] | None = None,
 ) -> AsyncIterator[StreamedResponse]
-
 ```
 
 Make a request to the model and return a streaming response.
@@ -963,7 +948,6 @@ async def request_stream(
     # yield is required to make this a generator for type checking
     # noinspection PyUnreachableCode
     yield  # pragma: no cover
-
 ```
 
 #### customize_request_parameters
@@ -972,7 +956,6 @@ async def request_stream(
 customize_request_parameters(
     model_request_parameters: ModelRequestParameters,
 ) -> ModelRequestParameters
-
 ```
 
 Customize the request parameters for the model.
@@ -1002,7 +985,6 @@ def customize_request_parameters(self, model_request_parameters: ModelRequestPar
             )
 
     return model_request_parameters
-
 ```
 
 #### prepare_request
@@ -1012,7 +994,6 @@ prepare_request(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> tuple[ModelSettings | None, ModelRequestParameters]
-
 ```
 
 Prepare request inputs before they are passed to the provider.
@@ -1059,11 +1040,14 @@ def prepare_request(
         params = replace(params, output_tools=[])
     if params.output_object and params.output_mode not in ('native', 'prompted'):
         params = replace(params, output_object=None)
-    if params.prompted_output_template and params.output_mode != 'prompted':
+    if params.prompted_output_template and params.output_mode not in ('prompted', 'native'):
         params = replace(params, prompted_output_template=None)  # pragma: no cover
 
     # Set default prompted output template
-    if params.output_mode == 'prompted' and not params.prompted_output_template:
+    if (
+        params.output_mode == 'prompted'
+        or (params.output_mode == 'native' and self.profile.native_output_requires_schema_in_instructions)
+    ) and not params.prompted_output_template:
         params = replace(params, prompted_output_template=self.profile.prompted_output_template)
 
     # Check if output mode is supported
@@ -1086,14 +1070,12 @@ def prepare_request(
             )
 
     return model_settings, params
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -1102,7 +1084,6 @@ The model name.
 
 ```python
 label: str
-
 ```
 
 Human-friendly display label for the model.
@@ -1120,7 +1101,6 @@ Handles common patterns:
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 Return the set of builtin tool types this model class can handle.
@@ -1138,14 +1118,12 @@ def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     Default is empty set - subclasses must explicitly declare support.
     """
     return frozenset()
-
 ```
 
 #### profile
 
 ```python
 profile: ModelProfile
-
 ```
 
 The model profile.
@@ -1156,7 +1134,6 @@ We use this to compute the intersection of the profile's supported_builtin_tools
 
 ```python
 system: str
-
 ```
 
 The model provider, ex: openai.
@@ -1167,7 +1144,6 @@ Use to populate the `gen_ai.system` OpenTelemetry semantic convention attribute,
 
 ```python
 base_url: str | None
-
 ```
 
 The base URL for the provider API, if available.
@@ -1318,14 +1294,12 @@ class StreamedResponse(ABC):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         raise NotImplementedError()
-
 ```
 
 #### __aiter__
 
 ```python
 __aiter__() -> AsyncIterator[ModelResponseStreamEvent]
-
 ```
 
 Stream the response as an async iterable of ModelResponseStreamEvents.
@@ -1400,14 +1374,12 @@ def __aiter__(self) -> AsyncIterator[ModelResponseStreamEvent]:
 
         self._event_iterator = iterator_with_part_end(iterator_with_final_event(self._get_event_iterator()))
     return self._event_iterator
-
 ```
 
 #### get
 
 ```python
 get() -> ModelResponse
-
 ```
 
 Build a ModelResponse from the data received from the stream so far.
@@ -1428,14 +1400,12 @@ def get(self) -> ModelResponse:
         provider_details=self.provider_details,
         finish_reason=self.finish_reason,
     )
-
 ```
 
 #### usage
 
 ```python
 usage() -> RequestUsage
-
 ```
 
 Get the usage of the response so far. This will not be the final usage until the stream is exhausted.
@@ -1446,14 +1416,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/__init__.py`
 def usage(self) -> RequestUsage:
     """Get the usage of the response so far. This will not be the final usage until the stream is exhausted."""
     return self._usage
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -1462,7 +1430,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str | None
-
 ```
 
 Get the provider name.
@@ -1471,7 +1438,6 @@ Get the provider name.
 
 ```python
 provider_url: str | None
-
 ```
 
 Get the provider base URL.
@@ -1480,7 +1446,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.
@@ -1489,7 +1454,6 @@ Get the timestamp of the response.
 
 ```python
 ALLOW_MODEL_REQUESTS = True
-
 ```
 
 Whether to allow requests to models.
@@ -1502,7 +1466,6 @@ The testing models TestModel and FunctionModel are no affected by this setting.
 
 ```python
 check_allow_model_requests() -> None
-
 ```
 
 Check if model requests are allowed.
@@ -1511,7 +1474,9 @@ If you're defining your own models that have costs or latency associated with th
 
 Raises:
 
-| Type | Description | | --- | --- | | `RuntimeError` | If model requests are not allowed. |
+| Type           | Description                        |
+| -------------- | ---------------------------------- |
+| `RuntimeError` | If model requests are not allowed. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/__init__.py`
 
@@ -1527,7 +1492,6 @@ def check_allow_model_requests() -> None:
     """
     if not ALLOW_MODEL_REQUESTS:
         raise RuntimeError('Model requests are not allowed, since ALLOW_MODEL_REQUESTS is False')
-
 ```
 
 ### override_allow_model_requests
@@ -1536,14 +1500,15 @@ def check_allow_model_requests() -> None:
 override_allow_model_requests(
     allow_model_requests: bool,
 ) -> Iterator[None]
-
 ```
 
 Context manager to temporarily override ALLOW_MODEL_REQUESTS.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `allow_model_requests` | `bool` | Whether to allow model requests within the context. | *required* |
+| Name                   | Type   | Description                                         | Default    |
+| ---------------------- | ------ | --------------------------------------------------- | ---------- |
+| `allow_model_requests` | `bool` | Whether to allow model requests within the context. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/__init__.py`
 
@@ -1562,5 +1527,4 @@ def override_allow_model_requests(allow_model_requests: bool) -> Iterator[None]:
         yield
     finally:
         ALLOW_MODEL_REQUESTS = old_value  # pyright: ignore[reportConstantRedefinition]
-
 ```

@@ -8,7 +8,6 @@ This module defines the fundamental node types used to build execution graphs, i
 
 ```python
 StateT = TypeVar('StateT', infer_variance=True)
-
 ```
 
 Type variable for graph state.
@@ -17,7 +16,6 @@ Type variable for graph state.
 
 ```python
 OutputT = TypeVar('OutputT', infer_variance=True)
-
 ```
 
 Type variable for node output data.
@@ -26,7 +24,6 @@ Type variable for node output data.
 
 ```python
 InputT = TypeVar('InputT', infer_variance=True)
-
 ```
 
 Type variable for node input data.
@@ -50,14 +47,12 @@ class StartNode(Generic[OutputT]):
 
     id = NodeID('__start__')
     """Fixed identifier for the start node."""
-
 ```
 
 #### id
 
 ```python
 id = NodeID('__start__')
-
 ```
 
 Fixed identifier for the start node.
@@ -95,14 +90,12 @@ class EndNode(Generic[InputT]):
             RuntimeError: Always, as this method should never be executed.
         """
         raise RuntimeError('This method should never be called, it is just defined for typing purposes.')
-
 ```
 
 #### id
 
 ```python
 id = NodeID('__end__')
-
 ```
 
 Fixed identifier for the end node.
@@ -154,14 +147,12 @@ class Fork(Generic[InputT, OutputT]):
             RuntimeError: Always, as this method should never be executed.
         """
         raise RuntimeError('This method should never be called, it is just defined for typing purposes.')
-
 ```
 
 #### id
 
 ```python
 id: ForkID
-
 ```
 
 Unique identifier for this fork node.
@@ -170,7 +161,6 @@ Unique identifier for this fork node.
 
 ```python
 is_map: bool
-
 ```
 
 Determines fork behavior.
@@ -181,7 +171,6 @@ If True, InputT must be Sequence[OutputT] and each element is sent to a separate
 
 ```python
 downstream_join_id: JoinID | None
-
 ```
 
 Optional identifier of a downstream join node that should be jumped to if mapping an empty iterable.

@@ -1,10 +1,10 @@
 # Advanced Tool Features
 
-This page covers advanced features for function tools in Pydantic AI. For basic tool usage, see the [Function Tools](../tools/) documentation.
+This page covers advanced features for function tools in Pydantic AI. For basic tool usage, see the [Function Tools](https://ai.pydantic.dev/tools/index.md) documentation.
 
 ## Tool Output
 
-Tools can return anything that Pydantic can serialize to JSON, as well as audio, video, image or document content depending on the types of [multi-modal input](../input/) the model supports:
+Tools can return anything that Pydantic can serialize to JSON, as well as audio, video, image or document content depending on the types of [multi-modal input](https://ai.pydantic.dev/input/index.md) the model supports:
 
 function_tool_output.py
 
@@ -60,7 +60,6 @@ print(result.output)
 result = agent.run_sync('What is the main content of the document?')
 print(result.output)
 #> The document contains just the text "Dummy PDF file."
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -77,7 +76,7 @@ For scenarios where you need more control over both the tool's return value and 
 
 Here's an example of a computer automation tool that captures screenshots and provides visual feedback:
 
-[Learn about Gateway](../gateway) advanced_tool_return.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) advanced_tool_return.py
 
 ```python
 import time
@@ -121,7 +120,6 @@ def click_and_capture(x: int, y: int) -> ToolReturn:
 result = agent.run_sync('Click on the submit button and tell me what happened')
 print(result.output)
 # The model can analyze the screenshots and provide detailed feedback
-
 ```
 
 advanced_tool_return.py
@@ -168,7 +166,6 @@ def click_and_capture(x: int, y: int) -> ToolReturn:
 result = agent.run_sync('Click on the submit button and tell me what happened')
 print(result.output)
 # The model can analyze the screenshots and provide detailed feedback
-
 ```
 
 - **`return_value`**: The actual return value used in the tool response. This is what gets serialized and sent back to the model as the tool's result.
@@ -211,7 +208,6 @@ agent = Agent(test_model, tools=[tool])
 result = agent.run_sync('testing...')
 print(result.output)
 #> {"sum":0}
-
 ```
 
 Please note that validation of the tool arguments will not be performed, and this will pass all arguments as keyword arguments.
@@ -258,7 +254,6 @@ print(result.output)
 result = agent.run_sync('testing...', deps=42)
 print(result.output)
 #> {"hitchhiker":"42 a"}
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -313,7 +308,6 @@ print(test_model.last_model_request_parameters.function_tools)
     )
 ]
 """
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -326,7 +320,7 @@ The `prepare_tools` function should be of type ToolsPrepareFunc, which takes the
 
 Note
 
-The list of tool definitions passed to `prepare_tools` includes both regular function tools and tools from any [toolsets](../toolsets/) registered on the agent, but not [output tools](../output/#tool-output).
+The list of tool definitions passed to `prepare_tools` includes both regular function tools and tools from any [toolsets](https://ai.pydantic.dev/toolsets/index.md) registered on the agent, but not [output tools](https://ai.pydantic.dev/output/#tool-output).
 
 To modify output tools, you can set a `prepare_output_tools` function instead.
 
@@ -366,7 +360,6 @@ test_model._system = 'openai'
 
 agent.run_sync('testing with openai...')
 assert test_model.last_model_request_parameters.function_tools[0].strict
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -404,7 +397,6 @@ print(result.output)
 result = agent.run_sync('testing...', deps=True)
 print(result.output)
 #> success (no tool calls)
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -418,7 +410,7 @@ If both per-tool `prepare` and agent-wide `prepare_tools` are used, the per-tool
 
 ## Tool Execution and Retries
 
-When a tool is executed, its arguments (provided by the LLM) are first validated against the function's signature using Pydantic (with optional [validation context](../output/#validation-context)). If validation fails (e.g., due to incorrect types or missing required arguments), a `ValidationError` is raised, and the framework automatically generates a RetryPromptPart containing the validation details. This prompt is sent back to the LLM, informing it of the error and allowing it to correct the parameters and retry the tool call.
+When a tool is executed, its arguments (provided by the LLM) are first validated against the function's signature using Pydantic (with optional [validation context](https://ai.pydantic.dev/output/#validation-context)). If validation fails (e.g., due to incorrect types or missing required arguments), a `ValidationError` is raised, and the framework automatically generates a RetryPromptPart containing the validation details. This prompt is sent back to the LLM, informing it of the error and allowing it to correct the parameters and retry the tool call.
 
 Beyond automatic validation errors, the tool's own internal logic can also explicitly request a retry by raising the ModelRetry exception. This is useful for situations where the parameters were technically valid, but an issue occurred during execution (like a transient network error, or the tool determining the initial attempt needs modification).
 
@@ -432,7 +424,6 @@ def my_flaky_tool(query: str) -> str:
         raise ModelRetry("The query 'bad' is not allowed. Please provide a different query.")
     # ... process query ...
     return 'Success!'
-
 ```
 
 Raising `ModelRetry` also generates a `RetryPromptPart` containing the exception message, which is sent back to the LLM to guide its next attempt. Both `ValidationError` and `ModelRetry` respect the `retries` setting configured on the `Tool` or `Agent`.
@@ -462,7 +453,6 @@ async def fast_tool() -> str:
     """This tool has its own timeout (5 seconds) that overrides the agent default."""
     await asyncio.sleep(1)
     return 'Done'
-
 ```
 
 - **Agent-level timeout**: Set `tool_timeout` on the Agent to apply a default timeout to all tools.
@@ -478,17 +468,17 @@ Async functions are run on the event loop, while sync functions are offloaded to
 
 Limiting tool executions
 
-You can cap tool executions within a run using [`UsageLimits(tool_calls_limit=...)`](../agents/#usage-limits). The counter increments only after a successful tool invocation. Output tools (used for [structured output](../output/)) are not counted in the `tool_calls` metric.
+You can cap tool executions within a run using [`UsageLimits(tool_calls_limit=...)`](https://ai.pydantic.dev/agents/#usage-limits). The counter increments only after a successful tool invocation. Output tools (used for [structured output](https://ai.pydantic.dev/output/index.md)) are not counted in the `tool_calls` metric.
 
 #### Output Tool Calls
 
-When a model calls an [output tool](../output/#tool-output) in parallel with other tools, the agent's end_strategy parameter controls how these tool calls are executed. The `'exhaustive'` strategy ensures all tools are executed even after a final result is found, which is useful when tools have side effects (like logging, sending notifications, or updating metrics) that should always execute.
+When a model calls an [output tool](https://ai.pydantic.dev/output/#tool-output) in parallel with other tools, the agent's end_strategy parameter controls how these tool calls are executed. The `'exhaustive'` strategy ensures all tools are executed even after a final result is found, which is useful when tools have side effects (like logging, sending notifications, or updating metrics) that should always execute.
 
-For more information of how `end_strategy` works with both function tools and output tools, see the [Output Tool](../output/#parallel-output-tool-calls) docs.
+For more information of how `end_strategy` works with both function tools and output tools, see the [Output Tool](https://ai.pydantic.dev/output/#parallel-output-tool-calls) docs.
 
 ## See Also
 
-- [Function Tools](../tools/) - Basic tool concepts and registration
-- [Toolsets](../toolsets/) - Managing collections of tools
-- [Deferred Tools](../deferred-tools/) - Tools requiring approval or external execution
-- [Third-Party Tools](../third-party-tools/) - Integrations with external tool libraries
+- [Function Tools](https://ai.pydantic.dev/tools/index.md) - Basic tool concepts and registration
+- [Toolsets](https://ai.pydantic.dev/toolsets/index.md) - Managing collections of tools
+- [Deferred Tools](https://ai.pydantic.dev/deferred-tools/index.md) - Tools requiring approval or external execution
+- [Third-Party Tools](https://ai.pydantic.dev/third-party-tools/index.md) - Integrations with external tool libraries

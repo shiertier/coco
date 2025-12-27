@@ -1,19 +1,20 @@
 # Multi-agent Applications
 
-There are roughly four levels of complexity when building applications with Pydantic AI:
+There are roughly five levels of complexity when building applications with Pydantic AI:
 
 1. Single agent workflows — what most of the `pydantic_ai` documentation covers
 1. [Agent delegation](#agent-delegation) — agents using another agent via tools
 1. [Programmatic agent hand-off](#programmatic-agent-hand-off) — one agent runs, then application code calls another agent
-1. [Graph based control flow](../graph/) — for the most complex cases, a graph-based state machine can be used to control the execution of multiple agents
+1. [Graph based control flow](https://ai.pydantic.dev/graph/index.md) — for the most complex cases, a graph-based state machine can be used to control the execution of multiple agents
+1. [Deep Agents](#deep-agents) — autonomous agents with planning, file operations, task delegation, and sandboxed code execution
 
 Of course, you can combine multiple strategies in a single application.
 
 ## Agent delegation
 
-"Agent delegation" refers to the scenario where an agent delegates work to another agent, then takes back control when the delegate agent (the agent called from within a tool) finishes. If you want to hand off control to another agent completely, without coming back to the first agent, you can use an [output function](../output/#output-functions).
+"Agent delegation" refers to the scenario where an agent delegates work to another agent, then takes back control when the delegate agent (the agent called from within a tool) finishes. If you want to hand off control to another agent completely, without coming back to the first agent, you can use an [output function](https://ai.pydantic.dev/output/#output-functions).
 
-Since agents are stateless and designed to be global, you do not need to include the agent itself in agent [dependencies](../dependencies/).
+Since agents are stateless and designed to be global, you do not need to include the agent itself in agent [dependencies](https://ai.pydantic.dev/dependencies/index.md).
 
 You'll generally want to pass ctx.usage to the usage keyword argument of the delegate agent run so usage within that run counts towards the total usage of the parent agent run.
 
@@ -21,7 +22,7 @@ Multiple models
 
 Agent delegation doesn't need to use the same model for each agent. If you choose to use different models within a run, calculating the monetary cost from the final result.usage() of the run will not be possible, but you can still use UsageLimits — including `request_limit`, `total_tokens_limit`, and `tool_calls_limit` — to avoid unexpected costs or runaway tool loops.
 
-[Learn about Gateway](../gateway) agent_delegation_simple.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_delegation_simple.py
 
 ```python
 from pydantic_ai import Agent, RunContext, UsageLimits
@@ -55,7 +56,6 @@ print(result.output)
 #> Did you hear about the toothpaste scandal? They called it Colgate.
 print(result.usage())
 #> RunUsage(input_tokens=204, output_tokens=24, requests=3, tool_calls=1)
-
 ```
 
 1. The "parent" or controlling agent.
@@ -98,7 +98,6 @@ print(result.output)
 #> Did you hear about the toothpaste scandal? They called it Colgate.
 print(result.usage())
 #> RunUsage(input_tokens=204, output_tokens=24, requests=3, tool_calls=1)
-
 ```
 
 1. The "parent" or controlling agent.
@@ -123,13 +122,13 @@ graph TD
 
 ### Agent delegation and dependencies
 
-Generally the delegate agent needs to either have the same [dependencies](../dependencies/) as the calling agent, or dependencies which are a subset of the calling agent's dependencies.
+Generally the delegate agent needs to either have the same [dependencies](https://ai.pydantic.dev/dependencies/index.md) as the calling agent, or dependencies which are a subset of the calling agent's dependencies.
 
 Initializing dependencies
 
 We say "generally" above since there's nothing to stop you initializing dependencies within a tool call and therefore using interdependencies in a delegate agent that are not available on the parent, this should often be avoided since it can be significantly slower than reusing connections etc. from the parent agent.
 
-[Learn about Gateway](../gateway) agent_delegation_deps.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) agent_delegation_deps.py
 
 ```python
 from dataclasses import dataclass
@@ -193,7 +192,6 @@ async def main():
         #> Did you hear about the toothpaste scandal? They called it Colgate.
         print(result.usage())  # (6)!
         #> RunUsage(input_tokens=309, output_tokens=32, requests=4, tool_calls=2)
-
 ```
 
 1. Define a dataclass to hold the client and API key dependencies.
@@ -267,7 +265,6 @@ async def main():
         #> Did you hear about the toothpaste scandal? They called it Colgate.
         print(result.usage())  # (6)!
         #> RunUsage(input_tokens=309, output_tokens=32, requests=4, tool_calls=2)
-
 ```
 
 1. Define a dataclass to hold the client and API key dependencies.
@@ -410,10 +407,9 @@ async def main():  # (7)!
         seat_preference = await find_seat(usage)
         print(f'Seat preference: {seat_preference}')
         #> Seat preference: row=1 seat='A'
-
 ```
 
-1. Define the first agent, which finds a flight. We use an explicit type annotation until [PEP-747](https://peps.python.org/pep-0747/) lands, see [structured output](../output/#structured-output). We use a union as the output type so the model can communicate if it's unable to find a satisfactory choice; internally, each member of the union will be registered as a separate tool.
+1. Define the first agent, which finds a flight. We use an explicit type annotation until [PEP-747](https://peps.python.org/pep-0747/) lands, see [structured output](https://ai.pydantic.dev/output/#structured-output). We use a union as the output type so the model can communicate if it's unable to find a satisfactory choice; internally, each member of the union will be registered as a separate tool.
 1. Define a tool on the agent to find a flight. In this simple case we could dispense with the tool and just define the agent to return structured data, then search for a flight, but in more complex scenarios the tool would be necessary.
 1. Define usage limits for the entire app.
 1. Define a function to find a flight, which asks the user for their preferences and then calls the agent to find a flight.
@@ -447,10 +443,26 @@ graph TB
 
 ## Pydantic Graphs
 
-See the [graph](../graph/) documentation on when and how to use graphs.
+See the [graph](https://ai.pydantic.dev/graph/index.md) documentation on when and how to use graphs.
+
+## Deep Agents
+
+Deep agents are autonomous agents that combine multiple architectural patterns and capabilities to handle complex, multi-step tasks reliably. These patterns can be implemented using Pydantic AI's built-in features and (third-party) toolsets:
+
+- **Planning and progress tracking** — agents break down complex tasks into steps and track their progress, giving users visibility into what the agent is working on. See [Task Management toolsets](https://ai.pydantic.dev/toolsets/#task-management).
+- **File system operations** — reading, writing, and editing files with proper abstraction layers that work across in-memory storage, real file systems, and sandboxed containers. See [File Operations toolsets](https://ai.pydantic.dev/toolsets/#file-operations).
+- **Task delegation** — spawning specialized sub-agents for specific tasks, with isolated context to prevent recursive delegation issues. See [Agent Delegation](#agent-delegation) above.
+- **Sandboxed code execution** — running AI-generated code in isolated environments (typically Docker containers) to prevent accidents. See [Code Execution toolsets](https://ai.pydantic.dev/toolsets/#code-execution).
+- **Context management** — automatic conversation summarization to handle long sessions that would otherwise exceed token limits. See [Processing Message History](https://ai.pydantic.dev/message-history/#processing-message-history).
+- **Human-in-the-loop** — approval workflows for dangerous operations like code execution or file deletion. See [Requiring Tool Approval](https://ai.pydantic.dev/toolsets/#requiring-tool-approval).
+- **Durable execution** — preserving agent state across transient API failures and application errors or restarts. See [Durable Execution](https://ai.pydantic.dev/durable_execution/overview/index.md).
+
+In addition, the community maintains packages that bring these concepts together in a more opinionated way:
+
+- [`pydantic-deep`](https://github.com/vstorm-co/pydantic-deepagents) by [Vstorm](https://vstorm.co/)
 
 ## Examples
 
-The following examples demonstrate how to use dependencies in Pydantic AI:
+The following examples demonstrate how to use multi-agent patterns in Pydantic AI:
 
-- [Flight booking](../examples/flight-booking/)
+- [Flight booking](https://ai.pydantic.dev/examples/flight-booking/index.md)

@@ -4,18 +4,21 @@
 
 ```python
 tool_from_langchain(langchain_tool: LangChainTool) -> Tool
-
 ```
 
 Creates a Pydantic AI tool proxy from a LangChain tool.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `langchain_tool` | `LangChainTool` | The LangChain tool to wrap. | *required* |
+| Name             | Type            | Description                 | Default    |
+| ---------------- | --------------- | --------------------------- | ---------- |
+| `langchain_tool` | `LangChainTool` | The LangChain tool to wrap. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Tool` | A Pydantic AI tool that corresponds to the LangChain tool. |
+| Type   | Description                                                |
+| ------ | ---------------------------------------------------------- |
+| `Tool` | A Pydantic AI tool that corresponds to the LangChain tool. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ext/langchain.py`
 
@@ -53,7 +56,6 @@ def tool_from_langchain(langchain_tool: LangChainTool) -> Tool:
         description=function_description,
         json_schema=schema,
     )
-
 ```
 
 ### LangChainToolset
@@ -70,7 +72,6 @@ class LangChainToolset(FunctionToolset):
 
     def __init__(self, tools: list[LangChainTool], *, id: str | None = None):
         super().__init__([tool_from_langchain(tool) for tool in tools], id=id)
-
 ```
 
 ### tool_from_aci
@@ -79,18 +80,22 @@ class LangChainToolset(FunctionToolset):
 tool_from_aci(
     aci_function: str, linked_account_owner_id: str
 ) -> Tool
-
 ```
 
 Creates a Pydantic AI tool proxy from an ACI.dev function.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `aci_function` | `str` | The ACI.dev function to wrap. | *required* | | `linked_account_owner_id` | `str` | The ACI user ID to execute the function on behalf of. | *required* |
+| Name                      | Type  | Description                                           | Default    |
+| ------------------------- | ----- | ----------------------------------------------------- | ---------- |
+| `aci_function`            | `str` | The ACI.dev function to wrap.                         | *required* |
+| `linked_account_owner_id` | `str` | The ACI user ID to execute the function on behalf of. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Tool` | A Pydantic AI tool that corresponds to the ACI.dev tool. |
+| Type   | Description                                              |
+| ------ | -------------------------------------------------------- |
+| `Tool` | A Pydantic AI tool that corresponds to the ACI.dev tool. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ext/aci.py`
 
@@ -138,7 +143,6 @@ def tool_from_aci(aci_function: str, linked_account_owner_id: str) -> Tool:
         description=function_description,
         json_schema=json_schema,
     )
-
 ```
 
 ### ACIToolset
@@ -157,5 +161,4 @@ class ACIToolset(FunctionToolset):
         super().__init__(
             [tool_from_aci(aci_function, linked_account_owner_id) for aci_function in aci_functions], id=id
         )
-
 ```

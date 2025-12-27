@@ -38,7 +38,6 @@ The diagram below shows the overall architecture of an agentic application in DB
 |                      Database                        |
 |   (Stores workflow and step state, schedules tasks)  |
 +------------------------------------------------------+
-
 ```
 
 See the [DBOS documentation](https://docs.dbos.dev/architecture) for more information.
@@ -48,7 +47,7 @@ See the [DBOS documentation](https://docs.dbos.dev/architecture) for more inform
 Any agent can be wrapped in a DBOSAgent to get durable execution. `DBOSAgent` automatically:,
 
 - Wraps `Agent.run` and `Agent.run_sync` as DBOS workflows.
-- Wraps [model requests](../../models/overview/) and [MCP communication](../../mcp/client/) as DBOS steps.
+- Wraps [model requests](https://ai.pydantic.dev/models/overview/index.md) and [MCP communication](https://ai.pydantic.dev/mcp/client/index.md) as DBOS steps.
 
 Custom tool functions and event stream handlers are **not automatically wrapped** by DBOS. If they involve non-deterministic behavior or perform I/O, you should explicitly decorate them with `@DBOS.step`.
 
@@ -58,24 +57,20 @@ Here is a simple but complete example of wrapping an agent for durable execution
 
 ```bash
 pip install pydantic-ai[dbos]
-
 ```
 
 ```bash
 uv add pydantic-ai[dbos]
-
 ```
 
 Or if you're using the slim package, you can install it with the `dbos` optional group:
 
 ```bash
 pip install pydantic-ai-slim[dbos]
-
 ```
 
 ```bash
 uv add pydantic-ai-slim[dbos]
-
 ```
 
 dbos_agent.py
@@ -105,7 +100,6 @@ async def main():
     result = await dbos_agent.run('What is the capital of Mexico?')  # (2)!
     print(result.output)
     #> Mexico City (Ciudad de México, CDMX)
-
 ```
 
 1. Workflows and `DBOSAgent` must be defined before `DBOS.launch()` so that recovery can correctly find all workflows.
@@ -137,13 +131,13 @@ Other than that, any agent and toolset will just work!
 
 ### Agent Run Context and Dependencies
 
-DBOS checkpoints workflow inputs/outputs and step outputs into a database using [`pickle`](https://docs.python.org/3/library/pickle.html). This means you need to make sure [dependencies](../../dependencies/) object provided to DBOSAgent.run() or DBOSAgent.run_sync(), and tool outputs can be serialized using pickle. You may also want to keep the inputs and outputs small (under ~2 MB). PostgreSQL and SQLite support up to 1 GB per field, but large objects may impact performance.
+DBOS checkpoints workflow inputs/outputs and step outputs into a database using [`pickle`](https://docs.python.org/3/library/pickle.html). This means you need to make sure [dependencies](https://ai.pydantic.dev/dependencies/index.md) object provided to DBOSAgent.run() or DBOSAgent.run_sync(), and tool outputs can be serialized using pickle. You may also want to keep the inputs and outputs small (under ~2 MB). PostgreSQL and SQLite support up to 1 GB per field, but large objects may impact performance.
 
 ### Streaming
 
 Because DBOS cannot stream output directly to the workflow or step call site, Agent.run_stream() and Agent.run_stream_events() are not supported when running inside of a DBOS workflow.
 
-Instead, you can implement streaming by setting an event_stream_handler on the `Agent` or `DBOSAgent` instance and using DBOSAgent.run(). The event stream handler function will receive the agent run context and an async iterable of events from the model's streaming response and the agent's execution of tools. For examples, see the [streaming docs](../../agents/#streaming-all-events).
+Instead, you can implement streaming by setting an event_stream_handler on the `Agent` or `DBOSAgent` instance and using DBOSAgent.run(). The event stream handler function will receive the agent run context and an async iterable of events from the model's streaming response and the agent's execution of tools. For examples, see the [streaming docs](https://ai.pydantic.dev/agents/#streaming-all-events).
 
 ## Step Configuration
 
@@ -158,12 +152,12 @@ For custom tools, you can annotate them directly with [`@DBOS.step`](https://doc
 
 On top of the automatic retries for request failures that DBOS will perform, Pydantic AI and various provider API clients also have their own request retry logic. Enabling these at the same time may cause the request to be retried more often than expected, with improper `Retry-After` handling.
 
-When using DBOS, it's recommended to not use [HTTP Request Retries](../../retries/) and to turn off your provider API client's own retry logic, for example by setting `max_retries=0` on a [custom `OpenAIProvider` API client](../../models/openai/#custom-openai-client).
+When using DBOS, it's recommended to not use [HTTP Request Retries](https://ai.pydantic.dev/retries/index.md) and to turn off your provider API client's own retry logic, for example by setting `max_retries=0` on a [custom `OpenAIProvider` API client](https://ai.pydantic.dev/models/openai/#custom-openai-client).
 
 You can customize DBOS's retry policy using [step configuration](#step-configuration).
 
 ## Observability with Logfire
 
-DBOS can be configured to generate OpenTelemetry spans for each workflow and step execution, and Pydantic AI emits spans for each agent run, model request, and tool invocation. You can send these spans to [Pydantic Logfire](../../logfire/) to get a full, end-to-end view of what's happening in your application.
+DBOS can be configured to generate OpenTelemetry spans for each workflow and step execution, and Pydantic AI emits spans for each agent run, model request, and tool invocation. You can send these spans to [Pydantic Logfire](https://ai.pydantic.dev/logfire/index.md) to get a full, end-to-end view of what's happening in your application.
 
 For more information about DBOS logging and tracing, please see the [DBOS docs](https://docs.dbos.dev/python/tutorials/logging-and-tracing) for details.

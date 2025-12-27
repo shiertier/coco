@@ -6,12 +6,10 @@ To use `AnthropicModel` models, you need to either install `pydantic-ai`, or ins
 
 ```bash
 pip install "pydantic-ai-slim[anthropic]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[anthropic]"
-
 ```
 
 ## Configuration
@@ -26,19 +24,17 @@ Once you have the API key, you can set it as an environment variable:
 
 ```bash
 export ANTHROPIC_API_KEY='your-api-key'
-
 ```
 
 You can then use `AnthropicModel` by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/anthropic:claude-sonnet-4-5')
 ...
-
 ```
 
 ```python
@@ -46,7 +42,6 @@ from pydantic_ai import Agent
 
 agent = Agent('anthropic:claude-sonnet-4-5')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -58,7 +53,6 @@ from pydantic_ai.models.anthropic import AnthropicModel
 model = AnthropicModel('claude-sonnet-4-5')
 agent = Agent(model)
 ...
-
 ```
 
 ## `provider` argument
@@ -75,7 +69,6 @@ model = AnthropicModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ## Custom HTTP Client
@@ -96,8 +89,78 @@ model = AnthropicModel(
 )
 agent = Agent(model)
 ...
-
 ```
+
+## Cloud Platform Integrations
+
+You can use Anthropic models through cloud platforms by passing a custom client to AnthropicProvider.
+
+### AWS Bedrock
+
+To use Claude models via [AWS Bedrock](https://aws.amazon.com/bedrock/claude/), follow the [Anthropic documentation](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock) on how to set up an `AsyncAnthropicBedrock` client and then pass it to `AnthropicProvider`:
+
+```python
+from anthropic import AsyncAnthropicBedrock
+
+from pydantic_ai import Agent
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+
+bedrock_client = AsyncAnthropicBedrock()  # Uses AWS credentials from environment
+provider = AnthropicProvider(anthropic_client=bedrock_client)
+model = AnthropicModel('us.anthropic.claude-sonnet-4-5-20250929-v1:0', provider=provider)
+agent = Agent(model)
+...
+```
+
+Bedrock vs BedrockConverseModel
+
+This approach uses Anthropic's SDK with AWS Bedrock credentials. For an alternative using AWS SDK (boto3) directly, see [`BedrockConverseModel`](https://ai.pydantic.dev/models/bedrock/index.md).
+
+### Google Vertex AI
+
+To use Claude models via [Google Cloud Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-claude), follow the [Anthropic documentation](https://docs.anthropic.com/en/api/claude-on-vertex-ai) on how to set up an `AsyncAnthropicVertex` client and then pass it to `AnthropicProvider`:
+
+```python
+from anthropic import AsyncAnthropicVertex
+
+from pydantic_ai import Agent
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+
+vertex_client = AsyncAnthropicVertex(region='us-east5', project_id='your-project-id')
+provider = AnthropicProvider(anthropic_client=vertex_client)
+model = AnthropicModel('claude-sonnet-4-5', provider=provider)
+agent = Agent(model)
+...
+```
+
+Vertex vs GoogleModel
+
+This approach uses Anthropic's SDK with Vertex AI credentials. For an alternative using Google's Vertex AI SDK directly, see [`GoogleModel`](https://ai.pydantic.dev/models/google/index.md).
+
+### Microsoft Foundry
+
+To use Claude models via [Microsoft Foundry](https://ai.azure.com/), follow the [Anthropic documentation](https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry) on how to set up an `AsyncAnthropicFoundry` client and then pass it to `AnthropicProvider`:
+
+```python
+from anthropic import AsyncAnthropicFoundry
+
+from pydantic_ai import Agent
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+
+foundry_client = AsyncAnthropicFoundry(
+    api_key='your-foundry-api-key',  # Or set ANTHROPIC_FOUNDRY_API_KEY
+    resource='your-resource-name',
+)
+provider = AnthropicProvider(anthropic_client=foundry_client)
+model = AnthropicModel('claude-sonnet-4-5', provider=provider)
+agent = Agent(model)
+...
+```
+
+See [Anthropic's Microsoft Foundry documentation](https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry) for setup instructions including Entra ID authentication.
 
 ## Prompt Caching
 
@@ -116,7 +179,7 @@ When using `AsyncAnthropicBedrock`, the TTL parameter is automatically omitted f
 
 Use `anthropic_cache_messages` to automatically cache all messages up to and including the newest user message:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
@@ -137,7 +200,6 @@ result1 = agent.run_sync('What is the capital of France?')
 result2 = agent.run_sync('What is the capital of Germany?')
 print(f'Cache write: {result1.usage().cache_write_tokens}')
 print(f'Cache read: {result2.usage().cache_read_tokens}')
-
 ```
 
 ```python
@@ -159,14 +221,13 @@ result1 = agent.run_sync('What is the capital of France?')
 result2 = agent.run_sync('What is the capital of Germany?')
 print(f'Cache write: {result1.usage().cache_write_tokens}')
 print(f'Cache read: {result2.usage().cache_read_tokens}')
-
 ```
 
 ### Example 2: Comprehensive Caching Strategy
 
 Combine multiple cache settings for maximum savings:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, RunContext
@@ -190,7 +251,6 @@ def search_docs(ctx: RunContext, query: str) -> str:
 
 result = agent.run_sync('Search for Python best practices')
 print(result.output)
-
 ```
 
 ```python
@@ -215,14 +275,13 @@ def search_docs(ctx: RunContext, query: str) -> str:
 
 result = agent.run_sync('Search for Python best practices')
 print(result.output)
-
 ```
 
 ### Example 3: Fine-Grained Control with CachePoint
 
 Use manual `CachePoint` markers to control cache locations precisely:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -239,7 +298,6 @@ result = agent.run_sync([
     'First question'
 ])
 print(result.output)
-
 ```
 
 ```python
@@ -257,14 +315,13 @@ result = agent.run_sync([
     'First question'
 ])
 print(result.output)
-
 ```
 
 ### Accessing Cache Usage Statistics
 
 Access cache usage statistics via `result.usage()`:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
@@ -282,7 +339,6 @@ result = agent.run_sync('Your question')
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 ```python
@@ -301,7 +357,6 @@ result = agent.run_sync('Your question')
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 ### Cache Point Limits
@@ -322,7 +377,7 @@ Each setting uses **at most 1 cache point**, but you can combine them.
 
 Define an agent with all cache settings enabled:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -353,7 +408,6 @@ print(result.output)
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 ```python
@@ -385,7 +439,6 @@ print(result.output)
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 #### Automatic Cache Point Limiting
@@ -394,7 +447,7 @@ When cache points from all sources (settings + `CachePoint` markers) exceed 4, P
 
 Define an agent with 2 cache points from settings:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -426,7 +479,6 @@ print(result.output)
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 ```python
@@ -459,7 +511,6 @@ print(result.output)
 usage = result.usage()
 print(f'Cache write tokens: {usage.cache_write_tokens}')
 print(f'Cache read tokens: {usage.cache_read_tokens}')
-
 ```
 
 **Key Points**:

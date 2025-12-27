@@ -1,0 +1,1605 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "coco-server",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/v1/docs/index": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "index_documents",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Reindex accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/docs/query": {
+      "post": {
+        "tags": [
+          "Memo"
+        ],
+        "operationId": "query_documents",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Query results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponseEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest/batch": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "ingest_batch",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Batch accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "operationId": "get_job",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Job identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}/events": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "operationId": "job_events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Job identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memo/query": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "query_memos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Memo query results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoQueryResponseEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sys/configs": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "list_configs",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "description": "Project identifier",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indexing configs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListConfigsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "upsert_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Indexing config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sys/configs/activate": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "activate_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Activated config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivateConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sys/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Service health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sys/prune": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "prune_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PruneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Prune completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PruneResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sys/register": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "register_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Project registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterProjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivateConfigRequest": {
+        "type": "object",
+        "required": [
+          "org_id",
+          "project_id",
+          "config_id"
+        ],
+        "properties": {
+          "config_id": {
+            "type": "string"
+          },
+          "org_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ActivateConfigResponse": {
+        "type": "object",
+        "required": [
+          "active_config_id"
+        ],
+        "properties": {
+          "active_config_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Chunk": {
+        "type": "object",
+        "description": "A chunk extracted from a document.",
+        "required": [
+          "id",
+          "doc_id",
+          "content",
+          "span"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Chunk content."
+          },
+          "doc_id": {
+            "type": "string",
+            "description": "Source document identifier."
+          },
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "description": "Optional embedding vector.",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "Chunk identifier."
+          },
+          "quality_score": {
+            "type": "number",
+            "format": "float",
+            "description": "Optional quality score for the chunk.",
+            "nullable": true
+          },
+          "span": {
+            "$ref": "#/components/schemas/TextSpan"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Whether the chunk has been verified.",
+            "nullable": true
+          }
+        }
+      },
+      "CocoErrorKind": {
+        "type": "string",
+        "description": "High-level error categories for CoCo.\n\nAdding new variants is a breaking change for the public API.",
+        "enum": [
+          "system",
+          "user",
+          "network",
+          "storage",
+          "compute"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Serializable error response used by API layers.",
+        "required": [
+          "kind",
+          "message"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CocoErrorKind"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version",
+          "worker",
+          "queue",
+          "vector_backend"
+        ],
+        "properties": {
+          "queue": {
+            "$ref": "#/components/schemas/QueueStatusResponse"
+          },
+          "service": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "vector_backend": {
+            "$ref": "#/components/schemas/VectorBackendStatus"
+          },
+          "version": {
+            "type": "string"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/WorkerStatusResponse"
+          }
+        }
+      },
+      "HnswParams": {
+        "type": "object",
+        "description": "HNSW index parameters.",
+        "properties": {
+          "ef_construction": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Construction ef parameter.",
+            "nullable": true,
+            "minimum": 0
+          },
+          "m": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of connections per node.",
+            "nullable": true,
+            "minimum": 0
+          }
+        }
+      },
+      "IndexRequest": {
+        "type": "object",
+        "properties": {
+          "indexing_config_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "IndexResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "IndexingConfigResponse": {
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/IndexingConfig"
+          }
+        }
+      },
+      "IngestBatchRequest": {
+        "type": "object",
+        "required": [
+          "documents"
+        ],
+        "properties": {
+          "activate": {
+            "type": "boolean"
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngestDocument"
+            }
+          },
+          "indexing_config_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "IngestBatchResponse": {
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        }
+      },
+      "IngestChunk": {
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "content",
+          "embedding",
+          "start",
+          "end"
+        ],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quality_score": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "verified": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "IngestDocument": {
+        "type": "object",
+        "required": [
+          "doc_id",
+          "source_ref",
+          "chunks"
+        ],
+        "properties": {
+          "chunks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngestChunk"
+            }
+          },
+          "content_hash": {
+            "type": "string",
+            "nullable": true
+          },
+          "doc_id": {
+            "type": "string"
+          },
+          "quality_score": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "source_ref": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "verified": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "IvfPqParams": {
+        "type": "object",
+        "description": "IVF-PQ index parameters.",
+        "properties": {
+          "max_iterations": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Max iterations for IVF training.",
+            "nullable": true,
+            "minimum": 0
+          },
+          "num_partitions": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of IVF partitions.",
+            "nullable": true,
+            "minimum": 0
+          },
+          "num_sub_vectors": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of PQ sub-vectors.",
+            "nullable": true,
+            "minimum": 0
+          },
+          "sample_rate": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Sample rate for IVF training.",
+            "nullable": true,
+            "minimum": 0
+          }
+        }
+      },
+      "JobStatusResponse": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "attempts",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "version_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ListConfigsQuery": {
+        "type": "object",
+        "required": [
+          "org_id"
+        ],
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ListConfigsResponse": {
+        "type": "object",
+        "required": [
+          "configs"
+        ],
+        "properties": {
+          "active_config_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexingConfig"
+            }
+          }
+        }
+      },
+      "MemoQueryRequest": {
+        "type": "object",
+        "required": [
+          "session_token",
+          "intent"
+        ],
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/PublicSearchIntent"
+          },
+          "session_token": {
+            "type": "string"
+          }
+        }
+      },
+      "MemoQueryResponseEnvelope": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        }
+      },
+      "PruneRequest": {
+        "type": "object",
+        "required": [
+          "org_id",
+          "project_id"
+        ],
+        "properties": {
+          "keep": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "org_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PruneResponse": {
+        "type": "object",
+        "required": [
+          "removed"
+        ],
+        "properties": {
+          "removed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "PublicFilter": {
+        "type": "object",
+        "description": "Filter constraint accepted by the public server API.",
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field name to filter on (server allows `doc_id` and `chunk_id`)."
+          },
+          "op": {
+            "$ref": "#/components/schemas/PublicFilterOp"
+          },
+          "value": {
+            "type": "string",
+            "description": "String-encoded filter value."
+          }
+        }
+      },
+      "PublicFilterOp": {
+        "type": "string",
+        "description": "Filter operator documented for the public server API.",
+        "enum": [
+          "eq",
+          "contains"
+        ]
+      },
+      "PublicSearchIntent": {
+        "type": "object",
+        "description": "Search intent describing how retrieval should run.",
+        "required": [
+          "retrieval_mode",
+          "top_k",
+          "hybrid_alpha",
+          "filters"
+        ],
+        "properties": {
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicFilter"
+            },
+            "description": "Optional filter list (server allows `doc_id`/`chunk_id` with `eq`/`contains`)."
+          },
+          "hybrid_alpha": {
+            "type": "number",
+            "format": "float",
+            "description": "Hybrid weight for vector vs. keyword scoring."
+          },
+          "indexing_config_id": {
+            "type": "string",
+            "description": "Optional indexing configuration selection (defaults to the project's default config).",
+            "nullable": true
+          },
+          "query_embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "description": "Optional query embedding (required for `vector` and `hybrid` retrieval).",
+            "nullable": true
+          },
+          "query_text": {
+            "type": "string",
+            "description": "Optional user query text (required for `fts` and `hybrid` retrieval).",
+            "nullable": true
+          },
+          "reranker": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/coco_protocol.RerankerConfig"
+              }
+            ],
+            "nullable": true
+          },
+          "retrieval_mode": {
+            "$ref": "#/components/schemas/coco_protocol.RetrievalMode"
+          },
+          "top_k": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of candidates to return.",
+            "minimum": 0
+          }
+        }
+      },
+      "QueryRequest": {
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "properties": {
+          "indexing_config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IndexingConfig"
+              }
+            ],
+            "nullable": true
+          },
+          "indexing_config_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "intent": {
+            "$ref": "#/components/schemas/PublicSearchIntent"
+          },
+          "retrieval_config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RetrievalConfig"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "QueryResponse": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            }
+          }
+        }
+      },
+      "QueryResponseEnvelope": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        }
+      },
+      "QueueStatusResponse": {
+        "type": "object",
+        "required": [
+          "mode",
+          "status"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "mode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterProjectRequest": {
+        "type": "object",
+        "required": [
+          "org_id",
+          "name",
+          "source_ref"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "org_id": {
+            "type": "string"
+          },
+          "org_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "platform": {
+            "type": "string",
+            "nullable": true
+          },
+          "project_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_ref": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterProjectResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "org_id",
+          "name",
+          "active_config_id"
+        ],
+        "properties": {
+          "active_config_id": {
+            "type": "string"
+          },
+          "active_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "org_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        }
+      },
+      "RerankerConfig": {
+        "type": "object",
+        "description": "Reranker configuration for post-retrieval scoring.",
+        "required": [
+          "model_name",
+          "rerank_top_n"
+        ],
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "description": "Model name for reranking."
+          },
+          "rerank_top_n": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of top candidates to rerank.",
+            "minimum": 0
+          }
+        }
+      },
+      "ResponseMeta": {
+        "type": "object",
+        "description": "Response metadata for request-level status.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          }
+        }
+      },
+      "ResponseStatus": {
+        "type": "string",
+        "description": "Response freshness indicator.",
+        "enum": [
+          "fresh",
+          "stale"
+        ]
+      },
+      "RetrievalMode": {
+        "type": "string",
+        "description": "Retrieval mode for query execution.",
+        "enum": [
+          "vector",
+          "fts",
+          "hybrid"
+        ]
+      },
+      "SearchHit": {
+        "type": "object",
+        "description": "A search hit with metadata and chunk payload.",
+        "required": [
+          "meta",
+          "chunk"
+        ],
+        "properties": {
+          "chunk": {
+            "$ref": "#/components/schemas/Chunk"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SearchHitMeta"
+          }
+        }
+      },
+      "SearchHitMeta": {
+        "type": "object",
+        "description": "Metadata associated with a search hit.",
+        "required": [
+          "score"
+        ],
+        "properties": {
+          "quality": {
+            "type": "number",
+            "format": "float",
+            "description": "Optional quality indicator.",
+            "nullable": true
+          },
+          "score": {
+            "type": "number",
+            "format": "float",
+            "description": "Similarity or relevance score."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Whether the result has been verified.",
+            "nullable": true
+          }
+        }
+      },
+      "TextSpan": {
+        "type": "object",
+        "description": "A span inside a document, expressed as byte offsets.",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "end": {
+            "type": "integer",
+            "description": "Exclusive end byte offset.",
+            "minimum": 0
+          },
+          "start": {
+            "type": "integer",
+            "description": "Inclusive start byte offset.",
+            "minimum": 0
+          }
+        }
+      },
+      "UpsertConfigRequest": {
+        "type": "object",
+        "required": [
+          "org_id",
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/IndexingConfig"
+          },
+          "org_id": {
+            "type": "string"
+          }
+        }
+      },
+      "VectorBackendKind": {
+        "type": "string",
+        "description": "Supported vector backend types.",
+        "enum": [
+          "pg_vector",
+          "qdrant"
+        ]
+      },
+      "VectorBackendStatus": {
+        "type": "object",
+        "required": [
+          "kind",
+          "status"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "$ref": "#/components/schemas/VectorBackendKind"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "VectorIndexParams": {
+        "type": "object",
+        "description": "Backend-specific index parameter overrides.",
+        "properties": {
+          "hnsw": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HnswParams"
+              }
+            ],
+            "nullable": true
+          },
+          "ivf_pq": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IvfPqParams"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "VectorMetric": {
+        "type": "string",
+        "description": "Supported vector similarity metrics.",
+        "enum": [
+          "cosine",
+          "dot",
+          "l2"
+        ]
+      },
+      "WorkerStatusResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "version"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer_auth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "System",
+      "description": "System and admin endpoints"
+    },
+    {
+      "name": "Docs",
+      "description": "Document ingestion and retrieval"
+    },
+    {
+      "name": "Memo",
+      "description": "User memo retrieval"
+    },
+    {
+      "name": "Jobs",
+      "description": "Ingest job status endpoints"
+    }
+  ]
+}

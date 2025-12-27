@@ -350,14 +350,12 @@ class SpanNode:
 
     def __repr__(self) -> str:
         return self.repr_xml()
-
 ```
 
 #### duration
 
 ```python
 duration: timedelta
-
 ```
 
 Return the span's duration as a timedelta, or None if start/end not set.
@@ -366,7 +364,6 @@ Return the span's duration as a timedelta, or None if start/end not set.
 
 ```python
 descendants: list[SpanNode]
-
 ```
 
 Return all descendants of this node in DFS order.
@@ -375,7 +372,6 @@ Return all descendants of this node in DFS order.
 
 ```python
 ancestors: list[SpanNode]
-
 ```
 
 Return all ancestors of this node.
@@ -384,7 +380,6 @@ Return all ancestors of this node.
 
 ```python
 add_child(child: SpanNode) -> None
-
 ```
 
 Attach a child node to this node's list of children.
@@ -400,7 +395,6 @@ def add_child(self, child: SpanNode) -> None:
     )
     self.children_by_id[child.node_key] = child
     child.parent = self
-
 ```
 
 #### find_children
@@ -409,7 +403,6 @@ def add_child(self, child: SpanNode) -> None:
 find_children(
     predicate: SpanQuery | SpanPredicate,
 ) -> list[SpanNode]
-
 ```
 
 Return all immediate children that satisfy the given predicate.
@@ -420,7 +413,6 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def find_children(self, predicate: SpanQuery | SpanPredicate) -> list[SpanNode]:
     """Return all immediate children that satisfy the given predicate."""
     return list(self._filter_children(predicate))
-
 ```
 
 #### first_child
@@ -429,7 +421,6 @@ def find_children(self, predicate: SpanQuery | SpanPredicate) -> list[SpanNode]:
 first_child(
     predicate: SpanQuery | SpanPredicate,
 ) -> SpanNode | None
-
 ```
 
 Return the first immediate child that satisfies the given predicate, or None if none match.
@@ -440,14 +431,12 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def first_child(self, predicate: SpanQuery | SpanPredicate) -> SpanNode | None:
     """Return the first immediate child that satisfies the given predicate, or None if none match."""
     return next(self._filter_children(predicate), None)
-
 ```
 
 #### any_child
 
 ```python
 any_child(predicate: SpanQuery | SpanPredicate) -> bool
-
 ```
 
 Returns True if there is at least one child that satisfies the predicate.
@@ -458,7 +447,6 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def any_child(self, predicate: SpanQuery | SpanPredicate) -> bool:
     """Returns True if there is at least one child that satisfies the predicate."""
     return self.first_child(predicate) is not None
-
 ```
 
 #### find_descendants
@@ -470,7 +458,6 @@ find_descendants(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> list[SpanNode]
-
 ```
 
 Return all descendant nodes that satisfy the given predicate in DFS order.
@@ -483,7 +470,6 @@ def find_descendants(
 ) -> list[SpanNode]:
     """Return all descendant nodes that satisfy the given predicate in DFS order."""
     return list(self._filter_descendants(predicate, stop_recursing_when))
-
 ```
 
 #### first_descendant
@@ -495,7 +481,6 @@ first_descendant(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> SpanNode | None
-
 ```
 
 DFS: Return the first descendant (in DFS order) that satisfies the given predicate, or `None` if none match.
@@ -508,7 +493,6 @@ def first_descendant(
 ) -> SpanNode | None:
     """DFS: Return the first descendant (in DFS order) that satisfies the given predicate, or `None` if none match."""
     return next(self._filter_descendants(predicate, stop_recursing_when), None)
-
 ```
 
 #### any_descendant
@@ -520,7 +504,6 @@ any_descendant(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> bool
-
 ```
 
 Returns `True` if there is at least one descendant that satisfies the predicate.
@@ -533,7 +516,6 @@ def any_descendant(
 ) -> bool:
     """Returns `True` if there is at least one descendant that satisfies the predicate."""
     return self.first_descendant(predicate, stop_recursing_when) is not None
-
 ```
 
 #### find_ancestors
@@ -545,7 +527,6 @@ find_ancestors(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> list[SpanNode]
-
 ```
 
 Return all ancestors that satisfy the given predicate.
@@ -558,7 +539,6 @@ def find_ancestors(
 ) -> list[SpanNode]:
     """Return all ancestors that satisfy the given predicate."""
     return list(self._filter_ancestors(predicate, stop_recursing_when))
-
 ```
 
 #### first_ancestor
@@ -570,7 +550,6 @@ first_ancestor(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> SpanNode | None
-
 ```
 
 Return the closest ancestor that satisfies the given predicate, or `None` if none match.
@@ -583,7 +562,6 @@ def first_ancestor(
 ) -> SpanNode | None:
     """Return the closest ancestor that satisfies the given predicate, or `None` if none match."""
     return next(self._filter_ancestors(predicate, stop_recursing_when), None)
-
 ```
 
 #### any_ancestor
@@ -595,7 +573,6 @@ any_ancestor(
         SpanQuery | SpanPredicate | None
     ) = None,
 ) -> bool
-
 ```
 
 Returns True if any ancestor satisfies the predicate.
@@ -608,14 +585,12 @@ def any_ancestor(
 ) -> bool:
     """Returns True if any ancestor satisfies the predicate."""
     return self.first_ancestor(predicate, stop_recursing_when) is not None
-
 ```
 
 #### matches
 
 ```python
 matches(query: SpanQuery | SpanPredicate) -> bool
-
 ```
 
 Check if the span node matches the query conditions or predicate.
@@ -629,7 +604,6 @@ def matches(self, query: SpanQuery | SpanPredicate) -> bool:
         return query(self)
 
     return self._matches_query(query)
-
 ```
 
 #### repr_xml
@@ -642,7 +616,6 @@ repr_xml(
     include_start_timestamp: bool = False,
     include_duration: bool = False,
 ) -> str
-
 ```
 
 Return an XML-like string representation of the node.
@@ -696,7 +669,6 @@ def repr_xml(
             first_line_parts.append('children=...')
         first_line_parts.append('/>')
     return '\n'.join([' '.join(first_line_parts), *extra_lines])
-
 ```
 
 ### SpanQuery
@@ -764,14 +736,12 @@ class SpanQuery(TypedDict, total=False):
     some_ancestor_has: SpanQuery
     all_ancestors_have: SpanQuery
     no_ancestor_has: SpanQuery
-
 ```
 
 #### stop_recursing_when
 
 ```python
 stop_recursing_when: SpanQuery
-
 ```
 
 If present, stop recursing through ancestors or descendants at nodes that match this condition.
@@ -894,14 +864,12 @@ class SpanTree:
 
     def __repr__(self):
         return self.repr_xml()
-
 ```
 
 #### add_spans
 
 ```python
 add_spans(spans: list[SpanNode]) -> None
-
 ```
 
 Add a list of spans to the tree, rebuilding the tree structure.
@@ -914,7 +882,6 @@ def add_spans(self, spans: list[SpanNode]) -> None:
     for span in spans:
         self.nodes_by_id[span.node_key] = span
     self._rebuild_tree()
-
 ```
 
 #### find
@@ -923,7 +890,6 @@ def add_spans(self, spans: list[SpanNode]) -> None:
 find(
     predicate: SpanQuery | SpanPredicate,
 ) -> list[SpanNode]
-
 ```
 
 Find all nodes in the entire tree that match the predicate, scanning from each root in DFS order.
@@ -934,7 +900,6 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def find(self, predicate: SpanQuery | SpanPredicate) -> list[SpanNode]:
     """Find all nodes in the entire tree that match the predicate, scanning from each root in DFS order."""
     return list(self._filter(predicate))
-
 ```
 
 #### first
@@ -943,7 +908,6 @@ def find(self, predicate: SpanQuery | SpanPredicate) -> list[SpanNode]:
 first(
     predicate: SpanQuery | SpanPredicate,
 ) -> SpanNode | None
-
 ```
 
 Find the first node that matches a predicate, scanning from each root in DFS order. Returns `None` if not found.
@@ -954,14 +918,12 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def first(self, predicate: SpanQuery | SpanPredicate) -> SpanNode | None:
     """Find the first node that matches a predicate, scanning from each root in DFS order. Returns `None` if not found."""
     return next(self._filter(predicate), None)
-
 ```
 
 #### any
 
 ```python
 any(predicate: SpanQuery | SpanPredicate) -> bool
-
 ```
 
 Returns True if any node in the tree matches the predicate.
@@ -972,14 +934,12 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def any(self, predicate: SpanQuery | SpanPredicate) -> bool:
     """Returns True if any node in the tree matches the predicate."""
     return self.first(predicate) is not None
-
 ```
 
 #### __iter__
 
 ```python
 __iter__() -> Iterator[SpanNode]
-
 ```
 
 Return an iterator over all nodes in the tree.
@@ -990,7 +950,6 @@ Source code in `pydantic_evals/pydantic_evals/otel/span_tree.py`
 def __iter__(self) -> Iterator[SpanNode]:
     """Return an iterator over all nodes in the tree."""
     return iter(self.nodes_by_id.values())
-
 ```
 
 #### repr_xml
@@ -1003,7 +962,6 @@ repr_xml(
     include_start_timestamp: bool = False,
     include_duration: bool = False,
 ) -> str
-
 ```
 
 Return an XML-like string representation of the tree, optionally including children, trace_id, span_id, duration, and timestamps.
@@ -1040,5 +998,4 @@ def repr_xml(
         '</SpanTree>',
     ]
     return '\n'.join(repr_parts)
-
 ```

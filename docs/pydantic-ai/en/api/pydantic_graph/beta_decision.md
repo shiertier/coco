@@ -8,7 +8,6 @@ This module provides the Decision node type and related classes for implementing
 
 ```python
 StateT = TypeVar('StateT', infer_variance=True)
-
 ```
 
 Type variable for graph state.
@@ -17,7 +16,6 @@ Type variable for graph state.
 
 ```python
 DepsT = TypeVar('DepsT', infer_variance=True)
-
 ```
 
 Type variable for graph dependencies.
@@ -26,7 +24,6 @@ Type variable for graph dependencies.
 
 ```python
 HandledT = TypeVar('HandledT', infer_variance=True)
-
 ```
 
 Type variable used to track types handled by the branches of a Decision.
@@ -35,7 +32,6 @@ Type variable used to track types handled by the branches of a Decision.
 
 ```python
 T = TypeVar('T', infer_variance=True)
-
 ```
 
 Generic type variable.
@@ -92,14 +88,12 @@ class Decision(Generic[StateT, DepsT, HandledT]):
             RuntimeError: Always, as this method should never be executed.
         """
         raise RuntimeError('This method should never be called, it is just defined for typing purposes.')
-
 ```
 
 #### id
 
 ```python
 id: NodeID
-
 ```
 
 Unique identifier for this decision node.
@@ -108,7 +102,6 @@ Unique identifier for this decision node.
 
 ```python
 branches: list[DecisionBranch[Any]]
-
 ```
 
 List of branches that can be taken from this decision.
@@ -117,7 +110,6 @@ List of branches that can be taken from this decision.
 
 ```python
 note: str | None
-
 ```
 
 Optional documentation note for this decision.
@@ -128,18 +120,21 @@ Optional documentation note for this decision.
 branch(
     branch: DecisionBranch[T],
 ) -> Decision[StateT, DepsT, HandledT | T]
-
 ```
 
 Add a new branch to this decision.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `branch` | `DecisionBranch[T]` | The branch to add to this decision. | *required* |
+| Name     | Type                | Description                         | Default    |
+| -------- | ------------------- | ----------------------------------- | ---------- |
+| `branch` | `DecisionBranch[T]` | The branch to add to this decision. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Decision[StateT, DepsT, HandledT | T]` | A new Decision with the additional branch. |
+| Type                                | Description |
+| ----------------------------------- | ----------- |
+| \`Decision\[StateT, DepsT, HandledT | T\]\`       |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -154,14 +149,12 @@ def branch(self, branch: DecisionBranch[T]) -> Decision[StateT, DepsT, HandledT 
         A new Decision with the additional branch.
     """
     return Decision(id=self.id, branches=self.branches + [branch], note=self.note)
-
 ```
 
 ### SourceT
 
 ```python
 SourceT = TypeVar('SourceT', infer_variance=True)
-
 ```
 
 Type variable for source data for a DecisionBranch.
@@ -217,14 +210,12 @@ class DecisionBranch(Generic[SourceT]):
 
     destinations: list[AnyDestinationNode]
     """The destination nodes that can be referenced by DestinationMarker in the path."""
-
 ```
 
 #### source
 
 ```python
 source: TypeOrTypeExpression[SourceT]
-
 ```
 
 The expected type of data for this branch.
@@ -235,7 +226,6 @@ This is necessary for exhaustiveness-checking when handling the inputs to a deci
 
 ```python
 matches: Callable[[Any], bool] | None
-
 ```
 
 An optional predicate function used to determine whether input data matches this branch.
@@ -248,7 +238,6 @@ Inputs are tested against each branch of a decision node in order, and the path 
 
 ```python
 path: Path
-
 ```
 
 The execution path to follow when an input value matches this branch of a decision node.
@@ -261,7 +250,6 @@ The path can also include position-aware labels which are used when generating m
 
 ```python
 destinations: list[AnyDestinationNode]
-
 ```
 
 The destination nodes that can be referenced by DestinationMarker in the path.
@@ -270,7 +258,6 @@ The destination nodes that can be referenced by DestinationMarker in the path.
 
 ```python
 OutputT = TypeVar('OutputT', infer_variance=True)
-
 ```
 
 Type variable for the output data of a node.
@@ -279,7 +266,6 @@ Type variable for the output data of a node.
 
 ```python
 NewOutputT = TypeVar('NewOutputT', infer_variance=True)
-
 ```
 
 Type variable for transformed output.
@@ -440,7 +426,6 @@ class DecisionBranchBuilder(Generic[StateT, DepsT, OutputT, SourceT, HandledT]):
             matches=self._matches,
             path_builder=self._path_builder.label(label),
         )
-
 ```
 
 #### to
@@ -458,18 +443,23 @@ to(
     | type[BaseNode[StateT, DepsT, Any]],
     fork_id: str | None = None,
 ) -> DecisionBranch[SourceT]
-
 ```
 
 Set the destination(s) for this branch.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `destination` | `DestinationNode[StateT, DepsT, OutputT] | type[BaseNode[StateT, DepsT, Any]]` | The primary destination node. | *required* | | `*extra_destinations` | `DestinationNode[StateT, DepsT, OutputT] | type[BaseNode[StateT, DepsT, Any]]` | Additional destination nodes. | `()` | | `fork_id` | `str | None` | Optional node ID to use for the resulting broadcast fork if multiple destinations are provided. | `None` |
+| Name                  | Type                                      | Description                            | Default                                                                                         |
+| --------------------- | ----------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `destination`         | \`DestinationNode[StateT, DepsT, OutputT] | type\[BaseNode[StateT, DepsT, Any]\]\` | The primary destination node.                                                                   |
+| `*extra_destinations` | \`DestinationNode[StateT, DepsT, OutputT] | type\[BaseNode[StateT, DepsT, Any]\]\` | Additional destination nodes.                                                                   |
+| `fork_id`             | \`str                                     | None\`                                 | Optional node ID to use for the resulting broadcast fork if multiple destinations are provided. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranch[SourceT]` | A completed DecisionBranch with the specified destinations. |
+| Type                      | Description                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| `DecisionBranch[SourceT]` | A completed DecisionBranch with the specified destinations. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -500,7 +490,6 @@ def to(
         path=self._path_builder.to(*destinations, fork_id=fork_id),
         destinations=destinations,
     )
-
 ```
 
 #### broadcast
@@ -514,18 +503,22 @@ broadcast(
     *,
     fork_id: str | None = None,
 ) -> DecisionBranch[SourceT]
-
 ```
 
 Broadcast this decision branch into multiple destinations.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `get_forks` | `Callable[[Self], Sequence[DecisionBranch[SourceT]]]` | The callback that will return a sequence of decision branches to broadcast to. | *required* | | `fork_id` | `str | None` | Optional node ID to use for the resulting broadcast fork. | `None` |
+| Name        | Type                                                  | Description                                                                    | Default                                                   |
+| ----------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `get_forks` | `Callable[[Self], Sequence[DecisionBranch[SourceT]]]` | The callback that will return a sequence of decision branches to broadcast to. | *required*                                                |
+| `fork_id`   | \`str                                                 | None\`                                                                         | Optional node ID to use for the resulting broadcast fork. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranch[SourceT]` | A completed DecisionBranch with the specified destinations. |
+| Type                      | Description                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| `DecisionBranch[SourceT]` | A completed DecisionBranch with the specified destinations. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -549,7 +542,6 @@ def broadcast(
     path = self._path_builder.broadcast(new_paths, fork_id=fork_id)
     destinations = [d for fdp in fork_decision_branches for d in fdp.destinations]
     return DecisionBranch(source=self._source, matches=self._matches, path=path, destinations=destinations)
-
 ```
 
 #### transform
@@ -562,18 +554,21 @@ transform(
 ) -> DecisionBranchBuilder[
     StateT, DepsT, NewOutputT, SourceT, HandledT
 ]
-
 ```
 
 Apply a transformation to the branch's output.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `func` | `TransformFunction[StateT, DepsT, OutputT, NewOutputT]` | Transformation function to apply. | *required* |
+| Name   | Type                                                    | Description                       | Default    |
+| ------ | ------------------------------------------------------- | --------------------------------- | ---------- |
+| `func` | `TransformFunction[StateT, DepsT, OutputT, NewOutputT]` | Transformation function to apply. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranchBuilder[StateT, DepsT, NewOutputT, SourceT, HandledT]` | A new DecisionBranchBuilder where the provided transform is applied prior to generating the final output. |
+| Type                                                                  | Description                                                                                               |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `DecisionBranchBuilder[StateT, DepsT, NewOutputT, SourceT, HandledT]` | A new DecisionBranchBuilder where the provided transform is applied prior to generating the final output. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -595,7 +590,6 @@ def transform(
         matches=self._matches,
         path_builder=self._path_builder.transform(func),
     )
-
 ```
 
 #### map
@@ -608,7 +602,6 @@ map(
 ) -> DecisionBranchBuilder[
     StateT, DepsT, T, SourceT, HandledT
 ]
-
 ```
 
 Spread the branch's output.
@@ -617,11 +610,16 @@ To do this, the current output must be iterable, and any subsequent steps in the
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `fork_id` | `str | None` | Optional ID for the fork, defaults to a generated value | `None` | | `downstream_join_id` | `str | None` | Optional ID of a downstream join node which is involved when mapping empty iterables | `None` |
+| Name                 | Type  | Description | Default                                                                              |
+| -------------------- | ----- | ----------- | ------------------------------------------------------------------------------------ |
+| `fork_id`            | \`str | None\`      | Optional ID for the fork, defaults to a generated value                              |
+| `downstream_join_id` | \`str | None\`      | Optional ID of a downstream join node which is involved when mapping empty iterables |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranchBuilder[StateT, DepsT, T, SourceT, HandledT]` | A new DecisionBranchBuilder where mapping is performed prior to generating the final output. |
+| Type                                                         | Description                                                                                  |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `DecisionBranchBuilder[StateT, DepsT, T, SourceT, HandledT]` | A new DecisionBranchBuilder where mapping is performed prior to generating the final output. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -651,7 +649,6 @@ def map(
         matches=self._matches,
         path_builder=self._path_builder.map(fork_id=fork_id, downstream_join_id=downstream_join_id),
     )
-
 ```
 
 #### label
@@ -662,7 +659,6 @@ label(
 ) -> DecisionBranchBuilder[
     StateT, DepsT, OutputT, SourceT, HandledT
 ]
-
 ```
 
 Apply a label to the branch at the current point in the path being built.
@@ -671,11 +667,15 @@ These labels are only used in generated mermaid diagrams.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `label` | `str` | The label to apply. | *required* |
+| Name    | Type  | Description         | Default    |
+| ------- | ----- | ------------------- | ---------- |
+| `label` | `str` | The label to apply. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranchBuilder[StateT, DepsT, OutputT, SourceT, HandledT]` | A new DecisionBranchBuilder where the label has been applied at the end of the current path being built. |
+| Type                                                               | Description                                                                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `DecisionBranchBuilder[StateT, DepsT, OutputT, SourceT, HandledT]` | A new DecisionBranchBuilder where the label has been applied at the end of the current path being built. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/decision.py`
 
@@ -697,5 +697,4 @@ def label(self, label: str) -> DecisionBranchBuilder[StateT, DepsT, OutputT, Sou
         matches=self._matches,
         path_builder=self._path_builder.label(label),
     )
-
 ```

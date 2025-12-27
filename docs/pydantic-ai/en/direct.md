@@ -31,7 +31,6 @@ print(model_response.parts[0].content)
 #> The capital of France is Paris.
 print(model_response.usage)
 #> RequestUsage(input_tokens=56, output_tokens=7)
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -91,7 +90,6 @@ async def main():
         timestamp=datetime.datetime(...),
     )
     """
-
 ```
 
 *(This example is complete, it can be run "as is" — you'll need to add `asyncio.run(main())` to run `main`)*
@@ -129,7 +127,6 @@ model_response = model_request_sync(
 
 print(model_response.parts[0].content)
 #> The capital of France is Paris.
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -155,7 +152,6 @@ model_response = model_request_sync(
 
 print(model_response.parts[0].content)
 #> The capital of France is Paris.
-
 ```
 
-See [Debugging and Monitoring](../logfire/) for more details, including how to instrument with plain OpenTelemetry without Logfire.
+See [Debugging and Monitoring](https://ai.pydantic.dev/logfire/index.md) for more details, including how to instrument with plain OpenTelemetry without Logfire.

@@ -6,12 +6,10 @@ To use `MistralModel`, you need to either install `pydantic-ai`, or install `pyd
 
 ```bash
 pip install "pydantic-ai-slim[mistral]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[mistral]"
-
 ```
 
 ## Configuration
@@ -26,7 +24,6 @@ Once you have the API key, you can set it as an environment variable:
 
 ```bash
 export MISTRAL_API_KEY='your-api-key'
-
 ```
 
 You can then use `MistralModel` by name:
@@ -36,7 +33,6 @@ from pydantic_ai import Agent
 
 agent = Agent('mistral:mistral-large-latest')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -48,7 +44,6 @@ from pydantic_ai.models.mistral import MistralModel
 model = MistralModel('mistral-small-latest')
 agent = Agent(model)
 ...
-
 ```
 
 ## `provider` argument
@@ -65,7 +60,6 @@ model = MistralModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 You can also customize the provider with a custom `httpx.AsyncClient`:
@@ -84,5 +78,4 @@ model = MistralModel(
 )
 agent = Agent(model)
 ...
-
 ```

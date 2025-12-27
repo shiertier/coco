@@ -11,7 +11,6 @@ format_as_xml(
     indent: str | None = "  ",
     include_field_info: Literal["once"] | bool = False,
 ) -> str
-
 ```
 
 Format a Python object as XML.
@@ -22,13 +21,24 @@ Supports: `str`, `bytes`, `bytearray`, `bool`, `int`, `float`, `date`, `datetime
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `obj` | `Any` | Python Object to serialize to XML. | *required* | | `root_tag` | `str | None` | Outer tag to wrap the XML in, use None to omit the outer tag. | `None` | | `item_tag` | `str` | Tag to use for each item in an iterable (e.g. list), this is overridden by the class name for dataclasses and Pydantic models. | `'item'` | | `none_str` | `str` | String to use for None values. | `'null'` | | `indent` | `str | None` | Indentation string to use for pretty printing. | `' '` | | `include_field_info` | `Literal['once'] | bool` | Whether to include attributes like Pydantic Field attributes and dataclasses field() metadata as XML attributes. In both cases the allowed Field attributes and field() metadata keys are title and description. If a field is repeated in the data (e.g. in a list) by setting once the attributes are included only in the first occurrence of an XML element relative to the same field. | `False` |
+| Name                 | Type              | Description                                                                                                                    | Default                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `obj`                | `Any`             | Python Object to serialize to XML.                                                                                             | *required*                                                                                                                                                                                                                                                                                                                                                                                  |
+| `root_tag`           | \`str             | None\`                                                                                                                         | Outer tag to wrap the XML in, use None to omit the outer tag.                                                                                                                                                                                                                                                                                                                               |
+| `item_tag`           | `str`             | Tag to use for each item in an iterable (e.g. list), this is overridden by the class name for dataclasses and Pydantic models. | `'item'`                                                                                                                                                                                                                                                                                                                                                                                    |
+| `none_str`           | `str`             | String to use for None values.                                                                                                 | `'null'`                                                                                                                                                                                                                                                                                                                                                                                    |
+| `indent`             | \`str             | None\`                                                                                                                         | Indentation string to use for pretty printing.                                                                                                                                                                                                                                                                                                                                              |
+| `include_field_info` | \`Literal['once'] | bool\`                                                                                                                         | Whether to include attributes like Pydantic Field attributes and dataclasses field() metadata as XML attributes. In both cases the allowed Field attributes and field() metadata keys are title and description. If a field is repeated in the data (e.g. in a list) by setting once the attributes are included only in the first occurrence of an XML element relative to the same field. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `str` | XML representation of the object. |
+| Type  | Description                       |
+| ----- | --------------------------------- |
+| `str` | XML representation of the object. |
 
-Example: format_as_xml_example.py
+Example:
+
+format_as_xml_example.py
 
 ```python
 from pydantic_ai import format_as_xml
@@ -41,7 +51,6 @@ print(format_as_xml({'name': 'John', 'height': 6, 'weight': 200}, root_tag='user
   <weight>200</weight>
 </user>
 '''
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/format_prompt.py`
@@ -105,5 +114,4 @@ def format_as_xml(
         if indent is not None:
             ElementTree.indent(el, space=indent)
         return ElementTree.tostring(el, encoding='unicode')
-
 ````

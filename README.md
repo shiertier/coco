@@ -1,53 +1,66 @@
-# docs-crawler
+# Context Core (CoCo) v3.0
 
-一个使用标准库实现的简单爬虫，用于抓取文档站点的 `*.md` / `*.mdx` 文件，作为 LLM/RAG 的本地参考语料。
+CoCo is a semantic retrieval engine for code and knowledge bases. The repository
+follows Physical Separation and No-DI (static dispatch) across local and server
+products.
 
-## 快速开始
+## Repository layout
 
-- 抓取所有来源：`python3 -m docs_crawler crawl`
-- 只抓取某个来源：`python3 -m docs_crawler crawl --source pydantic-ai`
-- 删除不再被发现的旧文档：`python3 -m docs_crawler crawl --source pydantic-ai --prune`
+- `crates/` (open source)
+  - `coco-protocol`: DTOs, traits, error types
+  - `coco-core`: parsing, chunking, text utilities (no I/O)
+  - `coco-local`: local service (SQLite + LanceDB + ONNX Runtime)
+- `private/` (closed source)
+  - `coco-server`: API service (Postgres + pgvector)
+  - `coco-worker`: ingest worker
+- `docs/coco/`: product documentation
 
-## 日志与进度
+## Quick start (local mode)
 
-默认输出 `INFO` 日志，包含发现、抓取进度和错误信息；可用 `--log-level` 调整（如 `WARNING` 仅显示错误）。
+```bash
+export COCO_EMBEDDER_MODE=stub
+cargo run -p coco-local --features local-storage -- start --headless
+```
 
-## 配置
+In another terminal:
 
-配置文件为 `sources.json`，核心字段：
+```bash
+cargo run -p coco-local --features local-storage -- import /path/to/project --recursive
+```
 
-- `sources[].id`：来源标识（用于 `--source`）
-- `sources[].output_dir`：输出目录（每个来源一个目录）
-- `sources[].default_language`：默认语言（例如 `en`）
-- `sources[].allowed_extensions`（可选）：覆盖全局 `defaults.allowed_extensions`；可使用 `["*"]` 接收任意后缀
-- `sources[].max_workers`（可选）：覆盖全局 `defaults.max_workers`，控制该来源的并发抓取线程数
-- `sources[].entrypoints[]`：入口列表，目前支持：
-  - `type: "llms_txt"`：从 `llms.txt` 中解析匹配 `allowed_extensions` 的链接并抓取
-  - `language`（可选）：如果链接路径里没有语言前缀，可用它给该入口的文档打语言标签
-  - `type: "github_tree"`：从 GitHub 仓库的目录树中发现并抓取文档
-    - `repo`：形如 `owner/name` 的仓库
-    - `ref`（可选）：分支或提交，默认 `main`
-    - `path`：仓库内的文档目录
-    - `languages`（可选）：仅抓取指定语言（例如 `["en", "zh", "ja", "ko"]`）
-    - `language`（可选）：未带语言前缀的文件使用该语言标签
-    - 如遇到 GitHub API 速率限制，可设置环境变量 `GITHUB_TOKEN` 或 `GH_TOKEN`
-    - API 失败时会尝试使用系统 `git` 进行回退（需本机已安装 git）
-    - `git_cache_dir`（可选）：git 回退时的本地缓存目录；默认 `output_dir/.git-cache`
-  - `language_variants`（可选）：需配合 `language` 使用，在 `language` 基础上生成额外语言版本；会把 URL 路径中匹配 `language` 的段替换为对应语言
+Query:
 
-## 输出结构与更新逻辑
+```bash
+curl -s \
+  -H "content-type: application/json" \
+  -d '{
+    "intent": {
+      "query_text": "init",
+      "retrieval_mode": "vector",
+      "top_k": 5,
+      "hybrid_alpha": 0.5,
+      "filters": [],
+      "reranker": null
+    }
+  }' \
+  http://127.0.0.1:3456/v1/docs/query
+```
 
-每个来源的输出目录包含：
+## Server mode (Docker)
 
-- `.manifest.json`：缓存/状态清单（按 URL 记录 `etag`/`last_modified`/`sha256` 等）
-- `.manifest.json` 中的 `documents_order` 保留 `llms.txt` 的原始顺序
-- `<lang>/.../*.md(x)`：按语言分目录存储的文档
-- 无后缀的 URL 会保存为 `.html` 文件以避免目录冲突
+```bash
+docker compose up -d
+```
 
-重复执行 `crawl` 会利用 `ETag`/`If-None-Match` 等机制增量更新；如果文档未变化，会得到 `304 Not Modified` 并跳过下载。
+Set `COCO_OPENAI_API_KEY` if you want the server to generate embeddings.
 
-## 路径规则
+To use the `coco-api` image alias, set `COCO_API_IMAGE=coco-api` before running
+Docker Compose.
 
-当 URL 以 `/index.md` 或 `/index.mdx` 结尾时，会折叠为同级的 `*.md(x)` 文件：
+## Documentation
 
-- `.../guide/index.md` -> `.../guide.md`
+See `docs/coco/README.md`.
+
+## Notes
+
+`src/docs_crawler/` is a future reference tool and not part of the CoCo build.

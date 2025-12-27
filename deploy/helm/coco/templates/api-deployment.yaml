@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "coco.fullname" . }}-api
+  labels:
+    {{- include "coco.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "coco.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "coco.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.api.repository }}:{{ .Values.image.api.tag }}"
+          imagePullPolicy: {{ .Values.image.api.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.api.port }}
+          env:
+            - name: COCO_HOST
+              value: "{{ .Values.config.cocoHost }}"
+            - name: COCO_PORT
+              value: "{{ .Values.config.cocoPort }}"
+            - name: COCO_ADMIN_KEY
+              value: "{{ .Values.config.adminKey }}"
+            - name: COCO_API_KEY
+              value: "{{ .Values.config.apiKey }}"
+            - name: COCO_VECTOR_BACKEND
+              value: "{{ .Values.config.vectorBackend }}"
+            {{- $dbUrl := include "coco.postgresUrl" . | trim }}
+            {{- if $dbUrl }}
+            - name: COCO_DB_URL
+              value: "{{ $dbUrl }}"
+            {{- end }}
+            {{- $vectorDbUrl := include "coco.vectorDbUrl" . | trim }}
+            {{- if $vectorDbUrl }}
+            - name: COCO_VECTOR_DB_URL
+              value: "{{ $vectorDbUrl }}"
+            {{- end }}
+            {{- if .Values.config.vectorDbCollectionPrefix }}
+            - name: COCO_VECTOR_DB_COLLECTION_PREFIX
+              value: "{{ .Values.config.vectorDbCollectionPrefix }}"
+            {{- end }}
+            {{- if .Values.config.openaiApiKey }}
+            - name: COCO_OPENAI_API_KEY
+              value: "{{ .Values.config.openaiApiKey }}"
+            {{- end }}

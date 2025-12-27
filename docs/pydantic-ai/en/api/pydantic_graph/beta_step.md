@@ -14,7 +14,11 @@ The step context provides access to the current graph state, dependencies, and i
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of the input data | *required* |
+| Name     | Bound or Constraints | Description                  | Default    |
+| -------- | -------------------- | ---------------------------- | ---------- |
+| `StateT` |                      | The type of the graph state  | *required* |
+| `DepsT`  |                      | The type of the dependencies | *required* |
+| `InputT` |                      | The type of the input data   | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -58,14 +62,12 @@ class StepContext(Generic[StateT, DepsT, InputT]):
         This must be a property to ensure correct variance behavior
         """
         return self._inputs
-
 ```
 
 #### inputs
 
 ```python
 inputs: InputT
-
 ```
 
 The input data for this step.
@@ -82,7 +84,12 @@ Step functions are async callables that receive a step context and return a resu
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of the input data | *required* | | `OutputT` | | The type of the output data | *required* |
+| Name      | Bound or Constraints | Description                  | Default    |
+| --------- | -------------------- | ---------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state  | *required* |
+| `DepsT`   |                      | The type of the dependencies | *required* |
+| `InputT`  |                      | The type of the input data   | *required* |
+| `OutputT` |                      | The type of the output data  | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -109,7 +116,6 @@ class StepFunction(Protocol[StateT, DepsT, InputT, OutputT]):
             An awaitable that resolves to the step's output
         """
         raise NotImplementedError
-
 ```
 
 #### __call__
@@ -118,18 +124,21 @@ class StepFunction(Protocol[StateT, DepsT, InputT, OutputT]):
 __call__(
     ctx: StepContext[StateT, DepsT, InputT],
 ) -> Awaitable[OutputT]
-
 ```
 
 Execute the step function with the given context.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `StepContext[StateT, DepsT, InputT]` | The step context containing state, dependencies, and inputs | *required* |
+| Name  | Type                                 | Description                                                 | Default    |
+| ----- | ------------------------------------ | ----------------------------------------------------------- | ---------- |
+| `ctx` | `StepContext[StateT, DepsT, InputT]` | The step context containing state, dependencies, and inputs | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Awaitable[OutputT]` | An awaitable that resolves to the step's output |
+| Type                 | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `Awaitable[OutputT]` | An awaitable that resolves to the step's output |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -144,7 +153,6 @@ def __call__(self, ctx: StepContext[StateT, DepsT, InputT]) -> Awaitable[OutputT
         An awaitable that resolves to the step's output
     """
     raise NotImplementedError
-
 ```
 
 ### StreamFunction
@@ -157,7 +165,12 @@ Stream functions are async callables that receive a step context and return an a
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of the input data | *required* | | `OutputT` | | The type of the output data | *required* |
+| Name      | Bound or Constraints | Description                  | Default    |
+| --------- | -------------------- | ---------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state  | *required* |
+| `DepsT`   |                      | The type of the dependencies | *required* |
+| `InputT`  |                      | The type of the input data   | *required* |
+| `OutputT` |                      | The type of the output data  | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -185,7 +198,6 @@ class StreamFunction(Protocol[StateT, DepsT, InputT, OutputT]):
         """
         raise NotImplementedError
         yield
-
 ```
 
 #### __call__
@@ -194,18 +206,21 @@ class StreamFunction(Protocol[StateT, DepsT, InputT, OutputT]):
 __call__(
     ctx: StepContext[StateT, DepsT, InputT],
 ) -> AsyncIterator[OutputT]
-
 ```
 
 Execute the stream function with the given context.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `StepContext[StateT, DepsT, InputT]` | The step context containing state, dependencies, and inputs | *required* |
+| Name  | Type                                 | Description                                                 | Default    |
+| ----- | ------------------------------------ | ----------------------------------------------------------- | ---------- |
+| `ctx` | `StepContext[StateT, DepsT, InputT]` | The step context containing state, dependencies, and inputs | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[OutputT]` | An async iterator yielding the streamed output |
+| Type                     | Description                                    |
+| ------------------------ | ---------------------------------------------- |
+| `AsyncIterator[OutputT]` | An async iterator yielding the streamed output |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -221,14 +236,12 @@ def __call__(self, ctx: StepContext[StateT, DepsT, InputT]) -> AsyncIterator[Out
     """
     raise NotImplementedError
     yield
-
 ```
 
 ### AnyStepFunction
 
 ```python
 AnyStepFunction = StepFunction[Any, Any, Any, Any]
-
 ```
 
 Type alias for a step function with any type parameters.
@@ -243,7 +256,12 @@ Steps represent individual units of execution in the graph, encapsulating a step
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of the input data | *required* | | `OutputT` | | The type of the output data | *required* |
+| Name      | Bound or Constraints | Description                  | Default    |
+| --------- | -------------------- | ---------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state  | *required* |
+| `DepsT`   |                      | The type of the dependencies | *required* |
+| `InputT`  |                      | The type of the input data   | *required* |
+| `OutputT` |                      | The type of the output data  | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -295,14 +313,12 @@ class Step(Generic[StateT, DepsT, InputT, OutputT]):
             A [`StepNode`][pydantic_graph.beta.step.StepNode] with this step and the bound inputs
         """
         return StepNode(self, inputs)
-
 ```
 
 #### id
 
 ```python
 id: NodeID = id
-
 ```
 
 Unique identifier for this step.
@@ -311,7 +327,6 @@ Unique identifier for this step.
 
 ```python
 label: str | None = label
-
 ```
 
 Optional human-readable label for this step.
@@ -320,7 +335,6 @@ Optional human-readable label for this step.
 
 ```python
 call: StepFunction[StateT, DepsT, InputT, OutputT]
-
 ```
 
 The step function to execute. This needs to be a property for proper variance inference.
@@ -329,30 +343,31 @@ The step function to execute. This needs to be a property for proper variance in
 
 ```python
 as_node(inputs: None = None) -> StepNode[StateT, DepsT]
-
 ```
 
 ```python
 as_node(inputs: InputT) -> StepNode[StateT, DepsT]
-
 ```
 
 ```python
 as_node(
     inputs: InputT | None = None,
 ) -> StepNode[StateT, DepsT]
-
 ```
 
 Create a step node with bound inputs.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `inputs` | `InputT | None` | The input data to bind to this step, or None | `None` |
+| Name     | Type     | Description | Default                                      |
+| -------- | -------- | ----------- | -------------------------------------------- |
+| `inputs` | \`InputT | None\`      | The input data to bind to this step, or None |
 
 Returns:
 
-| Type | Description | | --- | --- | | `StepNode[StateT, DepsT]` | A StepNode with this step and the bound inputs |
+| Type                      | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `StepNode[StateT, DepsT]` | A StepNode with this step and the bound inputs |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -367,7 +382,6 @@ def as_node(self, inputs: InputT | None = None) -> StepNode[StateT, DepsT]:
         A [`StepNode`][pydantic_graph.beta.step.StepNode] with this step and the bound inputs
     """
     return StepNode(self, inputs)
-
 ```
 
 ### StepNode
@@ -412,14 +426,12 @@ class StepNode(BaseNode[StateT, DepsT, Any]):
         raise NotImplementedError(
             '`StepNode` is not meant to be run directly, it is meant to be used in `BaseNode` subclasses to indicate a transition to v2-style steps.'
         )
-
 ```
 
 #### step
 
 ```python
 step: Step[StateT, DepsT, Any, Any]
-
 ```
 
 The step to execute.
@@ -428,7 +440,6 @@ The step to execute.
 
 ```python
 inputs: Any
-
 ```
 
 The inputs bound to this step.
@@ -439,22 +450,27 @@ The inputs bound to this step.
 run(
     ctx: GraphRunContext[StateT, DepsT],
 ) -> BaseNode[StateT, DepsT, Any] | End[Any]
-
 ```
 
 Attempt to run the step node.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `GraphRunContext[StateT, DepsT]` | The graph execution context | *required* |
+| Name  | Type                             | Description                 | Default    |
+| ----- | -------------------------------- | --------------------------- | ---------- |
+| `ctx` | `GraphRunContext[StateT, DepsT]` | The graph execution context | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `BaseNode[StateT, DepsT, Any] | End[Any]` | The result of step execution |
+| Type                           | Description |
+| ------------------------------ | ----------- |
+| \`BaseNode[StateT, DepsT, Any] | End[Any]\`  |
 
 Raises:
 
-| Type | Description | | --- | --- | | `NotImplementedError` | Always raised as StepNode is not meant to be run directly |
+| Type                  | Description                                               |
+| --------------------- | --------------------------------------------------------- |
+| `NotImplementedError` | Always raised as StepNode is not meant to be run directly |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -474,7 +490,6 @@ async def run(self, ctx: GraphRunContext[StateT, DepsT]) -> BaseNode[StateT, Dep
     raise NotImplementedError(
         '`StepNode` is not meant to be run directly, it is meant to be used in `BaseNode` subclasses to indicate a transition to v2-style steps.'
     )
-
 ```
 
 ### NodeStep
@@ -539,7 +554,6 @@ class NodeStep(Step[StateT, DepsT, Any, BaseNode[StateT, DepsT, Any] | End[Any]]
             raise ValueError(f'Node {node} is not of type {self.node_type}')  # pragma: no cover
         node = cast(BaseNode[StateT, DepsT, Any], node)
         return await node.run(GraphRunContext(state=ctx.state, deps=ctx.deps))
-
 ```
 
 #### __init__
@@ -551,14 +565,17 @@ __init__(
     id: NodeID | None = None,
     label: str | None = None
 )
-
 ```
 
 Initialize a node step.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `node_type` | `type[BaseNode[StateT, DepsT, Any]]` | The BaseNode class this step will execute | *required* | | `id` | `NodeID | None` | Optional unique identifier, defaults to the node's get_node_id() | `None` | | `label` | `str | None` | Optional human-readable label for this step | `None` |
+| Name        | Type                                 | Description                               | Default                                                          |
+| ----------- | ------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------- |
+| `node_type` | `type[BaseNode[StateT, DepsT, Any]]` | The BaseNode class this step will execute | *required*                                                       |
+| `id`        | \`NodeID                             | None\`                                    | Optional unique identifier, defaults to the node's get_node_id() |
+| `label`     | \`str                                | None\`                                    | Optional human-readable label for this step                      |
 
 Source code in `pydantic_graph/pydantic_graph/beta/step.py`
 
@@ -585,7 +602,6 @@ def __init__(
     # `type[BaseNode[StateT, DepsT, Any]]` could actually be a `typing._GenericAlias` like `pydantic_ai._agent_graph.UserPromptNode[~DepsT, ~OutputT]`,
     # so we get the origin to get to the actual class
     self.node_type = get_origin(node_type) or node_type
-
 ```
 
 #### node_type
@@ -594,7 +610,6 @@ def __init__(
 node_type: type[BaseNode[StateT, DepsT, Any]] = (
     get_origin(node_type) or node_type
 )
-
 ```
 
 The BaseNode type this step executes.

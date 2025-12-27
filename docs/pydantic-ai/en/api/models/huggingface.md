@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Hugging Face](../../../models/huggingface/).
+For details on how to set up authentication with this model, see [model configuration for Hugging Face](https://ai.pydantic.dev/models/huggingface/index.md).
 
 ### LatestHuggingFaceModelNames
 
@@ -17,7 +17,6 @@ LatestHuggingFaceModelNames = Literal[
     "Qwen/Qwen3-235B-A22B",
     "Qwen/Qwen3-32B",
 ]
-
 ```
 
 Latest Hugging Face models.
@@ -26,7 +25,6 @@ Latest Hugging Face models.
 
 ```python
 HuggingFaceModelName = str | LatestHuggingFaceModelNames
-
 ```
 
 Possible Hugging Face model names.
@@ -44,7 +42,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/huggingface.py`
 ```python
 class HuggingFaceModelSettings(ModelSettings, total=False):
     """Settings used for a Hugging Face model request."""
-
 ```
 
 ### HuggingFaceModel
@@ -218,11 +215,6 @@ class HuggingFaceModel(Model):
 
     def _process_response(self, response: ChatCompletionOutput) -> ModelResponse:
         """Process a non-streamed response, and prepare a message to return."""
-        if response.created:
-            timestamp = datetime.fromtimestamp(response.created, tz=timezone.utc)
-        else:
-            timestamp = _now_utc()
-
         choice = response.choices[0]
         content = choice.message.content
         tool_calls = choice.message.tool_calls
@@ -236,14 +228,15 @@ class HuggingFaceModel(Model):
                 items.append(ToolCallPart(c.function.name, c.function.arguments, tool_call_id=c.id))
 
         raw_finish_reason = choice.finish_reason
-        provider_details = {'finish_reason': raw_finish_reason}
+        provider_details: dict[str, Any] = {'finish_reason': raw_finish_reason}
+        if response.created:  # pragma: no branch
+            provider_details['timestamp'] = datetime.fromtimestamp(response.created, tz=timezone.utc)
         finish_reason = _FINISH_REASON_MAP.get(cast(TextGenerationOutputFinishReason, raw_finish_reason), None)
 
         return ModelResponse(
             parts=items,
             usage=_map_usage(response),
             model_name=response.model,
-            timestamp=timestamp,
             provider_response_id=response.id,
             provider_name=self._provider.name,
             provider_url=self.base_url,
@@ -267,9 +260,9 @@ class HuggingFaceModel(Model):
             _model_name=first_chunk.model,
             _model_profile=self.profile,
             _response=peekable_response,
-            _timestamp=datetime.fromtimestamp(first_chunk.created, tz=timezone.utc),
             _provider_name=self._provider.name,
             _provider_url=self.base_url,
+            _provider_timestamp=datetime.fromtimestamp(first_chunk.created, tz=timezone.utc),
         )
 
     def _get_tools(self, model_request_parameters: ModelRequestParameters) -> list[ChatCompletionInputTool]:
@@ -408,7 +401,6 @@ class HuggingFaceModel(Model):
                 else:
                     assert_never(item)
         return ChatCompletionInputMessage(role='user', content=content)  # type: ignore
-
 ```
 
 #### __init__
@@ -424,14 +416,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize a Hugging Face model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `str` | The name of the Model to use. You can browse available models here. | *required* | | `provider` | `Literal['huggingface'] | Provider[AsyncInferenceClient]` | The provider to use for Hugging Face Inference Providers. Can be either the string 'huggingface' or an instance of Provider[AsyncInferenceClient]. If not provided, the other parameters will be used. | `'huggingface'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                     | Description                                                         | Default                                                                                                                                                                                                |
+| ------------ | ------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `model_name` | `str`                    | The name of the Model to use. You can browse available models here. | *required*                                                                                                                                                                                             |
+| `provider`   | \`Literal['huggingface'] | Provider[AsyncInferenceClient]\`                                    | The provider to use for Hugging Face Inference Providers. Can be either the string 'huggingface' or an instance of Provider[AsyncInferenceClient]. If not provided, the other parameters will be used. |
+| `profile`    | \`ModelProfileSpec       | None\`                                                              | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                                                                        |
+| `settings`   | \`ModelSettings          | None\`                                                              | Model-specific settings that will be used as defaults for this model.                                                                                                                                  |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/huggingface.py`
 
@@ -460,14 +456,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### base_url
 
 ```python
 base_url: str
-
 ```
 
 The base URL of the provider.
@@ -476,7 +470,6 @@ The base URL of the provider.
 
 ```python
 model_name: HuggingFaceModelName
-
 ```
 
 The model name.
@@ -485,7 +478,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The system / model provider.
@@ -506,11 +498,14 @@ class HuggingFaceStreamedResponse(StreamedResponse):
     _model_name: str
     _model_profile: ModelProfile
     _response: AsyncIterable[ChatCompletionStreamOutput]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _provider_timestamp: datetime | None = None
+    _timestamp: datetime = field(default_factory=_utils.now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:
+        if self._provider_timestamp is not None:  # pragma: no branch
+            self.provider_details = {'timestamp': self._provider_timestamp}
         async for chunk in self._response:
             self._usage += _map_usage(chunk)
 
@@ -523,7 +518,7 @@ class HuggingFaceStreamedResponse(StreamedResponse):
                 continue
 
             if raw_finish_reason := choice.finish_reason:
-                self.provider_details = {'finish_reason': raw_finish_reason}
+                self.provider_details = {**(self.provider_details or {}), 'finish_reason': raw_finish_reason}
                 self.finish_reason = _FINISH_REASON_MAP.get(
                     cast(TextGenerationOutputFinishReason, raw_finish_reason), None
                 )
@@ -568,14 +563,12 @@ class HuggingFaceStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -584,7 +577,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -593,7 +585,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -602,7 +593,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

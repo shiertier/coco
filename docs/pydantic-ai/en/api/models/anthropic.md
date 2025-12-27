@@ -2,13 +2,12 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Anthropic](../../../models/anthropic/).
+For details on how to set up authentication with this model, see [model configuration for Anthropic](https://ai.pydantic.dev/models/anthropic/index.md).
 
 ### LatestAnthropicModelNames
 
 ```python
 LatestAnthropicModelNames = ModelParam
-
 ```
 
 Latest Anthropic models.
@@ -17,7 +16,6 @@ Latest Anthropic models.
 
 ```python
 AnthropicModelName = str | LatestAnthropicModelNames
-
 ```
 
 Possible Anthropic model names.
@@ -93,14 +91,12 @@ class AnthropicModelSettings(ModelSettings, total=False):
     Set to `False` to force a fresh container (ignore any `container_id` from history).
     Set to a dict (e.g. `{'id': 'container_xxx'}`) to explicitly specify a container.
     """
-
 ```
 
 #### anthropic_metadata
 
 ```python
 anthropic_metadata: BetaMetadataParam
-
 ```
 
 An object describing metadata about the request.
@@ -111,7 +107,6 @@ Contains `user_id`, an external identifier for the user who is associated with t
 
 ```python
 anthropic_thinking: BetaThinkingConfigParam
-
 ```
 
 Determine whether the model should generate a thinking block.
@@ -122,7 +117,6 @@ See [the Anthropic docs](https://docs.anthropic.com/en/docs/build-with-claude/ex
 
 ```python
 anthropic_cache_tool_definitions: bool | Literal["5m", "1h"]
-
 ```
 
 Whether to add `cache_control` to the last tool definition.
@@ -133,7 +127,6 @@ When enabled, the last tool in the `tools` array will have `cache_control` set, 
 
 ```python
 anthropic_cache_instructions: bool | Literal['5m', '1h']
-
 ```
 
 Whether to add `cache_control` to the last system prompt block.
@@ -144,7 +137,6 @@ When enabled, the last system prompt will have `cache_control` set, allowing Ant
 
 ```python
 anthropic_cache_messages: bool | Literal['5m', '1h']
-
 ```
 
 Convenience setting to enable caching for the last user message.
@@ -157,7 +149,6 @@ Note: Uses 1 of Anthropic's 4 available cache points per request. Any additional
 
 ```python
 anthropic_container: BetaContainerParams | Literal[False]
-
 ```
 
 Container configuration for multi-turn conversations.
@@ -552,7 +543,6 @@ class AnthropicModel(Model):
             model_request_parameters=model_request_parameters,
             _model_name=first_chunk.message.model,
             _response=peekable_response,
-            _timestamp=_utils.now_utc(),
             _provider_name=self._provider.name,
             _provider_url=self._provider.base_url,
         )
@@ -1093,7 +1083,6 @@ class AnthropicModel(Model):
             return None
         assert model_request_parameters.output_object is not None
         return {'type': 'json_schema', 'schema': model_request_parameters.output_object.json_schema}
-
 ```
 
 #### __init__
@@ -1109,14 +1098,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an Anthropic model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `AnthropicModelName` | The name of the Anthropic model to use. List of model names available here. | *required* | | `provider` | `Literal['anthropic', 'gateway'] | Provider[AsyncAnthropicClient]` | The provider to use for the Anthropic API. Can be either the string 'anthropic' or an instance of Provider[AsyncAnthropicClient]. Defaults to 'anthropic'. | `'anthropic'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. The default 'anthropic' provider will use the default ..profiles.anthropic.anthropic_model_profile. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name         | Type                              | Description                                                                 | Default                                                                                                                                                                                             |
+| ------------ | --------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name` | `AnthropicModelName`              | The name of the Anthropic model to use. List of model names available here. | *required*                                                                                                                                                                                          |
+| `provider`   | \`Literal['anthropic', 'gateway'] | Provider[AsyncAnthropicClient]\`                                            | The provider to use for the Anthropic API. Can be either the string 'anthropic' or an instance of Provider[AsyncAnthropicClient]. Defaults to 'anthropic'.                                          |
+| `profile`    | \`ModelProfileSpec                | None\`                                                                      | The model profile to use. Defaults to a profile picked by the provider based on the model name. The default 'anthropic' provider will use the default ..profiles.anthropic.anthropic_model_profile. |
+| `settings`   | \`ModelSettings                   | None\`                                                                      | Default model settings for this model instance.                                                                                                                                                     |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/anthropic.py`
 
@@ -1148,14 +1141,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: AnthropicModelName
-
 ```
 
 The model name.
@@ -1164,7 +1155,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -1175,7 +1165,6 @@ The model provider.
 supported_builtin_tools() -> (
     frozenset[type[AbstractBuiltinTool]]
 )
-
 ```
 
 The set of builtin tool types this model can handle.
@@ -1187,7 +1176,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/anthropic.py`
 def supported_builtin_tools(cls) -> frozenset[type[AbstractBuiltinTool]]:
     """The set of builtin tool types this model can handle."""
     return frozenset({WebSearchTool, CodeExecutionTool, WebFetchTool, MemoryTool, MCPServerTool})
-
 ```
 
 ### AnthropicStreamedResponse
@@ -1205,9 +1193,9 @@ class AnthropicStreamedResponse(StreamedResponse):
 
     _model_name: AnthropicModelName
     _response: AsyncIterable[BetaRawMessageStreamEvent]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str
+    _timestamp: datetime = field(default_factory=_utils.now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:  # noqa: C901
         current_block: BetaContentBlock | None = None
@@ -1371,14 +1359,12 @@ class AnthropicStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: AnthropicModelName
-
 ```
 
 Get the model name of the response.
@@ -1387,7 +1373,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -1396,7 +1381,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.
@@ -1405,7 +1389,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

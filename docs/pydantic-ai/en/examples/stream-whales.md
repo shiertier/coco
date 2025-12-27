@@ -2,29 +2,27 @@ Information about whales — an example of streamed structured response validati
 
 Demonstrates:
 
-- [streaming structured output](../../output/#streaming-structured-output)
+- [streaming structured output](https://ai.pydantic.dev/output/#streaming-structured-output)
 
 This script streams structured responses from GPT-4 about whales, validates the data and displays it as a dynamic table using [`rich`](https://github.com/Textualize/rich) as the data is received.
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.stream_whales
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.stream_whales
-
 ```
 
 Should give an output like this:
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [stream_whales.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/stream_whales.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [stream_whales.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/stream_whales.py)
 
 ```python
 """Information about whales — an example of streamed structured response validation.
@@ -109,7 +107,6 @@ if __name__ == '__main__':
     import asyncio
 
     asyncio.run(main())
-
 ```
 
 [stream_whales.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/stream_whales.py)
@@ -197,5 +194,4 @@ if __name__ == '__main__':
     import asyncio
 
     asyncio.run(main())
-
 ```

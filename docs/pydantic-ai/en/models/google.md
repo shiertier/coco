@@ -8,12 +8,10 @@ To use `GoogleModel`, you need to either install `pydantic-ai`, or install `pyda
 
 ```bash
 pip install "pydantic-ai-slim[google]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[google]"
-
 ```
 
 ## Configuration
@@ -28,7 +26,6 @@ Once you have the API key, set it as an environment variable:
 
 ```bash
 export GOOGLE_API_KEY=your-api-key
-
 ```
 
 You can then use `GoogleModel` by name (where GLA stands for Generative Language API):
@@ -38,7 +35,6 @@ from pydantic_ai import Agent
 
 agent = Agent('google-gla:gemini-2.5-pro')
 ...
-
 ```
 
 Or you can explicitly create the provider:
@@ -52,7 +48,6 @@ provider = GoogleProvider(api_key='your-api-key')
 model = GoogleModel('gemini-2.5-pro', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 ### Vertex AI (Enterprise/Cloud)
@@ -74,14 +69,13 @@ Whichever way you authenticate, you'll need to have Vertex AI enabled in your GC
 
 If you have the [`gcloud` CLI](https://cloud.google.com/sdk/gcloud) installed and configured, you can use `GoogleProvider` in Vertex AI mode by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/google-vertex:gemini-2.5-pro')
 ...
-
 ```
 
 ```python
@@ -89,7 +83,6 @@ from pydantic_ai import Agent
 
 agent = Agent('google-vertex:gemini-2.5-pro')
 ...
-
 ```
 
 Or you can explicitly create the provider and model:
@@ -103,7 +96,6 @@ provider = GoogleProvider(vertexai=True)
 model = GoogleModel('gemini-2.5-pro', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 #### Service Account
@@ -127,7 +119,6 @@ provider = GoogleProvider(credentials=credentials, project='your-project-id')
 model = GoogleModel('gemini-2.5-flash', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 #### API Key
@@ -136,19 +127,17 @@ To use Vertex AI with an API key, [create a key](https://cloud.google.com/vertex
 
 ```bash
 export GOOGLE_API_KEY=your-api-key
-
 ```
 
 You can then use `GoogleModel` in Vertex AI mode by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/google-vertex:gemini-2.5-pro')
 ...
-
 ```
 
 ```python
@@ -156,7 +145,6 @@ from pydantic_ai import Agent
 
 agent = Agent('google-vertex:gemini-2.5-pro')
 ...
-
 ```
 
 Or you can explicitly create the provider and model:
@@ -170,7 +158,6 @@ provider = GoogleProvider(vertexai=True, api_key='your-api-key')
 model = GoogleModel('gemini-2.5-pro', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 #### Customizing Location or Project
@@ -188,7 +175,6 @@ provider = GoogleProvider(vertexai=True, location='asia-east1', project='your-gc
 model = GoogleModel('gemini-2.5-pro', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 #### Model Garden
@@ -212,7 +198,6 @@ provider = GoogleProvider(
 model = GoogleModel('meta/llama-3.3-70b-instruct-maas', provider=provider)
 agent = Agent(model)
 ...
-
 ```
 
 ## Custom HTTP Client
@@ -233,7 +218,6 @@ model = GoogleModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ## Document, Image, Audio, and Video Input
@@ -256,7 +240,6 @@ result = agent.run_sync(
     ]
 )
 print(result.output)
-
 ```
 
 Files can be uploaded via the [Files API](https://ai.google.dev/gemini-api/docs/files) and passed as URLs:
@@ -280,10 +263,9 @@ result = agent.run_sync(
     ]
 )
 print(result.output)
-
 ```
 
-See the [input documentation](../../input/) for more details and examples.
+See the [input documentation](https://ai.pydantic.dev/input/index.md) for more details and examples.
 
 ## Model settings
 
@@ -309,7 +291,6 @@ settings = GoogleModelSettings(
 model = GoogleModel('gemini-2.5-pro')
 agent = Agent(model, model_settings=settings)
 ...
-
 ```
 
 ### Disable thinking
@@ -324,7 +305,6 @@ model_settings = GoogleModelSettings(google_thinking_config={'thinking_budget': 
 model = GoogleModel('gemini-2.5-flash')
 agent = Agent(model, model_settings=model_settings)
 ...
-
 ```
 
 Check out the [Gemini API docs](https://ai.google.dev/gemini-api/docs/thinking) for more on thinking.
@@ -350,7 +330,6 @@ model_settings = GoogleModelSettings(
 model = GoogleModel('gemini-2.5-flash')
 agent = Agent(model, model_settings=model_settings)
 ...
-
 ```
 
 See the [Gemini API docs](https://ai.google.dev/gemini-api/docs/safety-settings) for more on safety settings.

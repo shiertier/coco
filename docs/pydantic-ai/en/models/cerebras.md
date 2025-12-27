@@ -6,12 +6,10 @@ To use `CerebrasModel`, you need to either install `pydantic-ai`, or install `py
 
 ```bash
 pip install "pydantic-ai-slim[cerebras]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[cerebras]"
-
 ```
 
 ## Configuration
@@ -26,7 +24,6 @@ Once you have the API key, you can set it as an environment variable:
 
 ```bash
 export CEREBRAS_API_KEY='your-api-key'
-
 ```
 
 You can then use `CerebrasModel` by name:
@@ -36,7 +33,6 @@ from pydantic_ai import Agent
 
 agent = Agent('cerebras:llama-3.3-70b')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -48,7 +44,6 @@ from pydantic_ai.models.cerebras import CerebrasModel
 model = CerebrasModel('llama-3.3-70b')
 agent = Agent(model)
 ...
-
 ```
 
 ## `provider` argument
@@ -65,7 +60,6 @@ model = CerebrasModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 You can also customize the `CerebrasProvider` with a custom `httpx.AsyncClient`:
@@ -84,5 +78,4 @@ model = CerebrasModel(
 )
 agent = Agent(model)
 ...
-
 ```

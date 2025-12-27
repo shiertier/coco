@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+FROM rust:1.85-slim-bookworm AS builder
+WORKDIR /app
+
+ARG WITH_ORT=0
+ARG ORT_VERSION=1.17.3
+ARG TARGETARCH
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl pkg-config tar gzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/onnxruntime \
+    && if [ "$WITH_ORT" = "1" ]; then \
+        arch="${TARGETARCH:-amd64}"; \
+        case "$arch" in \
+          amd64) ort_arch="x64" ;; \
+          arm64) ort_arch="aarch64" ;; \
+          *) echo "unsupported TARGETARCH: $arch" >&2; exit 1 ;; \
+        esac; \
+        url="https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ort_arch}-${ORT_VERSION}.tgz"; \
+        curl -fsSL "$url" -o /tmp/onnxruntime.tgz; \
+        tar -xzf /tmp/onnxruntime.tgz -C /opt/onnxruntime --strip-components=1; \
+        rm /tmp/onnxruntime.tgz; \
+    fi
+
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY crates crates
+COPY private private
+
+RUN cargo build -p coco-worker --release --locked --features worker-storage
+
+FROM gcr.io/distroless/cc-debian12:nonroot
+WORKDIR /app
+COPY --from=builder /app/target/release/coco-worker /app/coco-worker
+COPY --from=builder /opt/onnxruntime /opt/onnxruntime
+
+ENV LD_LIBRARY_PATH=/opt/onnxruntime/lib
+
+USER nonroot:nonroot
+ENTRYPOINT ["/app/coco-worker"]

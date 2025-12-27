@@ -6,12 +6,10 @@ To use `BedrockConverseModel`, you need to either install `pydantic-ai`, or inst
 
 ```bash
 pip install "pydantic-ai-slim[bedrock]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[bedrock]"
-
 ```
 
 ## Configuration
@@ -30,19 +28,17 @@ export AWS_BEARER_TOKEN_BEDROCK='your-api-key'
 export AWS_ACCESS_KEY_ID='your-access-key'
 export AWS_SECRET_ACCESS_KEY='your-secret-key'
 export AWS_DEFAULT_REGION='us-east-1'  # or your preferred region
-
 ```
 
 You can then use `BedrockConverseModel` by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/bedrock:anthropic.claude-3-sonnet-20240229-v1:0')
 ...
-
 ```
 
 ```python
@@ -50,7 +46,6 @@ from pydantic_ai import Agent
 
 agent = Agent('bedrock:anthropic.claude-3-sonnet-20240229-v1:0')
 ...
-
 ```
 
 Or initialize the model directly with just the model name:
@@ -62,7 +57,6 @@ from pydantic_ai.models.bedrock import BedrockConverseModel
 model = BedrockConverseModel('anthropic.claude-3-sonnet-20240229-v1:0')
 agent = Agent(model)
 ...
-
 ```
 
 ## Customizing Bedrock Runtime API
@@ -91,7 +85,6 @@ bedrock_model_settings = BedrockModelSettings(
 model = BedrockConverseModel(model_name='us.amazon.nova-pro-v1:0')
 
 agent = Agent(model=model, model_settings=bedrock_model_settings)
-
 ```
 
 ## Prompt Caching
@@ -115,7 +108,7 @@ AWS only serves cached content once a segment crosses the provider-specific mini
 
 Use `bedrock_cache_messages` to automatically cache the last user message:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
@@ -136,7 +129,6 @@ result1 = agent.run_sync('What is the capital of France?')
 result2 = agent.run_sync('What is the capital of Germany?')
 print(f'Cache write: {result1.usage().cache_write_tokens}')
 print(f'Cache read: {result2.usage().cache_read_tokens}')
-
 ```
 
 ```python
@@ -158,7 +150,6 @@ result1 = agent.run_sync('What is the capital of France?')
 result2 = agent.run_sync('What is the capital of Germany?')
 print(f'Cache write: {result1.usage().cache_write_tokens}')
 print(f'Cache read: {result2.usage().cache_read_tokens}')
-
 ```
 
 ### Example 2: Comprehensive Caching Strategy
@@ -189,14 +180,13 @@ def search_docs(ctx: RunContext, query: str) -> str:
 
 result = agent.run_sync('Search for Python best practices')
 print(result.output)
-
 ```
 
 ### Example 3: Fine-Grained Control with CachePoint
 
 Use manual `CachePoint` markers to control cache locations precisely:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -213,7 +203,6 @@ result = agent.run_sync([
     'First question'
 ])
 print(result.output)
-
 ```
 
 ```python
@@ -231,14 +220,13 @@ result = agent.run_sync([
     'First question'
 ])
 print(result.output)
-
 ```
 
 ### Accessing Cache Usage Statistics
 
 Access cache usage statistics via RequestUsage:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -257,7 +245,6 @@ async def main():
     usage = result.usage()
     print(f'Cache writes: {usage.cache_write_tokens}')
     print(f'Cache reads: {usage.cache_read_tokens}')
-
 ```
 
 ```python
@@ -277,7 +264,6 @@ async def main():
     usage = result.usage()
     print(f'Cache writes: {usage.cache_write_tokens}')
     print(f'Cache reads: {usage.cache_read_tokens}')
-
 ```
 
 ### Cache Point Limits
@@ -298,7 +284,7 @@ Each setting uses **at most 1 cache point**, but you can combine them.
 
 When cache points from all sources (settings + `CachePoint` markers) exceed 4, Pydantic AI automatically removes excess cache points from **older message content** (keeping the most recent ones).
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent, CachePoint
@@ -328,7 +314,6 @@ result = agent.run_sync([
 ])
 # Final cache points: instructions + tools + Context 2 + Context 3 = 4
 print(result.output)
-
 ```
 
 ```python
@@ -359,7 +344,6 @@ result = agent.run_sync([
 ])
 # Final cache points: instructions + tools + Context 2 + Context 3 = 4
 print(result.output)
-
 ```
 
 **Key Points**:
@@ -389,7 +373,6 @@ model = BedrockConverseModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 You can also pass a pre-configured boto3 client:
@@ -409,7 +392,6 @@ model = BedrockConverseModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ## Configuring Retries
@@ -443,7 +425,6 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 agent = Agent(model)
-
 ```
 
 ### Retry Modes
@@ -456,4 +437,4 @@ For more details on boto3 retry configuration, see the [AWS boto3 documentation]
 
 Note
 
-Unlike other providers that use httpx for HTTP requests, Bedrock uses boto3's native retry mechanisms. The retry strategies described in [HTTP Request Retries](../../retries/) do not apply to Bedrock.
+Unlike other providers that use httpx for HTTP requests, Bedrock uses boto3's native retry mechanisms. The retry strategies described in [HTTP Request Retries](https://ai.pydantic.dev/retries/index.md) do not apply to Bedrock.

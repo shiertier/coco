@@ -8,7 +8,6 @@ This package provides seamless integration between pydantic-ai agents and ag-ui 
 
 ```python
 SSE_CONTENT_TYPE = 'text/event-stream'
-
 ```
 
 Content type header value for Server-Sent Events (SSE).
@@ -21,7 +20,6 @@ OnCompleteFunc: TypeAlias = (
     | Callable[[AgentRunResult[Any]], Awaitable[None]]
     | Callable[[AgentRunResult[Any]], AsyncIterator[EventT]]
 )
-
 ```
 
 Callback function type that receives the `AgentRunResult` of the completed run. Can be sync, async, or an async generator of protocol-specific events.
@@ -55,7 +53,6 @@ class StateDeps(Generic[StateT]):
     """
 
     state: StateT
-
 ```
 
 ### StateHandler
@@ -91,14 +88,12 @@ class StateHandler(Protocol):
             state: The run state.
         """
         ...
-
 ```
 
 #### state
 
 ```python
 state: Any
-
 ```
 
 Get the current state of the agent run.
@@ -222,7 +217,6 @@ class AGUIApp(Generic[AgentDepsT, OutputDataT], Starlette):
             )
 
         self.router.add_route('/', run_agent, methods=['POST'])
-
 ```
 
 #### __init__
@@ -259,7 +253,6 @@ __init__(
     on_shutdown: Sequence[Callable[[], Any]] | None = None,
     lifespan: Lifespan[Self] | None = None
 ) -> None
-
 ```
 
 An ASGI application that handles every request by running the agent and streaming the response.
@@ -268,7 +261,28 @@ Note that the `deps` will be the same for each request, with the exception of th
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `agent` | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to run. | *required* | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool] | None` | Optional additional builtin tools for this run. | `None` | | `on_complete` | `OnCompleteFunc[Any] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data. | `None` | | `debug` | `bool` | Boolean indicating if debug tracebacks should be returned on errors. | `False` | | `routes` | `Sequence[BaseRoute] | None` | A list of routes to serve incoming HTTP and WebSocket requests. | `None` | | `middleware` | `Sequence[Middleware] | None` | A list of middleware to run for every request. A starlette application will always automatically include two middleware classes. ServerErrorMiddleware is added as the very outermost middleware, to handle any uncaught errors occurring anywhere in the entire stack. ExceptionMiddleware is added as the very innermost middleware, to deal with handled exception cases occurring in the routing or endpoints. | `None` | | `exception_handlers` | `Mapping[Any, ExceptionHandler] | None` | A mapping of either integer status codes, or exception class types onto callables which handle the exceptions. Exception handler callables should be of the form handler(request, exc) -> response and may be either standard functions, or async functions. | `None` | | `on_startup` | `Sequence[Callable[[], Any]] | None` | A list of callables to run on application startup. Startup handler callables do not take any arguments, and may be either standard functions, or async functions. | `None` | | `on_shutdown` | `Sequence[Callable[[], Any]] | None` | A list of callables to run on application shutdown. Shutdown handler callables do not take any arguments, and may be either standard functions, or async functions. | `None` | | `lifespan` | `Lifespan[Self] | None` | A lifespan context function, which can be used to perform startup and shutdown tasks. This is a newer style that replaces the on_startup and on_shutdown handlers. Use one or the other, not both. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent`                 | `AbstractAgent[AgentDepsT, OutputDataT]`  | The agent to run.                                                           | *required*                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type.                                                                                                                                                                                                                  |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                                                                                                                                                                                                                                                |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                                                                                                                                                                                                                                   |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                                                                                                                                                                                                                                 |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                                                                                                                                                                                                                                             |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                                                                                                                                                                                                                                          |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                                                                                                                                                                                                                                         |
+| `builtin_tools`         | \`Sequence[AbstractBuiltinTool]           | None\`                                                                      | Optional additional builtin tools for this run.                                                                                                                                                                                                                                                                                                                                                                    |
+| `on_complete`           | \`OnCompleteFunc[Any]                     | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data.                                                                                                                                                                                                                               |
+| `debug`                 | `bool`                                    | Boolean indicating if debug tracebacks should be returned on errors.        | `False`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `routes`                | \`Sequence[BaseRoute]                     | None\`                                                                      | A list of routes to serve incoming HTTP and WebSocket requests.                                                                                                                                                                                                                                                                                                                                                    |
+| `middleware`            | \`Sequence[Middleware]                    | None\`                                                                      | A list of middleware to run for every request. A starlette application will always automatically include two middleware classes. ServerErrorMiddleware is added as the very outermost middleware, to handle any uncaught errors occurring anywhere in the entire stack. ExceptionMiddleware is added as the very innermost middleware, to deal with handled exception cases occurring in the routing or endpoints. |
+| `exception_handlers`    | \`Mapping[Any, ExceptionHandler]          | None\`                                                                      | A mapping of either integer status codes, or exception class types onto callables which handle the exceptions. Exception handler callables should be of the form handler(request, exc) -> response and may be either standard functions, or async functions.                                                                                                                                                       |
+| `on_startup`            | \`Sequence\[Callable\[[], Any\]\]         | None\`                                                                      | A list of callables to run on application startup. Startup handler callables do not take any arguments, and may be either standard functions, or async functions.                                                                                                                                                                                                                                                  |
+| `on_shutdown`           | \`Sequence\[Callable\[[], Any\]\]         | None\`                                                                      | A list of callables to run on application shutdown. Shutdown handler callables do not take any arguments, and may be either standard functions, or async functions.                                                                                                                                                                                                                                                |
+| `lifespan`              | \`Lifespan[Self]                          | None\`                                                                      | A lifespan context function, which can be used to perform startup and shutdown tasks. This is a newer style that replaces the on_startup and on_shutdown handlers. Use one or the other, not both.                                                                                                                                                                                                                 |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/ag_ui/app.py`
 
@@ -380,7 +394,6 @@ def __init__(
         )
 
     self.router.add_route('/', run_agent, methods=['POST'])
-
 ```
 
 ### handle_ag_ui_request
@@ -400,24 +413,41 @@ handle_ag_ui_request(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
     ) = None,
     on_complete: OnCompleteFunc[BaseEvent] | None = None
 ) -> Response
-
 ```
 
 Handle an AG-UI request by running the agent and returning a streaming response.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `agent` | `AbstractAgent[AgentDepsT, Any]` | The agent to run. | *required* | | `request` | `Request` | The Starlette request (e.g. from FastAPI) containing the AG-UI run input. | *required* | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `on_complete` | `OnCompleteFunc[BaseEvent] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`                 | `AbstractAgent[AgentDepsT, Any]`          | The agent to run.                                                           | *required*                                                                                                                                                                                        |
+| `request`               | `Request`                                 | The Starlette request (e.g. from FastAPI) containing the AG-UI run input.   | *required*                                                                                                                                                                                        |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `on_complete`           | \`OnCompleteFunc[BaseEvent]               | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data.              |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Response` | A streaming Starlette response with AG-UI protocol events. |
+| Type       | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| `Response` | A streaming Starlette response with AG-UI protocol events. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ag_ui.py`
 
@@ -434,6 +464,7 @@ async def handle_ag_ui_request(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     on_complete: OnCompleteFunc[BaseEvent] | None = None,
@@ -453,6 +484,8 @@ async def handle_ag_ui_request(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         on_complete: Optional callback function called when the agent run completes successfully.
@@ -472,11 +505,11 @@ async def handle_ag_ui_request(
         model_settings=model_settings,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         on_complete=on_complete,
     )
-
 ```
 
 ### run_ag_ui
@@ -497,24 +530,42 @@ run_ag_ui(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
     ) = None,
     on_complete: OnCompleteFunc[BaseEvent] | None = None
 ) -> AsyncIterator[str]
-
 ```
 
 Run the agent with the AG-UI run input and stream AG-UI protocol events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `agent` | `AbstractAgent[AgentDepsT, Any]` | The agent to run. | *required* | | `run_input` | `RunAgentInput` | The AG-UI run input containing thread_id, run_id, messages, etc. | *required* | | `accept` | `str` | The accept header value for the run. | `SSE_CONTENT_TYPE` | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `on_complete` | `OnCompleteFunc[BaseEvent] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`                 | `AbstractAgent[AgentDepsT, Any]`          | The agent to run.                                                           | *required*                                                                                                                                                                                        |
+| `run_input`             | `RunAgentInput`                           | The AG-UI run input containing thread_id, run_id, messages, etc.            | *required*                                                                                                                                                                                        |
+| `accept`                | `str`                                     | The accept header value for the run.                                        | `SSE_CONTENT_TYPE`                                                                                                                                                                                |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `on_complete`           | \`OnCompleteFunc[BaseEvent]               | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data.              |
 
 Yields:
 
-| Type | Description | | --- | --- | | `AsyncIterator[str]` | Streaming event chunks encoded as strings according to the accept header value. |
+| Type                 | Description                                                                     |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `AsyncIterator[str]` | Streaming event chunks encoded as strings according to the accept header value. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ag_ui.py`
 
@@ -532,6 +583,7 @@ def run_ag_ui(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     on_complete: OnCompleteFunc[BaseEvent] | None = None,
@@ -552,6 +604,8 @@ def run_ag_ui(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         on_complete: Optional callback function called when the agent run completes successfully.
@@ -571,10 +625,10 @@ def run_ag_ui(
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             on_complete=on_complete,
         ),
     )
-
 ```

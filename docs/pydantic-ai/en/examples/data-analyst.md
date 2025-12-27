@@ -2,26 +2,24 @@
 
 Sometimes in an agent workflow, the agent does not need to know the exact tool output, but still needs to process the tool output in some ways. This is especially common in data analytics: the agent needs to know that the result of a query tool is a `DataFrame` with certain named columns, but not necessarily the content of every single row.
 
-With Pydantic AI, you can use a [dependencies object](../../dependencies/) to store the result from one tool and use it in another tool.
+With Pydantic AI, you can use a [dependencies object](https://ai.pydantic.dev/dependencies/index.md) to store the result from one tool and use it in another tool.
 
 In this example, we'll build an agent that analyzes the [Rotten Tomatoes movie review dataset from Cornell](https://huggingface.co/datasets/cornell-movie-review-data/rotten_tomatoes).
 
 Demonstrates:
 
-- [agent dependencies](../../dependencies/)
+- [agent dependencies](https://ai.pydantic.dev/dependencies/index.md)
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.data_analyst
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.data_analyst
-
 ```
 
 Output (debug):
@@ -30,7 +28,7 @@ Output (debug):
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [data_analyst.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/data_analyst.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [data_analyst.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/data_analyst.py)
 
 ```python
 from dataclasses import dataclass, field
@@ -82,7 +80,7 @@ def load_dataset(
     """
     # begin load data from hf
     builder = datasets.load_dataset_builder(path)  # pyright: ignore[reportUnknownMemberType]
-    splits: dict[str, datasets.SplitInfo] = builder.info.splits or {}  # pyright: ignore[reportUnknownMemberType]
+    splits: dict[str, datasets.SplitInfo] = builder.info.splits or {}
     if split not in splits:
         raise ModelRetry(
             f'{split} is not valid for dataset {path}. Valid splits are {",".join(splits.keys())}'
@@ -122,7 +120,7 @@ def run_duckdb(ctx: RunContext[AnalystAgentDeps], dataset: str, sql: str) -> str
     data = ctx.deps.get(dataset)
     result = duckdb.query_df(df=data, virtual_table_name='dataset', sql_query=sql)
     # pass the result as ref (because DuckDB SQL can select many rows, creating another huge dataframe)
-    ref = ctx.deps.store(result.df())  # pyright: ignore[reportUnknownMemberType]
+    ref = ctx.deps.store(result.df())
     return f'Executed SQL, result is `{ref}`'
 
 
@@ -140,7 +138,6 @@ if __name__ == '__main__':
         deps=deps,
     )
     print(result.output)
-
 ```
 
 [data_analyst.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/data_analyst.py)
@@ -195,7 +192,7 @@ def load_dataset(
     """
     # begin load data from hf
     builder = datasets.load_dataset_builder(path)  # pyright: ignore[reportUnknownMemberType]
-    splits: dict[str, datasets.SplitInfo] = builder.info.splits or {}  # pyright: ignore[reportUnknownMemberType]
+    splits: dict[str, datasets.SplitInfo] = builder.info.splits or {}
     if split not in splits:
         raise ModelRetry(
             f'{split} is not valid for dataset {path}. Valid splits are {",".join(splits.keys())}'
@@ -235,7 +232,7 @@ def run_duckdb(ctx: RunContext[AnalystAgentDeps], dataset: str, sql: str) -> str
     data = ctx.deps.get(dataset)
     result = duckdb.query_df(df=data, virtual_table_name='dataset', sql_query=sql)
     # pass the result as ref (because DuckDB SQL can select many rows, creating another huge dataframe)
-    ref = ctx.deps.store(result.df())  # pyright: ignore[reportUnknownMemberType]
+    ref = ctx.deps.store(result.df())
     return f'Executed SQL, result is `{ref}`'
 
 
@@ -253,7 +250,6 @@ if __name__ == '__main__':
         deps=deps,
     )
     print(result.output)
-
 ```
 
 ## Appendix
@@ -282,5 +278,4 @@ Some key features of DuckDB SQL include:
 
 I can help you with DuckDB SQL queries, schema design, optimization, or other
 DuckDB-related questions.
-
 ```

@@ -70,14 +70,12 @@ class WrapperModel(Model):
 
     def __getattr__(self, item: str):
         return getattr(self.wrapped, item)
-
 ```
 
 #### wrapped
 
 ```python
 wrapped: Model = infer_model(wrapped)
-
 ```
 
 The underlying model being wrapped.
@@ -86,7 +84,6 @@ The underlying model being wrapped.
 
 ```python
 settings: ModelSettings | None
-
 ```
 
 Get the settings from the wrapped model.

@@ -12,12 +12,10 @@ To use the retry transports, you need to install `tenacity`, which you can do vi
 
 ```bash
 pip install 'pydantic-ai-slim[retries]'
-
 ```
 
 ```bash
 uv add 'pydantic-ai-slim[retries]'
-
 ```
 
 ## Usage Example
@@ -66,7 +64,6 @@ def create_retrying_client():
 client = create_retrying_client()
 model = OpenAIChatModel('gpt-5', provider=OpenAIProvider(http_client=client))
 agent = Agent(model)
-
 ```
 
 ## Wait Strategies
@@ -90,7 +87,6 @@ wait_strategy_2 = wait_retry_after(
     fallback_strategy=wait_exponential(multiplier=2, max=120),
     max_wait=600  # Never wait more than 10 minutes
 )
-
 ```
 
 This wait strategy:
@@ -129,7 +125,6 @@ transport = AsyncTenacityTransport(
 
 # Create a client using the transport:
 client = AsyncClient(transport=transport)
-
 ```
 
 ### TenacityTransport
@@ -159,7 +154,6 @@ transport = TenacityTransport(
 
 # Create a client using the transport
 client = Client(transport=transport)
-
 ```
 
 ## Common Retry Patterns
@@ -194,7 +188,6 @@ def create_rate_limit_client():
 # Example usage
 client = create_rate_limit_client()
 # Client is now ready to use with any HTTP requests and will respect Retry-After headers
-
 ```
 
 The `wait_retry_after` function automatically detects `Retry-After` headers in 429 (rate limit) responses and waits for the specified time. If no header is present, it falls back to exponential backoff.
@@ -229,7 +222,6 @@ def create_network_resilient_client():
 # Example usage
 client = create_network_resilient_client()
 # Client will now retry on timeout, connection, and read errors
-
 ```
 
 ### Custom Retry Logic
@@ -270,7 +262,6 @@ def create_custom_retry_client():
 
 client = create_custom_retry_client()
 # Client will retry server errors (5xx) and network errors, but not client errors (4xx)
-
 ```
 
 ## Using with Different Providers
@@ -291,7 +282,6 @@ from smart_retry_example import create_retrying_client
 client = create_retrying_client()
 model = OpenAIChatModel('gpt-5', provider=OpenAIProvider(http_client=client))
 agent = Agent(model)
-
 ```
 
 ### Anthropic
@@ -308,7 +298,6 @@ from smart_retry_example import create_retrying_client
 client = create_retrying_client()
 model = AnthropicModel('claude-sonnet-4-5-20250929', provider=AnthropicProvider(http_client=client))
 agent = Agent(model)
-
 ```
 
 ### Any OpenAI-Compatible Provider
@@ -332,7 +321,6 @@ model = OpenAIChatModel(
     )
 )
 agent = Agent(model)
-
 ```
 
 ## Best Practices
@@ -360,7 +348,6 @@ from smart_retry_example import create_retrying_client
 client = create_retrying_client()
 model = OpenAIChatModel('gpt-5', provider=OpenAIProvider(http_client=client))
 agent = Agent(model)
-
 ```
 
 ## Performance Considerations
@@ -382,7 +369,6 @@ The AWS Bedrock provider uses boto3's built-in retry mechanisms instead of httpx
 from botocore.config import Config
 
 config = Config(retries={'max_attempts': 5, 'mode': 'adaptive'})
-
 ```
 
-See [Bedrock: Configuring Retries](../models/bedrock/#configuring-retries) for complete examples.
+See [Bedrock: Configuring Retries](https://ai.pydantic.dev/models/bedrock/#configuring-retries) for complete examples.

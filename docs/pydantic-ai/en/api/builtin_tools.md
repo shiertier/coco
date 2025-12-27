@@ -6,7 +6,6 @@
 BUILTIN_TOOL_TYPES: dict[str, type[AbstractBuiltinTool]] = (
     {}
 )
-
 ```
 
 Registry of all builtin tool types, keyed by their kind string.
@@ -28,7 +27,6 @@ ImageAspectRatio = Literal[
     "5:4",
     "4:5",
 ]
-
 ```
 
 Supported aspect ratios for image generation tools.
@@ -93,14 +91,12 @@ class AbstractBuiltinTool(ABC):
             tools_type = Annotated[Union[tuple(tools_annotated)], pydantic.Discriminator(_tool_discriminator)]  # noqa: UP007
 
         return handler(tools_type)
-
 ```
 
 #### kind
 
 ```python
 kind: str = 'unknown_builtin_tool'
-
 ```
 
 Built-in tool identifier, this should be available on all built-in tools as a discriminator.
@@ -109,7 +105,6 @@ Built-in tool identifier, this should be available on all built-in tools as a di
 
 ```python
 unique_id: str
-
 ```
 
 A unique identifier for the builtin tool.
@@ -120,7 +115,6 @@ If multiple instances of the same builtin tool can be passed to the model, subcl
 
 ```python
 label: str
-
 ```
 
 Human-readable label for UI display.
@@ -208,7 +202,6 @@ class WebSearchTool(AbstractBuiltinTool):
 
     kind: str = 'web_search'
     """The kind of tool."""
-
 ```
 
 #### search_context_size
@@ -217,7 +210,6 @@ class WebSearchTool(AbstractBuiltinTool):
 search_context_size: Literal["low", "medium", "high"] = (
     "medium"
 )
-
 ```
 
 The `search_context_size` parameter controls how much context is retrieved from the web to help the tool formulate a response.
@@ -230,7 +222,6 @@ Supported by:
 
 ```python
 user_location: WebSearchUserLocation | None = None
-
 ```
 
 The `user_location` parameter allows you to localize search results based on a user's location.
@@ -244,7 +235,6 @@ Supported by:
 
 ```python
 blocked_domains: list[str] | None = None
-
 ```
 
 If provided, these domains will never appear in results.
@@ -260,7 +250,6 @@ Supported by:
 
 ```python
 allowed_domains: list[str] | None = None
-
 ```
 
 If provided, only these domains will be included in results.
@@ -276,7 +265,6 @@ Supported by:
 
 ```python
 max_uses: int | None = None
-
 ```
 
 If provided, the tool will stop searching the web after the given number of uses.
@@ -289,7 +277,6 @@ Supported by:
 
 ```python
 kind: str = 'web_search'
-
 ```
 
 The kind of tool.
@@ -328,14 +315,12 @@ class WebSearchUserLocation(TypedDict, total=False):
 
     timezone: str
     """The timezone of the user's location."""
-
 ```
 
 #### city
 
 ```python
 city: str
-
 ```
 
 The city where the user is located.
@@ -344,7 +329,6 @@ The city where the user is located.
 
 ```python
 country: str
-
 ```
 
 The country where the user is located. For OpenAI, this must be a 2-letter country code (e.g., 'US', 'GB').
@@ -353,7 +337,6 @@ The country where the user is located. For OpenAI, this must be a 2-letter count
 
 ```python
 region: str
-
 ```
 
 The region or state where the user is located.
@@ -362,7 +345,6 @@ The region or state where the user is located.
 
 ```python
 timezone: str
-
 ```
 
 The timezone of the user's location.
@@ -395,14 +377,12 @@ class CodeExecutionTool(AbstractBuiltinTool):
 
     kind: str = 'code_execution'
     """The kind of tool."""
-
 ```
 
 #### kind
 
 ```python
 kind: str = 'code_execution'
-
 ```
 
 The kind of tool.
@@ -481,14 +461,12 @@ class WebFetchTool(AbstractBuiltinTool):
 
     kind: str = 'web_fetch'
     """The kind of tool."""
-
 ```
 
 #### max_uses
 
 ```python
 max_uses: int | None = None
-
 ```
 
 If provided, the tool will stop fetching URLs after the given number of uses.
@@ -501,7 +479,6 @@ Supported by:
 
 ```python
 allowed_domains: list[str] | None = None
-
 ```
 
 If provided, only these domains will be fetched.
@@ -516,7 +493,6 @@ Supported by:
 
 ```python
 blocked_domains: list[str] | None = None
-
 ```
 
 If provided, these domains will never be fetched.
@@ -531,7 +507,6 @@ Supported by:
 
 ```python
 enable_citations: bool = False
-
 ```
 
 If True, enables citations for fetched content.
@@ -544,7 +519,6 @@ Supported by:
 
 ```python
 max_content_tokens: int | None = None
-
 ```
 
 Maximum content length in tokens for fetched content.
@@ -557,7 +531,6 @@ Supported by:
 
 ```python
 kind: str = 'web_fetch'
-
 ```
 
 The kind of tool.
@@ -588,14 +561,12 @@ class UrlContextTool(WebFetchTool):
 
     kind: str = 'url_context'
     """The kind of tool (deprecated value for backward compatibility)."""
-
 ```
 
 #### kind
 
 ```python
 kind: str = 'url_context'
-
 ```
 
 The kind of tool (deprecated value for backward compatibility).
@@ -650,12 +621,14 @@ class ImageGenerationTool(AbstractBuiltinTool):
     * OpenAI Responses
     """
 
-    output_compression: int = 100
+    output_compression: int | None = None
     """Compression level for the output image.
 
     Supported by:
 
-    * OpenAI Responses. Only supported for 'png' and 'webp' output formats.
+    * OpenAI Responses. Only supported for 'jpeg' and 'webp' output formats. Default: 100.
+    * Google (Vertex AI only). Only supported for 'jpeg' output format. Default: 75.
+      Setting this will default `output_format` to 'jpeg' if not specified.
     """
 
     output_format: Literal['png', 'webp', 'jpeg'] | None = None
@@ -664,6 +637,7 @@ class ImageGenerationTool(AbstractBuiltinTool):
     Supported by:
 
     * OpenAI Responses. Default: 'png'.
+    * Google (Vertex AI only). Default: 'png', or 'jpeg' if `output_compression` is set.
     """
 
     partial_images: int = 0
@@ -701,7 +675,6 @@ class ImageGenerationTool(AbstractBuiltinTool):
 
     kind: str = 'image_generation'
     """The kind of tool."""
-
 ```
 
 #### background
@@ -710,7 +683,6 @@ class ImageGenerationTool(AbstractBuiltinTool):
 background: Literal["transparent", "opaque", "auto"] = (
     "auto"
 )
-
 ```
 
 Background type for the generated image.
@@ -723,7 +695,6 @@ Supported by:
 
 ```python
 input_fidelity: Literal['high', 'low'] | None = None
-
 ```
 
 Control how much effort the model will exert to match the style and features, especially facial features, of input images.
@@ -736,7 +707,6 @@ Supported by:
 
 ```python
 moderation: Literal['auto', 'low'] = 'auto'
-
 ```
 
 Moderation level for the generated image.
@@ -748,21 +718,20 @@ Supported by:
 #### output_compression
 
 ```python
-output_compression: int = 100
-
+output_compression: int | None = None
 ```
 
 Compression level for the output image.
 
 Supported by:
 
-- OpenAI Responses. Only supported for 'png' and 'webp' output formats.
+- OpenAI Responses. Only supported for 'jpeg' and 'webp' output formats. Default: 100.
+- Google (Vertex AI only). Only supported for 'jpeg' output format. Default: 75. Setting this will default `output_format` to 'jpeg' if not specified.
 
 #### output_format
 
 ```python
 output_format: Literal['png', 'webp', 'jpeg'] | None = None
-
 ```
 
 The output format of the generated image.
@@ -770,12 +739,12 @@ The output format of the generated image.
 Supported by:
 
 - OpenAI Responses. Default: 'png'.
+- Google (Vertex AI only). Default: 'png', or 'jpeg' if `output_compression` is set.
 
 #### partial_images
 
 ```python
 partial_images: int = 0
-
 ```
 
 Number of partial images to generate in streaming mode.
@@ -788,7 +757,6 @@ Supported by:
 
 ```python
 quality: Literal['low', 'medium', 'high', 'auto'] = 'auto'
-
 ```
 
 The quality of the generated image.
@@ -812,7 +780,6 @@ size: (
     ]
     | None
 ) = None
-
 ```
 
 The size of the generated image.
@@ -824,7 +791,6 @@ The size of the generated image.
 
 ```python
 aspect_ratio: ImageAspectRatio | None = None
-
 ```
 
 The aspect ratio to use for generated images.
@@ -838,7 +804,6 @@ Supported by:
 
 ```python
 kind: str = 'image_generation'
-
 ```
 
 The kind of tool.
@@ -867,14 +832,12 @@ class MemoryTool(AbstractBuiltinTool):
 
     kind: str = 'memory'
     """The kind of tool."""
-
 ```
 
 #### kind
 
 ```python
 kind: str = 'memory'
-
 ```
 
 The kind of tool.
@@ -957,14 +920,12 @@ class MCPServerTool(AbstractBuiltinTool):
     @property
     def label(self) -> str:
         return f'MCP: {self.id}'
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 A unique identifier for the MCP server.
@@ -973,7 +934,6 @@ A unique identifier for the MCP server.
 
 ```python
 url: str
-
 ```
 
 The URL of the MCP server to use.
@@ -984,7 +944,6 @@ For OpenAI Responses, it is possible to use `connector_id` by providing it as `x
 
 ```python
 authorization_token: str | None = None
-
 ```
 
 Authorization header to use when making requests to the MCP server.
@@ -998,7 +957,6 @@ Supported by:
 
 ```python
 description: str | None = None
-
 ```
 
 A description of the MCP server.
@@ -1011,7 +969,6 @@ Supported by:
 
 ```python
 allowed_tools: list[str] | None = None
-
 ```
 
 A list of tools that the MCP server can use.
@@ -1025,7 +982,6 @@ Supported by:
 
 ```python
 headers: dict[str, str] | None = None
-
 ```
 
 Optional HTTP headers to send to the MCP server.
@@ -1074,14 +1030,12 @@ class FileSearchTool(AbstractBuiltinTool):
 
     kind: str = 'file_search'
     """The kind of tool."""
-
 ```
 
 #### file_store_ids
 
 ```python
 file_store_ids: Sequence[str]
-
 ```
 
 The file store IDs to search through.
@@ -1092,7 +1046,6 @@ For OpenAI, these are the IDs of vector stores created via the OpenAI API. For G
 
 ```python
 kind: str = 'file_search'
-
 ```
 
 The kind of tool.
@@ -1103,7 +1056,6 @@ The kind of tool.
 DEPRECATED_BUILTIN_TOOLS: frozenset[
     type[AbstractBuiltinTool]
 ] = frozenset({UrlContextTool})
-
 ```
 
 Set of deprecated builtin tool IDs that should not be offered in new UIs.
@@ -1116,7 +1068,6 @@ SUPPORTED_BUILTIN_TOOLS = frozenset(
     for cls in (values())
     if cls not in DEPRECATED_BUILTIN_TOOLS
 )
-
 ```
 
 Get the set of all builtin tool types (excluding deprecated tools).

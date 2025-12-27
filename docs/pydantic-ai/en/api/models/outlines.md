@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up this model, see [model configuration for Outlines](../../../models/outlines/).
+For details on how to set up this model, see [model configuration for Outlines](https://ai.pydantic.dev/models/outlines/index.md).
 
 ### OutlinesModel
 
@@ -452,24 +452,13 @@ class OutlinesModel(Model):
         if isinstance(first_chunk, _utils.Unset):  # pragma: no cover
             raise UnexpectedModelBehavior('Streamed response ended without content or tool calls')
 
-        timestamp = datetime.now(tz=timezone.utc)
         return OutlinesStreamedResponse(
             model_request_parameters=model_request_parameters,
             _model_name=self._model_name,
             _model_profile=self.profile,
             _response=peekable_response,
-            _timestamp=timestamp,
             _provider_name='outlines',
         )
-
-    def customize_request_parameters(self, model_request_parameters: ModelRequestParameters) -> ModelRequestParameters:
-        """Customize the model request parameters for the model."""
-        if model_request_parameters.output_mode in ('auto', 'native'):
-            # This way the JSON schema will be included in the instructions.
-            return replace(model_request_parameters, output_mode='prompted')
-        else:
-            return model_request_parameters
-
 ```
 
 #### __init__
@@ -484,14 +473,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an Outlines model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model` | `Model | AsyncModel` | The Outlines model used for the model. | *required* | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name       | Type                  | Description       | Default                                                                                                                                                                       |
+| ---------- | --------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`    | \`Model               | AsyncModel\`      | The Outlines model used for the model.                                                                                                                                        |
+| `provider` | \`Literal['outlines'] | Provider[Model]\` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. |
+| `profile`  | \`ModelProfileSpec    | None\`            | The model profile to use. Defaults to a profile picked by the provider.                                                                                                       |
+| `settings` | \`ModelSettings       | None\`            | Default model settings for this model instance.                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -520,7 +513,6 @@ def __init__(
         provider = infer_provider(provider)
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### from_transformers
@@ -538,14 +530,19 @@ from_transformers(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Create an Outlines model from a Hugging Face model and tokenizer.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `hf_model` | `PreTrainedModel` | The Hugging Face PreTrainedModel or any model that is compatible with the transformers API. | *required* | | `hf_tokenizer_or_processor` | `PreTrainedTokenizer | ProcessorMixin` | Either a HuggingFace PreTrainedTokenizer or any tokenizer that is compatible with the transformers API, or a HuggingFace processor inheriting from ProcessorMixin. If a tokenizer is provided, a regular model will be used, while if you provide a processor, it will be a multimodal model. | *required* | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name                        | Type                  | Description                                                                                 | Default                                                                                                                                                                                                                                                                                       |
+| --------------------------- | --------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hf_model`                  | `PreTrainedModel`     | The Hugging Face PreTrainedModel or any model that is compatible with the transformers API. | *required*                                                                                                                                                                                                                                                                                    |
+| `hf_tokenizer_or_processor` | \`PreTrainedTokenizer | ProcessorMixin\`                                                                            | Either a HuggingFace PreTrainedTokenizer or any tokenizer that is compatible with the transformers API, or a HuggingFace processor inheriting from ProcessorMixin. If a tokenizer is provided, a regular model will be used, while if you provide a processor, it will be a multimodal model. |
+| `provider`                  | \`Literal['outlines'] | Provider[Model]\`                                                                           | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used.                                                                                                                 |
+| `profile`                   | \`ModelProfileSpec    | None\`                                                                                      | The model profile to use. Defaults to a profile picked by the provider.                                                                                                                                                                                                                       |
+| `settings`                  | \`ModelSettings       | None\`                                                                                      | Default model settings for this model instance.                                                                                                                                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -577,7 +574,6 @@ def from_transformers(
     """
     outlines_model: OutlinesBaseModel = from_transformers(hf_model, hf_tokenizer_or_processor)
     return cls(outlines_model, provider=provider, profile=profile, settings=settings)
-
 ```
 
 #### from_llamacpp
@@ -592,14 +588,18 @@ from_llamacpp(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Create an Outlines model from a LlamaCpp model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `llama_model` | `Llama` | The llama_cpp.Llama model to use. | *required* | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name          | Type                  | Description                       | Default                                                                                                                                                                       |
+| ------------- | --------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `llama_model` | `Llama`               | The llama_cpp.Llama model to use. | *required*                                                                                                                                                                    |
+| `provider`    | \`Literal['outlines'] | Provider[Model]\`                 | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. |
+| `profile`     | \`ModelProfileSpec    | None\`                            | The model profile to use. Defaults to a profile picked by the provider.                                                                                                       |
+| `settings`    | \`ModelSettings       | None\`                            | Default model settings for this model instance.                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -624,7 +624,6 @@ def from_llamacpp(
     """
     outlines_model: OutlinesBaseModel = from_llamacpp(llama_model)
     return cls(outlines_model, provider=provider, profile=profile, settings=settings)
-
 ```
 
 #### from_mlxlm
@@ -640,14 +639,19 @@ from_mlxlm(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Create an Outlines model from a MLXLM model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `mlx_model` | `Module` | The nn.Module model to use. | *required* | | `mlx_tokenizer` | `PreTrainedTokenizer` | The PreTrainedTokenizer to use. | *required* | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name            | Type                  | Description                     | Default                                                                                                                                                                       |
+| --------------- | --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mlx_model`     | `Module`              | The nn.Module model to use.     | *required*                                                                                                                                                                    |
+| `mlx_tokenizer` | `PreTrainedTokenizer` | The PreTrainedTokenizer to use. | *required*                                                                                                                                                                    |
+| `provider`      | \`Literal['outlines'] | Provider[Model]\`               | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. |
+| `profile`       | \`ModelProfileSpec    | None\`                          | The model profile to use. Defaults to a profile picked by the provider.                                                                                                       |
+| `settings`      | \`ModelSettings       | None\`                          | Default model settings for this model instance.                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -674,7 +678,6 @@ def from_mlxlm(  # pragma: no cover
     """
     outlines_model: OutlinesBaseModel = from_mlxlm(mlx_model, mlx_tokenizer)  # pyright: ignore[reportUnknownArgumentType]
     return cls(outlines_model, provider=provider, profile=profile, settings=settings)
-
 ```
 
 #### from_sglang
@@ -691,14 +694,20 @@ from_sglang(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Create an Outlines model to send requests to an SGLang server.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `base_url` | `str` | The url of the SGLang server. | *required* | | `api_key` | `str | None` | The API key to use for authenticating requests to the SGLang server. | `None` | | `model_name` | `str | None` | The name of the model to use. | `None` | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name         | Type                  | Description                   | Default                                                                                                                                                                       |
+| ------------ | --------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_url`   | `str`                 | The url of the SGLang server. | *required*                                                                                                                                                                    |
+| `api_key`    | \`str                 | None\`                        | The API key to use for authenticating requests to the SGLang server.                                                                                                          |
+| `model_name` | \`str                 | None\`                        | The name of the model to use.                                                                                                                                                 |
+| `provider`   | \`Literal['outlines'] | Provider[Model]\`             | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. |
+| `profile`    | \`ModelProfileSpec    | None\`                        | The model profile to use. Defaults to a profile picked by the provider.                                                                                                       |
+| `settings`   | \`ModelSettings       | None\`                        | Default model settings for this model instance.                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -736,7 +745,6 @@ def from_sglang(
     openai_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
     outlines_model: OutlinesBaseModel | OutlinesAsyncBaseModel = from_sglang(openai_client, model_name)
     return cls(outlines_model, provider=provider, profile=profile, settings=settings)
-
 ```
 
 #### from_vllm_offline
@@ -751,14 +759,18 @@ from_vllm_offline(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Create an Outlines model from a vLLM offline inference model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `vllm_model` | `Any` | The vllm.LLM local model to use. | *required* | | `provider` | `Literal['outlines'] | Provider[Model]` | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. | `'outlines'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider. | `None` | | `settings` | `ModelSettings | None` | Default model settings for this model instance. | `None` |
+| Name         | Type                  | Description                      | Default                                                                                                                                                                       |
+| ------------ | --------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vllm_model` | `Any`                 | The vllm.LLM local model to use. | *required*                                                                                                                                                                    |
+| `provider`   | \`Literal['outlines'] | Provider[Model]\`                | The provider to use for OutlinesModel. Can be either the string 'outlines' or an instance of Provider[OutlinesBaseModel]. If not provided, the other parameters will be used. |
+| `profile`    | \`ModelProfileSpec    | None\`                           | The model profile to use. Defaults to a profile picked by the provider.                                                                                                       |
+| `settings`   | \`ModelSettings       | None\`                           | Default model settings for this model instance.                                                                                                                               |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
 
@@ -783,7 +795,6 @@ def from_vllm_offline(  # pragma: no cover
     """
     outlines_model: OutlinesBaseModel | OutlinesAsyncBaseModel = from_vllm_offline(vllm_model)
     return cls(outlines_model, provider=provider, profile=profile, settings=settings)
-
 ```
 
 #### format_inference_kwargs
@@ -792,7 +803,6 @@ def from_vllm_offline(  # pragma: no cover
 format_inference_kwargs(
     model_settings: ModelSettings | None,
 ) -> dict[str, Any]
-
 ```
 
 Format the model settings for the inference kwargs.
@@ -819,31 +829,6 @@ def format_inference_kwargs(self, model_settings: ModelSettings | None) -> dict[
     settings_dict.update(extra_body)
 
     return settings_dict
-
-```
-
-#### customize_request_parameters
-
-```python
-customize_request_parameters(
-    model_request_parameters: ModelRequestParameters,
-) -> ModelRequestParameters
-
-```
-
-Customize the model request parameters for the model.
-
-Source code in `pydantic_ai_slim/pydantic_ai/models/outlines.py`
-
-```python
-def customize_request_parameters(self, model_request_parameters: ModelRequestParameters) -> ModelRequestParameters:
-    """Customize the model request parameters for the model."""
-    if model_request_parameters.output_mode in ('auto', 'native'):
-        # This way the JSON schema will be included in the instructions.
-        return replace(model_request_parameters, output_mode='prompted')
-    else:
-        return model_request_parameters
-
 ```
 
 ### OutlinesStreamedResponse
@@ -862,9 +847,9 @@ class OutlinesStreamedResponse(StreamedResponse):
     _model_name: str
     _model_profile: ModelProfile
     _response: AsyncIterable[str]
-    _timestamp: datetime
     _provider_name: str
     _provider_url: str | None = None
+    _timestamp: datetime = field(default_factory=_utils.now_utc)
 
     async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:
         async for content in self._response:
@@ -895,14 +880,12 @@ class OutlinesStreamedResponse(StreamedResponse):
     def timestamp(self) -> datetime:
         """Get the timestamp of the response."""
         return self._timestamp
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -911,7 +894,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -920,7 +902,6 @@ Get the provider name.
 
 ```python
 provider_url: str | None
-
 ```
 
 Get the provider base URL.
@@ -929,7 +910,6 @@ Get the provider base URL.
 
 ```python
 timestamp: datetime
-
 ```
 
 Get the timestamp of the response.

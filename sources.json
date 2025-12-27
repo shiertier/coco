@@ -143,6 +143,19 @@
           "language": "en"
         }
       ]
+    },
+    {
+      "id": "ref-tools",
+      "description": "Ref Tools documentation (via llms.txt)",
+      "output_dir": "docs/ref-tools",
+      "default_language": "en",
+      "allowed_extensions": ["*"],
+      "entrypoints": [
+        {
+          "type": "llms_txt",
+          "url": "https://docs.ref.tools/llms.txt"
+        }
+      ]
     }
   ]
 }

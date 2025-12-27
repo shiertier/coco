@@ -56,7 +56,9 @@ class FastA2A(Starlette):
 
         # Setup
         self._agent_card_json_schema: bytes | None = None
-        self.router.add_route('/.well-known/agent.json', self._agent_card_endpoint, methods=['HEAD', 'GET', 'OPTIONS'])
+        self.router.add_route(
+            '/.well-known/agent-card.json', self._agent_card_endpoint, methods=['HEAD', 'GET', 'OPTIONS']
+        )
         self.router.add_route('/', self._agent_run_endpoint, methods=['POST'])
         self.router.add_route('/docs', self._docs_endpoint, methods=['GET'])
 
@@ -72,7 +74,7 @@ class FastA2A(Starlette):
                 description=self.description or 'An AI agent exposed as an A2A agent.',
                 url=self.url,
                 version=self.version,
-                protocol_version='0.2.5',
+                protocol_version='0.3.0',
                 skills=self.skills,
                 default_input_modes=self.default_input_modes,
                 default_output_modes=self.default_output_modes,
@@ -95,7 +97,7 @@ class FastA2A(Starlette):
 
         Although the specification allows freedom of choice and implementation, I'm pretty sure about some decisions.
 
-        1. The server will always either send a "submitted" or a "failed" on `tasks/send`.
+        1. The server will always either send a "submitted" or a "failed" on `message/send`.
             Never a "completed" on the first message.
         2. There are three possible ends for the task:
             2.1. The task was "completed" successfully.
@@ -117,7 +119,6 @@ class FastA2A(Starlette):
         return Response(
             content=a2a_response_ta.dump_json(jsonrpc_response, by_alias=True), media_type='application/json'
         )
-
 ```
 
 ### Broker
@@ -167,14 +168,12 @@ class Broker(ABC):
         On a multi-worker setup, the broker will need to round-robin the task operations
         between the workers.
         """
-
 ```
 
 #### run_task
 
 ```python
 run_task(params: TaskSendParams) -> None
-
 ```
 
 Send a task to be executed by the worker.
@@ -186,14 +185,12 @@ Source code in `.venv/lib/python3.12/site-packages/fasta2a/broker.py`
 async def run_task(self, params: TaskSendParams) -> None:
     """Send a task to be executed by the worker."""
     raise NotImplementedError('send_run_task is not implemented yet.')
-
 ```
 
 #### cancel_task
 
 ```python
 cancel_task(params: TaskIdParams) -> None
-
 ```
 
 Cancel a task.
@@ -205,14 +202,12 @@ Source code in `.venv/lib/python3.12/site-packages/fasta2a/broker.py`
 async def cancel_task(self, params: TaskIdParams) -> None:
     """Cancel a task."""
     raise NotImplementedError('send_cancel_task is not implemented yet.')
-
 ```
 
 #### receive_task_operations
 
 ```python
 receive_task_operations() -> AsyncIterator[TaskOperation]
-
 ```
 
 Receive task operations from the broker.
@@ -229,7 +224,6 @@ def receive_task_operations(self) -> AsyncIterator[TaskOperation]:
     On a multi-worker setup, the broker will need to round-robin the task operations
     between the workers.
     """
-
 ```
 
 ### Skill
@@ -274,14 +268,12 @@ class Skill(TypedDict):
 
     output_modes: list[str]
     """Supported mime types for output data."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 A unique identifier for the skill.
@@ -290,7 +282,6 @@ A unique identifier for the skill.
 
 ```python
 name: str
-
 ```
 
 Human readable name of the skill.
@@ -299,7 +290,6 @@ Human readable name of the skill.
 
 ```python
 description: str
-
 ```
 
 A human-readable description of the skill.
@@ -310,7 +300,6 @@ It will be used by the client or a human as a hint to understand the skill.
 
 ```python
 tags: list[str]
-
 ```
 
 Set of tag-words describing classes of capabilities for this specific skill.
@@ -321,7 +310,6 @@ Examples: "cooking", "customer support", "billing".
 
 ```python
 examples: NotRequired[list[str]]
-
 ```
 
 The set of example scenarios that the skill can perform.
@@ -332,7 +320,6 @@ Will be used by the client as a hint to understand how the skill can be used. (e
 
 ```python
 input_modes: list[str]
-
 ```
 
 Supported mime types for input data.
@@ -341,7 +328,6 @@ Supported mime types for input data.
 
 ```python
 output_modes: list[str]
-
 ```
 
 Supported mime types for output data.
@@ -399,7 +385,6 @@ class Storage(ABC, Generic[ContextT]):
 
         Implementing agent can decide what to store in context.
         """
-
 ```
 
 #### load_task
@@ -408,7 +393,6 @@ class Storage(ABC, Generic[ContextT]):
 load_task(
     task_id: str, history_length: int | None = None
 ) -> Task | None
-
 ```
 
 Load a task from storage.
@@ -424,14 +408,12 @@ async def load_task(self, task_id: str, history_length: int | None = None) -> Ta
 
     If the task is not found, return None.
     """
-
 ```
 
 #### submit_task
 
 ```python
 submit_task(context_id: str, message: Message) -> Task
-
 ```
 
 Submit a task to storage.
@@ -442,7 +424,6 @@ Source code in `.venv/lib/python3.12/site-packages/fasta2a/storage.py`
 @abstractmethod
 async def submit_task(self, context_id: str, message: Message) -> Task:
     """Submit a task to storage."""
-
 ```
 
 #### update_task
@@ -454,7 +435,6 @@ update_task(
     new_artifacts: list[Artifact] | None = None,
     new_messages: list[Message] | None = None,
 ) -> Task
-
 ```
 
 Update the state of a task. Appends artifacts and messages, if specified.
@@ -471,14 +451,12 @@ async def update_task(
     new_messages: list[Message] | None = None,
 ) -> Task:
     """Update the state of a task. Appends artifacts and messages, if specified."""
-
 ```
 
 #### load_context
 
 ```python
 load_context(context_id: str) -> ContextT | None
-
 ```
 
 Retrieve the stored context given the `context_id`.
@@ -489,14 +467,12 @@ Source code in `.venv/lib/python3.12/site-packages/fasta2a/storage.py`
 @abstractmethod
 async def load_context(self, context_id: str) -> ContextT | None:
     """Retrieve the stored context given the `context_id`."""
-
 ```
 
 #### update_context
 
 ```python
 update_context(context_id: str, context: ContextT) -> None
-
 ```
 
 Updates the context for a `context_id`.
@@ -512,7 +488,6 @@ async def update_context(self, context_id: str, context: ContextT) -> None:
 
     Implementing agent can decide what to store in context.
     """
-
 ```
 
 ### Worker
@@ -572,14 +547,12 @@ class Worker(ABC, Generic[ContextT]):
 
     @abstractmethod
     def build_artifacts(self, result: Any) -> list[Artifact]: ...
-
 ```
 
 #### run
 
 ```python
 run() -> AsyncIterator[None]
-
 ```
 
 Run the worker.
@@ -599,7 +572,6 @@ async def run(self) -> AsyncIterator[None]:
         tg.start_soon(self._loop)
         yield
         tg.cancel_scope.cancel()
-
 ```
 
 This module contains the schema for the agent card.
@@ -667,14 +639,13 @@ class AgentCard(TypedDict):
     """Supported mime types for output data."""
 
     skills: list[Skill]
-
+    """The set of skills, or distinct capabilities, that the agent can perform."""
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 Human readable name of the agent e.g. "Recipe Agent".
@@ -683,7 +654,6 @@ Human readable name of the agent e.g. "Recipe Agent".
 
 ```python
 description: str
-
 ```
 
 A human-readable description of the agent.
@@ -694,7 +664,6 @@ Used to assist users and other agents in understanding what the agent can do. (e
 
 ```python
 url: str
-
 ```
 
 A URL to the address the agent is hosted at.
@@ -703,7 +672,6 @@ A URL to the address the agent is hosted at.
 
 ```python
 version: str
-
 ```
 
 The version of the agent - format is up to the provider. (e.g. "1.0.0")
@@ -712,7 +680,6 @@ The version of the agent - format is up to the provider. (e.g. "1.0.0")
 
 ```python
 protocol_version: str
-
 ```
 
 The version of the A2A protocol this agent supports.
@@ -721,7 +688,6 @@ The version of the A2A protocol this agent supports.
 
 ```python
 provider: NotRequired[AgentProvider]
-
 ```
 
 The service provider of the agent.
@@ -730,7 +696,6 @@ The service provider of the agent.
 
 ```python
 documentation_url: NotRequired[str]
-
 ```
 
 A URL to documentation for the agent.
@@ -739,7 +704,6 @@ A URL to documentation for the agent.
 
 ```python
 icon_url: NotRequired[str]
-
 ```
 
 A URL to an icon for the agent.
@@ -748,7 +712,6 @@ A URL to an icon for the agent.
 
 ```python
 preferred_transport: NotRequired[str]
-
 ```
 
 The transport of the preferred endpoint. If empty, defaults to JSONRPC.
@@ -757,7 +720,6 @@ The transport of the preferred endpoint. If empty, defaults to JSONRPC.
 
 ```python
 additional_interfaces: NotRequired[list[AgentInterface]]
-
 ```
 
 Announcement of additional supported transports.
@@ -766,7 +728,6 @@ Announcement of additional supported transports.
 
 ```python
 capabilities: AgentCapabilities
-
 ```
 
 The capabilities of the agent.
@@ -775,7 +736,6 @@ The capabilities of the agent.
 
 ```python
 security: NotRequired[list[dict[str, list[str]]]]
-
 ```
 
 Security requirements for contacting the agent.
@@ -784,7 +744,6 @@ Security requirements for contacting the agent.
 
 ```python
 security_schemes: NotRequired[dict[str, SecurityScheme]]
-
 ```
 
 Security scheme definitions.
@@ -793,7 +752,6 @@ Security scheme definitions.
 
 ```python
 default_input_modes: list[str]
-
 ```
 
 Supported mime types for input data.
@@ -802,10 +760,17 @@ Supported mime types for input data.
 
 ```python
 default_output_modes: list[str]
-
 ```
 
 Supported mime types for output data.
+
+#### skills
+
+```python
+skills: list[Skill]
+```
+
+The set of skills, or distinct capabilities, that the agent can perform.
 
 ### AgentProvider
 
@@ -820,9 +785,27 @@ class AgentProvider(TypedDict):
     """The service provider of the agent."""
 
     organization: str
-    url: str
+    """The name of the agent provider's organization."""
 
+    url: str
+    """A URL for the agent provider's website or relevant documentation."""
 ```
+
+#### organization
+
+```python
+organization: str
+```
+
+The name of the agent provider's organization.
+
+#### url
+
+```python
+url: str
+```
+
+A URL for the agent provider's website or relevant documentation.
 
 ### AgentCapabilities
 
@@ -845,14 +828,12 @@ class AgentCapabilities(TypedDict):
 
     state_transition_history: NotRequired[bool]
     """Whether the agent exposes status change history for tasks."""
-
 ```
 
 #### streaming
 
 ```python
 streaming: NotRequired[bool]
-
 ```
 
 Whether the agent supports streaming.
@@ -861,7 +842,6 @@ Whether the agent supports streaming.
 
 ```python
 push_notifications: NotRequired[bool]
-
 ```
 
 Whether the agent can notify updates to client.
@@ -870,7 +850,6 @@ Whether the agent can notify updates to client.
 
 ```python
 state_transition_history: NotRequired[bool]
-
 ```
 
 Whether the agent exposes status change history for tasks.
@@ -889,20 +868,30 @@ class HttpSecurityScheme(TypedDict):
     """HTTP security scheme."""
 
     type: Literal['http']
+    """The type of the security scheme. Must be 'http'."""
+
     scheme: str
     """The name of the HTTP Authorization scheme."""
+
     bearer_format: NotRequired[str]
     """A hint to the client to identify how the bearer token is formatted."""
+
     description: NotRequired[str]
     """Description of this security scheme."""
-
 ```
+
+#### type
+
+```python
+type: Literal['http']
+```
+
+The type of the security scheme. Must be 'http'.
 
 #### scheme
 
 ```python
 scheme: str
-
 ```
 
 The name of the HTTP Authorization scheme.
@@ -911,7 +900,6 @@ The name of the HTTP Authorization scheme.
 
 ```python
 bearer_format: NotRequired[str]
-
 ```
 
 A hint to the client to identify how the bearer token is formatted.
@@ -920,7 +908,6 @@ A hint to the client to identify how the bearer token is formatted.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 Description of this security scheme.
@@ -939,20 +926,30 @@ class ApiKeySecurityScheme(TypedDict):
     """API Key security scheme."""
 
     type: Literal['apiKey']
+    """The type of the security scheme. Must be 'apiKey'."""
+
     name: str
     """The name of the header, query or cookie parameter to be used."""
+
     in_: Literal['query', 'header', 'cookie']
     """The location of the API key."""
+
     description: NotRequired[str]
     """Description of this security scheme."""
-
 ```
+
+#### type
+
+```python
+type: Literal['apiKey']
+```
+
+The type of the security scheme. Must be 'apiKey'.
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the header, query or cookie parameter to be used.
@@ -961,7 +958,6 @@ The name of the header, query or cookie parameter to be used.
 
 ```python
 in_: Literal['query', 'header', 'cookie']
-
 ```
 
 The location of the API key.
@@ -970,7 +966,6 @@ The location of the API key.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 Description of this security scheme.
@@ -989,18 +984,27 @@ class OAuth2SecurityScheme(TypedDict):
     """OAuth2 security scheme."""
 
     type: Literal['oauth2']
+    """The type of the security scheme. Must be 'oauth2'."""
+
     flows: dict[str, Any]
     """An object containing configuration information for the flow types supported."""
+
     description: NotRequired[str]
     """Description of this security scheme."""
-
 ```
+
+#### type
+
+```python
+type: Literal['oauth2']
+```
+
+The type of the security scheme. Must be 'oauth2'.
 
 #### flows
 
 ```python
 flows: dict[str, Any]
-
 ```
 
 An object containing configuration information for the flow types supported.
@@ -1009,7 +1013,6 @@ An object containing configuration information for the flow types supported.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 Description of this security scheme.
@@ -1028,18 +1031,27 @@ class OpenIdConnectSecurityScheme(TypedDict):
     """OpenID Connect security scheme."""
 
     type: Literal['openIdConnect']
+    """The type of the security scheme. Must be 'openIdConnect'."""
+
     open_id_connect_url: str
     """OpenId Connect URL to discover OAuth2 configuration values."""
+
     description: NotRequired[str]
     """Description of this security scheme."""
-
 ```
+
+#### type
+
+```python
+type: Literal['openIdConnect']
+```
+
+The type of the security scheme. Must be 'openIdConnect'.
 
 #### open_id_connect_url
 
 ```python
 open_id_connect_url: str
-
 ```
 
 OpenId Connect URL to discover OAuth2 configuration values.
@@ -1048,7 +1060,6 @@ OpenId Connect URL to discover OAuth2 configuration values.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 Description of this security scheme.
@@ -1065,7 +1076,6 @@ SecurityScheme = Annotated[
     ],
     Field(discriminator="type"),
 ]
-
 ```
 
 A security scheme for authentication.
@@ -1091,14 +1101,12 @@ class AgentInterface(TypedDict):
 
     description: NotRequired[str]
     """Description of this interface."""
-
 ```
 
 #### transport
 
 ```python
 transport: str
-
 ```
 
 The transport protocol (e.g., 'jsonrpc', 'websocket').
@@ -1107,7 +1115,6 @@ The transport protocol (e.g., 'jsonrpc', 'websocket').
 
 ```python
 url: str
-
 ```
 
 The URL endpoint for this transport.
@@ -1116,7 +1123,6 @@ The URL endpoint for this transport.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 Description of this interface.
@@ -1145,14 +1151,12 @@ class AgentExtension(TypedDict):
 
     params: NotRequired[dict[str, Any]]
     """Optional configuration for the extension."""
-
 ```
 
 #### uri
 
 ```python
 uri: str
-
 ```
 
 The URI of the extension.
@@ -1161,7 +1165,6 @@ The URI of the extension.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 A description of how this agent uses this extension.
@@ -1170,7 +1173,6 @@ A description of how this agent uses this extension.
 
 ```python
 required: NotRequired[bool]
-
 ```
 
 Whether the client must follow specific requirements of the extension.
@@ -1179,7 +1181,6 @@ Whether the client must follow specific requirements of the extension.
 
 ```python
 params: NotRequired[dict[str, Any]]
-
 ```
 
 Optional configuration for the extension.
@@ -1226,14 +1227,12 @@ class Skill(TypedDict):
 
     output_modes: list[str]
     """Supported mime types for output data."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 A unique identifier for the skill.
@@ -1242,7 +1241,6 @@ A unique identifier for the skill.
 
 ```python
 name: str
-
 ```
 
 Human readable name of the skill.
@@ -1251,7 +1249,6 @@ Human readable name of the skill.
 
 ```python
 description: str
-
 ```
 
 A human-readable description of the skill.
@@ -1262,7 +1259,6 @@ It will be used by the client or a human as a hint to understand the skill.
 
 ```python
 tags: list[str]
-
 ```
 
 Set of tag-words describing classes of capabilities for this specific skill.
@@ -1273,7 +1269,6 @@ Examples: "cooking", "customer support", "billing".
 
 ```python
 examples: NotRequired[list[str]]
-
 ```
 
 The set of example scenarios that the skill can perform.
@@ -1284,7 +1279,6 @@ Will be used by the client as a hint to understand how the skill can be used. (e
 
 ```python
 input_modes: list[str]
-
 ```
 
 Supported mime types for input data.
@@ -1293,7 +1287,6 @@ Supported mime types for input data.
 
 ```python
 output_modes: list[str]
-
 ```
 
 Supported mime types for output data.
@@ -1345,14 +1338,12 @@ class Artifact(TypedDict):
 
     last_chunk: NotRequired[bool]
     """Whether this is the last chunk of the artifact."""
-
 ```
 
 #### artifact_id
 
 ```python
 artifact_id: str
-
 ```
 
 Unique identifier for the artifact.
@@ -1361,7 +1352,6 @@ Unique identifier for the artifact.
 
 ```python
 name: NotRequired[str]
-
 ```
 
 The name of the artifact.
@@ -1370,7 +1360,6 @@ The name of the artifact.
 
 ```python
 description: NotRequired[str]
-
 ```
 
 A description of the artifact.
@@ -1379,7 +1368,6 @@ A description of the artifact.
 
 ```python
 parts: list[Part]
-
 ```
 
 The parts that make up the artifact.
@@ -1388,7 +1376,6 @@ The parts that make up the artifact.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Metadata about the artifact.
@@ -1397,7 +1384,6 @@ Metadata about the artifact.
 
 ```python
 extensions: NotRequired[list[str]]
-
 ```
 
 Array of extensions.
@@ -1406,7 +1392,6 @@ Array of extensions.
 
 ```python
 append: NotRequired[bool]
-
 ```
 
 Whether to append this artifact to an existing one.
@@ -1415,7 +1400,6 @@ Whether to append this artifact to an existing one.
 
 ```python
 last_chunk: NotRequired[bool]
-
 ```
 
 Whether this is the last chunk of the artifact.
@@ -1426,9 +1410,9 @@ Bases: `TypedDict`
 
 Configuration for push notifications.
 
-A2A supports a secure notification mechanism whereby an agent can notify a client of an update outside of a connected session via a PushNotificationService. Within and across enterprises, it is critical that the agent verifies the identity of the notification service, authenticates itself with the service, and presents an identifier that ties the notification to the executing Task.
+A2A supports a secure notification mechanism whereby an agent can notify a client of an update outside a connected session via a PushNotificationService. Within and across enterprises, it is critical that the agent verifies the identity of the notification service, authenticates itself with the service, and presents an identifier that ties the notification to the executing Task.
 
-The target server of the PushNotificationService should be considered a separate service, and is not guaranteed (or even expected) to be the client directly. This PushNotificationService is responsible for authenticating and authorizing the agent and for proxying the verified notification to the appropriate endpoint (which could be anything from a pub/sub queue, to an email inbox or other service, etc).
+The target server of the PushNotificationService should be considered a separate service, and is not guaranteed (or even expected) to be the client directly. This PushNotificationService is responsible for authenticating and authorizing the agent and for proxying the verified notification to the appropriate endpoint (which could be anything from a pub/sub queue, to an email inbox or other service, etc.).
 
 For contrived scenarios with isolated client-agent pairs (e.g. local service mesh in a contained VPC, etc.) or isolated environments without enterprise security concerns, the client may choose to simply open a port and act as its own PushNotificationService. Any enterprise implementation will likely have a centralized service that authenticates the remote agents with trusted notification credentials and can handle online/offline scenarios. (This should be thought of similarly to a mobile Push Notification Service).
 
@@ -1440,7 +1424,7 @@ class PushNotificationConfig(TypedDict):
     """Configuration for push notifications.
 
     A2A supports a secure notification mechanism whereby an agent can notify a client of an update
-    outside of a connected session via a PushNotificationService. Within and across enterprises,
+    outside a connected session via a PushNotificationService. Within and across enterprises,
     it is critical that the agent verifies the identity of the notification service, authenticates
     itself with the service, and presents an identifier that ties the notification to the executing
     Task.
@@ -1449,7 +1433,7 @@ class PushNotificationConfig(TypedDict):
     is not guaranteed (or even expected) to be the client directly. This PushNotificationService is
     responsible for authenticating and authorizing the agent and for proxying the verified notification
     to the appropriate endpoint (which could be anything from a pub/sub queue, to an email inbox or
-    other service, etc).
+    other service, etc.).
 
     For contrived scenarios with isolated client-agent pairs (e.g. local service mesh in a contained
     VPC, etc.) or isolated environments without enterprise security concerns, the client may choose to
@@ -1470,14 +1454,12 @@ class PushNotificationConfig(TypedDict):
 
     authentication: NotRequired[SecurityScheme]
     """Authentication details for push notifications."""
-
 ```
 
 #### id
 
 ```python
 id: NotRequired[str]
-
 ```
 
 Server-assigned identifier.
@@ -1486,7 +1468,6 @@ Server-assigned identifier.
 
 ```python
 url: str
-
 ```
 
 The URL to send push notifications to.
@@ -1495,7 +1476,6 @@ The URL to send push notifications to.
 
 ```python
 token: NotRequired[str]
-
 ```
 
 Token unique to this task/session.
@@ -1504,7 +1484,6 @@ Token unique to this task/session.
 
 ```python
 authentication: NotRequired[SecurityScheme]
-
 ```
 
 Authentication details for push notifications.
@@ -1527,14 +1506,12 @@ class TaskPushNotificationConfig(TypedDict):
 
     push_notification_config: PushNotificationConfig
     """The push notification configuration."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 The task id.
@@ -1543,7 +1520,6 @@ The task id.
 
 ```python
 push_notification_config: PushNotificationConfig
-
 ```
 
 The push notification configuration.
@@ -1603,14 +1579,12 @@ class Message(TypedDict):
 
     extensions: NotRequired[list[str]]
     """Array of extensions."""
-
 ```
 
 #### role
 
 ```python
 role: Literal['user', 'agent']
-
 ```
 
 The role of the message.
@@ -1619,7 +1593,6 @@ The role of the message.
 
 ```python
 parts: list[Part]
-
 ```
 
 The parts of the message.
@@ -1628,7 +1601,6 @@ The parts of the message.
 
 ```python
 kind: Literal['message']
-
 ```
 
 Event type.
@@ -1637,7 +1609,6 @@ Event type.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Metadata about the message.
@@ -1646,7 +1617,6 @@ Metadata about the message.
 
 ```python
 message_id: str
-
 ```
 
 Identifier created by the message creator.
@@ -1655,7 +1625,6 @@ Identifier created by the message creator.
 
 ```python
 context_id: NotRequired[str]
-
 ```
 
 The context the message is associated with.
@@ -1664,7 +1633,6 @@ The context the message is associated with.
 
 ```python
 task_id: NotRequired[str]
-
 ```
 
 Identifier of task the message is related to.
@@ -1673,7 +1641,6 @@ Identifier of task the message is related to.
 
 ```python
 reference_task_ids: NotRequired[list[str]]
-
 ```
 
 Array of task IDs this message references.
@@ -1682,7 +1649,6 @@ Array of task IDs this message references.
 
 ```python
 extensions: NotRequired[list[str]]
-
 ```
 
 Array of extensions.
@@ -1705,14 +1671,12 @@ class TextPart(_BasePart):
 
     text: str
     """The text of the part."""
-
 ```
 
 #### kind
 
 ```python
 kind: Literal['text']
-
 ```
 
 The kind of the part.
@@ -1721,7 +1685,6 @@ The kind of the part.
 
 ```python
 text: str
-
 ```
 
 The text of the part.
@@ -1744,14 +1707,12 @@ class FileWithBytes(TypedDict):
 
     mime_type: NotRequired[str]
     """Optional mime type for the file."""
-
 ```
 
 #### bytes
 
 ```python
 bytes: str
-
 ```
 
 The base64 encoded content of the file.
@@ -1760,7 +1721,6 @@ The base64 encoded content of the file.
 
 ```python
 mime_type: NotRequired[str]
-
 ```
 
 Optional mime type for the file.
@@ -1783,14 +1743,12 @@ class FileWithUri(TypedDict):
 
     mime_type: NotRequired[str]
     """The mime type of the file."""
-
 ```
 
 #### uri
 
 ```python
 uri: str
-
 ```
 
 The URI of the file.
@@ -1799,7 +1757,6 @@ The URI of the file.
 
 ```python
 mime_type: NotRequired[str]
-
 ```
 
 The mime type of the file.
@@ -1822,14 +1779,12 @@ class FilePart(_BasePart):
 
     file: FileWithBytes | FileWithUri
     """The file content - either bytes or URI."""
-
 ```
 
 #### kind
 
 ```python
 kind: Literal['file']
-
 ```
 
 The kind of the part.
@@ -1838,7 +1793,6 @@ The kind of the part.
 
 ```python
 file: FileWithBytes | FileWithUri
-
 ```
 
 The file content - either bytes or URI.
@@ -1861,14 +1815,12 @@ class DataPart(_BasePart):
 
     data: dict[str, Any]
     """The data of the part."""
-
 ```
 
 #### kind
 
 ```python
 kind: Literal['data']
-
 ```
 
 The kind of the part.
@@ -1877,7 +1829,6 @@ The kind of the part.
 
 ```python
 data: dict[str, Any]
-
 ```
 
 The data of the part.
@@ -1889,7 +1840,6 @@ Part = Annotated[
     Union[TextPart, FilePart, DataPart],
     Field(discriminator="kind"),
 ]
-
 ```
 
 A fully formed piece of content exchanged between a client and a remote agent as part of a Message or an Artifact.
@@ -1910,7 +1860,6 @@ TaskState: TypeAlias = Literal[
     "auth-required",
     "unknown",
 ]
-
 ```
 
 The possible states of a task.
@@ -1936,14 +1885,12 @@ class TaskStatus(TypedDict):
 
     timestamp: NotRequired[str]
     """ISO datetime value of when the status was updated."""
-
 ```
 
 #### state
 
 ```python
 state: TaskState
-
 ```
 
 The current state of the task.
@@ -1952,7 +1899,6 @@ The current state of the task.
 
 ```python
 message: NotRequired[Message]
-
 ```
 
 Additional status updates for client.
@@ -1961,7 +1907,6 @@ Additional status updates for client.
 
 ```python
 timestamp: NotRequired[str]
-
 ```
 
 ISO datetime value of when the status was updated.
@@ -2005,14 +1950,12 @@ class Task(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 Unique identifier for the task.
@@ -2021,7 +1964,6 @@ Unique identifier for the task.
 
 ```python
 context_id: str
-
 ```
 
 The context the task is associated with.
@@ -2030,7 +1972,6 @@ The context the task is associated with.
 
 ```python
 kind: Literal['task']
-
 ```
 
 Event type.
@@ -2039,7 +1980,6 @@ Event type.
 
 ```python
 status: TaskStatus
-
 ```
 
 Current status of the task.
@@ -2048,7 +1988,6 @@ Current status of the task.
 
 ```python
 history: NotRequired[list[Message]]
-
 ```
 
 Optional history of messages.
@@ -2057,7 +1996,6 @@ Optional history of messages.
 
 ```python
 artifacts: NotRequired[list[Artifact]]
-
 ```
 
 Collection of artifacts created by the agent.
@@ -2066,7 +2004,6 @@ Collection of artifacts created by the agent.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2101,14 +2038,12 @@ class TaskStatusUpdateEvent(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### task_id
 
 ```python
 task_id: str
-
 ```
 
 The id of the task.
@@ -2117,7 +2052,6 @@ The id of the task.
 
 ```python
 context_id: str
-
 ```
 
 The context the task is associated with.
@@ -2126,7 +2060,6 @@ The context the task is associated with.
 
 ```python
 kind: Literal['status-update']
-
 ```
 
 Event type.
@@ -2135,7 +2068,6 @@ Event type.
 
 ```python
 status: TaskStatus
-
 ```
 
 The status of the task.
@@ -2144,7 +2076,6 @@ The status of the task.
 
 ```python
 final: bool
-
 ```
 
 Indicates the end of the event stream.
@@ -2153,7 +2084,6 @@ Indicates the end of the event stream.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2191,14 +2121,12 @@ class TaskArtifactUpdateEvent(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### task_id
 
 ```python
 task_id: str
-
 ```
 
 The id of the task.
@@ -2207,7 +2135,6 @@ The id of the task.
 
 ```python
 context_id: str
-
 ```
 
 The context the task is associated with.
@@ -2216,7 +2143,6 @@ The context the task is associated with.
 
 ```python
 kind: Literal['artifact-update']
-
 ```
 
 Event type identification.
@@ -2225,7 +2151,6 @@ Event type identification.
 
 ```python
 artifact: Artifact
-
 ```
 
 The artifact that was updated.
@@ -2234,7 +2159,6 @@ The artifact that was updated.
 
 ```python
 append: NotRequired[bool]
-
 ```
 
 Whether to append to existing artifact (true) or replace (false).
@@ -2243,7 +2167,6 @@ Whether to append to existing artifact (true) or replace (false).
 
 ```python
 last_chunk: NotRequired[bool]
-
 ```
 
 Indicates this is the final chunk of the artifact.
@@ -2252,7 +2175,6 @@ Indicates this is the final chunk of the artifact.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2271,9 +2193,27 @@ class TaskIdParams(TypedDict):
     """Parameters for a task id."""
 
     id: str
-    metadata: NotRequired[dict[str, Any]]
+    """The unique identifier for the task."""
 
+    metadata: NotRequired[dict[str, Any]]
+    """Optional metadata associated with the request."""
 ```
+
+#### id
+
+```python
+id: str
+```
+
+The unique identifier for the task.
+
+#### metadata
+
+```python
+metadata: NotRequired[dict[str, Any]]
+```
+
+Optional metadata associated with the request.
 
 ### TaskQueryParams
 
@@ -2290,14 +2230,12 @@ class TaskQueryParams(TaskIdParams):
 
     history_length: NotRequired[int]
     """Number of recent messages to be retrieved."""
-
 ```
 
 #### history_length
 
 ```python
 history_length: NotRequired[int]
-
 ```
 
 Number of recent messages to be retrieved.
@@ -2326,14 +2264,12 @@ class MessageSendConfiguration(TypedDict):
 
     push_notification_config: NotRequired[PushNotificationConfig]
     """Where the server should send notifications when disconnected."""
-
 ```
 
 #### accepted_output_modes
 
 ```python
 accepted_output_modes: list[str]
-
 ```
 
 Accepted output modalities by the client.
@@ -2342,7 +2278,6 @@ Accepted output modalities by the client.
 
 ```python
 blocking: NotRequired[bool]
-
 ```
 
 If the server should treat the client as a blocking request.
@@ -2351,7 +2286,6 @@ If the server should treat the client as a blocking request.
 
 ```python
 history_length: NotRequired[int]
-
 ```
 
 Number of recent messages to be retrieved.
@@ -2362,7 +2296,6 @@ Number of recent messages to be retrieved.
 push_notification_config: NotRequired[
     PushNotificationConfig
 ]
-
 ```
 
 Where the server should send notifications when disconnected.
@@ -2388,14 +2321,12 @@ class MessageSendParams(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### configuration
 
 ```python
 configuration: NotRequired[MessageSendConfiguration]
-
 ```
 
 Send message configuration.
@@ -2404,7 +2335,6 @@ Send message configuration.
 
 ```python
 message: Message
-
 ```
 
 The message being sent to the server.
@@ -2413,7 +2343,6 @@ The message being sent to the server.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2451,14 +2380,12 @@ class TaskSendParams(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 The id of the task.
@@ -2467,7 +2394,6 @@ The id of the task.
 
 ```python
 context_id: str
-
 ```
 
 The context id for the task.
@@ -2476,7 +2402,6 @@ The context id for the task.
 
 ```python
 message: Message
-
 ```
 
 The message to process.
@@ -2485,7 +2410,6 @@ The message to process.
 
 ```python
 history_length: NotRequired[int]
-
 ```
 
 Number of recent messages to be retrieved.
@@ -2494,7 +2418,6 @@ Number of recent messages to be retrieved.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2517,14 +2440,12 @@ class ListTaskPushNotificationConfigParams(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 Task id.
@@ -2533,7 +2454,6 @@ Task id.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2559,14 +2479,12 @@ class DeleteTaskPushNotificationConfigParams(TypedDict):
 
     metadata: NotRequired[dict[str, Any]]
     """Extension metadata."""
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 Task id.
@@ -2575,7 +2493,6 @@ Task id.
 
 ```python
 push_notification_config_id: str
-
 ```
 
 The push notification config id to delete.
@@ -2584,7 +2501,6 @@ The push notification config id to delete.
 
 ```python
 metadata: NotRequired[dict[str, Any]]
-
 ```
 
 Extension metadata.
@@ -2606,14 +2522,12 @@ class JSONRPCMessage(TypedDict):
 
     id: int | str | None
     """The request id."""
-
 ```
 
 #### jsonrpc
 
 ```python
 jsonrpc: Literal['2.0']
-
 ```
 
 The JSON RPC version.
@@ -2622,7 +2536,6 @@ The JSON RPC version.
 
 ```python
 id: int | str | None
-
 ```
 
 The request id.
@@ -2644,14 +2557,12 @@ class JSONRPCRequest(JSONRPCMessage, Generic[Method, Params]):
 
     params: Params
     """The parameters to pass to the method."""
-
 ```
 
 #### method
 
 ```python
 method: Method
-
 ```
 
 The method to call.
@@ -2660,7 +2571,6 @@ The method to call.
 
 ```python
 params: Params
-
 ```
 
 The parameters to pass to the method.
@@ -2678,10 +2588,38 @@ class JSONRPCError(TypedDict, Generic[CodeT, MessageT]):
     """A JSON RPC error."""
 
     code: CodeT
-    message: MessageT
-    data: NotRequired[Any]
+    """A number that indicates the error type that occurred."""
 
+    message: MessageT
+    """A string providing a short description of the error."""
+
+    data: NotRequired[Any]
+    """A primitive or structured value containing additional information about the error."""
 ```
+
+#### code
+
+```python
+code: CodeT
+```
+
+A number that indicates the error type that occurred.
+
+#### message
+
+```python
+message: MessageT
+```
+
+A string providing a short description of the error.
+
+#### data
+
+```python
+data: NotRequired[Any]
+```
+
+A primitive or structured value containing additional information about the error.
 
 ### JSONRPCResponse
 
@@ -2697,7 +2635,6 @@ class JSONRPCResponse(JSONRPCMessage, Generic[ResultT, ErrorT]):
 
     result: NotRequired[ResultT]
     error: NotRequired[ErrorT]
-
 ```
 
 ### JSONParseError
@@ -2706,7 +2643,6 @@ class JSONRPCResponse(JSONRPCMessage, Generic[ResultT, ErrorT]):
 JSONParseError = JSONRPCError[
     Literal[-32700], Literal["Invalid JSON payload"]
 ]
-
 ```
 
 A JSON RPC error for a parse error.
@@ -2718,7 +2654,6 @@ InvalidRequestError = JSONRPCError[
     Literal[-32600],
     Literal["Request payload validation error"],
 ]
-
 ```
 
 A JSON RPC error for an invalid request.
@@ -2729,7 +2664,6 @@ A JSON RPC error for an invalid request.
 MethodNotFoundError = JSONRPCError[
     Literal[-32601], Literal["Method not found"]
 ]
-
 ```
 
 A JSON RPC error for a method not found.
@@ -2740,7 +2674,6 @@ A JSON RPC error for a method not found.
 InvalidParamsError = JSONRPCError[
     Literal[-32602], Literal["Invalid parameters"]
 ]
-
 ```
 
 A JSON RPC error for invalid parameters.
@@ -2751,7 +2684,6 @@ A JSON RPC error for invalid parameters.
 InternalError = JSONRPCError[
     Literal[-32603], Literal["Internal error"]
 ]
-
 ```
 
 A JSON RPC error for an internal error.
@@ -2762,7 +2694,6 @@ A JSON RPC error for an internal error.
 TaskNotFoundError = JSONRPCError[
     Literal[-32001], Literal["Task not found"]
 ]
-
 ```
 
 A JSON RPC error for a task not found.
@@ -2773,7 +2704,6 @@ A JSON RPC error for a task not found.
 TaskNotCancelableError = JSONRPCError[
     Literal[-32002], Literal["Task not cancelable"]
 ]
-
 ```
 
 A JSON RPC error for a task not cancelable.
@@ -2785,7 +2715,6 @@ PushNotificationNotSupportedError = JSONRPCError[
     Literal[-32003],
     Literal["Push notification not supported"],
 ]
-
 ```
 
 A JSON RPC error for a push notification not supported.
@@ -2797,7 +2726,6 @@ UnsupportedOperationError = JSONRPCError[
     Literal[-32004],
     Literal["This operation is not supported"],
 ]
-
 ```
 
 A JSON RPC error for an unsupported operation.
@@ -2808,7 +2736,6 @@ A JSON RPC error for an unsupported operation.
 ContentTypeNotSupportedError = JSONRPCError[
     Literal[-32005], Literal["Incompatible content types"]
 ]
-
 ```
 
 A JSON RPC error for incompatible content types.
@@ -2819,7 +2746,6 @@ A JSON RPC error for incompatible content types.
 InvalidAgentResponseError = JSONRPCError[
     Literal[-32006], Literal["Invalid agent response"]
 ]
-
 ```
 
 A JSON RPC error for invalid agent response.
@@ -2830,7 +2756,6 @@ A JSON RPC error for invalid agent response.
 SendMessageRequest = JSONRPCRequest[
     Literal["message/send"], MessageSendParams
 ]
-
 ```
 
 A JSON RPC request to send a message.
@@ -2841,7 +2766,6 @@ A JSON RPC request to send a message.
 SendMessageResponse = JSONRPCResponse[
     Union[Task, Message], JSONRPCError[Any, Any]
 ]
-
 ```
 
 A JSON RPC response to send a message.
@@ -2852,10 +2776,25 @@ A JSON RPC response to send a message.
 StreamMessageRequest = JSONRPCRequest[
     Literal["message/stream"], MessageSendParams
 ]
-
 ```
 
 A JSON RPC request to stream a message.
+
+### StreamMessageResponse
+
+```python
+StreamMessageResponse = JSONRPCResponse[
+    Union[
+        Task,
+        Message,
+        TaskStatusUpdateEvent,
+        TaskArtifactUpdateEvent,
+    ],
+    JSONRPCError[Any, Any],
+]
+```
+
+A JSON RPC response to a StreamMessageRequest.
 
 ### GetTaskRequest
 
@@ -2863,7 +2802,6 @@ A JSON RPC request to stream a message.
 GetTaskRequest = JSONRPCRequest[
     Literal["tasks/get"], TaskQueryParams
 ]
-
 ```
 
 A JSON RPC request to get a task.
@@ -2872,7 +2810,6 @@ A JSON RPC request to get a task.
 
 ```python
 GetTaskResponse = JSONRPCResponse[Task, TaskNotFoundError]
-
 ```
 
 A JSON RPC response to get a task.
@@ -2883,7 +2820,6 @@ A JSON RPC response to get a task.
 CancelTaskRequest = JSONRPCRequest[
     Literal["tasks/cancel"], TaskIdParams
 ]
-
 ```
 
 A JSON RPC request to cancel a task.
@@ -2894,7 +2830,6 @@ A JSON RPC request to cancel a task.
 CancelTaskResponse = JSONRPCResponse[
     Task, Union[TaskNotCancelableError, TaskNotFoundError]
 ]
-
 ```
 
 A JSON RPC response to cancel a task.
@@ -2906,7 +2841,6 @@ SetTaskPushNotificationRequest = JSONRPCRequest[
     Literal["tasks/pushNotification/set"],
     TaskPushNotificationConfig,
 ]
-
 ```
 
 A JSON RPC request to set a task push notification.
@@ -2918,7 +2852,6 @@ SetTaskPushNotificationResponse = JSONRPCResponse[
     TaskPushNotificationConfig,
     PushNotificationNotSupportedError,
 ]
-
 ```
 
 A JSON RPC response to set a task push notification.
@@ -2929,7 +2862,6 @@ A JSON RPC response to set a task push notification.
 GetTaskPushNotificationRequest = JSONRPCRequest[
     Literal["tasks/pushNotification/get"], TaskIdParams
 ]
-
 ```
 
 A JSON RPC request to get a task push notification.
@@ -2941,7 +2873,6 @@ GetTaskPushNotificationResponse = JSONRPCResponse[
     TaskPushNotificationConfig,
     PushNotificationNotSupportedError,
 ]
-
 ```
 
 A JSON RPC response to get a task push notification.
@@ -2952,7 +2883,6 @@ A JSON RPC response to get a task push notification.
 ResubscribeTaskRequest = JSONRPCRequest[
     Literal["tasks/resubscribe"], TaskIdParams
 ]
-
 ```
 
 A JSON RPC request to resubscribe to a task.
@@ -2964,7 +2894,6 @@ ListTaskPushNotificationConfigRequest = JSONRPCRequest[
     Literal["tasks/pushNotificationConfig/list"],
     ListTaskPushNotificationConfigParams,
 ]
-
 ```
 
 A JSON RPC request to list task push notification configs.
@@ -2976,7 +2905,6 @@ DeleteTaskPushNotificationConfigRequest = JSONRPCRequest[
     Literal["tasks/pushNotificationConfig/delete"],
     DeleteTaskPushNotificationConfigParams,
 ]
-
 ```
 
 A JSON RPC request to delete a task push notification config.
@@ -2998,7 +2926,6 @@ A2ARequest = Annotated[
     ],
     Discriminator("method"),
 ]
-
 ```
 
 A JSON RPC request to the A2A server.
@@ -3008,12 +2935,12 @@ A JSON RPC request to the A2A server.
 ```python
 A2AResponse: TypeAlias = Union[
     SendMessageResponse,
+    StreamMessageResponse,
     GetTaskResponse,
     CancelTaskResponse,
     SetTaskPushNotificationResponse,
     GetTaskPushNotificationResponse,
 ]
-
 ```
 
 A JSON RPC response from the A2A server.
@@ -3070,7 +2997,6 @@ class A2AClient:
     def _raise_for_status(self, response: httpx.Response) -> None:
         if response.status_code >= 400:
             raise UnexpectedResponseError(response.status_code, response.text)
-
 ```
 
 #### send_message
@@ -3082,7 +3008,6 @@ send_message(
     metadata: dict[str, Any] | None = None,
     configuration: MessageSendConfiguration | None = None
 ) -> SendMessageResponse
-
 ```
 
 Send a message using the A2A protocol.
@@ -3116,7 +3041,6 @@ async def send_message(
     self._raise_for_status(response)
 
     return send_message_response_ta.validate_json(response.content)
-
 ```
 
 ### UnexpectedResponseError
@@ -3134,5 +3058,4 @@ class UnexpectedResponseError(Exception):
     def __init__(self, status_code: int, content: str) -> None:
         self.status_code = status_code
         self.content = content
-
 ```

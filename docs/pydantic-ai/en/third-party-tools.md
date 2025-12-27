@@ -4,7 +4,7 @@ Pydantic AI supports integration with various third-party tool libraries, allowi
 
 ## MCP Tools
 
-See the [MCP Client](../mcp/client/) documentation for how to use MCP servers with Pydantic AI as [toolsets](../toolsets/).
+See the [MCP Client](https://ai.pydantic.dev/mcp/client/index.md) documentation for how to use MCP servers with Pydantic AI as [toolsets](https://ai.pydantic.dev/toolsets/index.md).
 
 ## LangChain Tools
 
@@ -31,14 +31,13 @@ agent = Agent(
 result = agent.run_sync('What is the release date of Elden Ring Nightreign?')  # (1)!
 print(result.output)
 #> Elden Ring Nightreign is planned to be released on May 30, 2025.
-
 ```
 
 1. The release date of this game is the 30th of May 2025, which is after the knowledge cutoff for Gemini 2.0 (August 2024).
 
-If you'd like to use multiple LangChain tools or a LangChain [toolkit](https://python.langchain.com/docs/concepts/tools/#toolkits), you can use the LangChainToolset [toolset](../toolsets/) which takes a list of LangChain tools:
+If you'd like to use multiple LangChain tools or a LangChain [toolkit](https://python.langchain.com/docs/concepts/tools/#toolkits), you can use the LangChainToolset [toolset](https://ai.pydantic.dev/toolsets/index.md) which takes a list of LangChain tools:
 
-[Learn about Gateway](../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from langchain_community.agent_toolkits import SlackToolkit
@@ -51,7 +50,6 @@ toolset = LangChainToolset(toolkit.get_tools())
 
 agent = Agent('gateway/openai:gpt-5', toolsets=[toolset])
 # ...
-
 ```
 
 ```python
@@ -65,7 +63,6 @@ toolset = LangChainToolset(toolkit.get_tools())
 
 agent = Agent('openai:gpt-5', toolsets=[toolset])
 # ...
-
 ```
 
 ## ACI.dev Tools
@@ -95,14 +92,13 @@ agent = Agent(
 result = agent.run_sync('What is the release date of Elden Ring Nightreign?')  # (1)!
 print(result.output)
 #> Elden Ring Nightreign is planned to be released on May 30, 2025.
-
 ```
 
 1. The release date of this game is the 30th of May 2025, which is after the knowledge cutoff for Gemini 2.0 (August 2024).
 
-If you'd like to use multiple ACI.dev tools, you can use the ACIToolset [toolset](../toolsets/) which takes a list of ACI tool names as well as the `linked_account_owner_id`:
+If you'd like to use multiple ACI.dev tools, you can use the ACIToolset [toolset](https://ai.pydantic.dev/toolsets/index.md) which takes a list of ACI tool names as well as the `linked_account_owner_id`:
 
-[Learn about Gateway](../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 import os
@@ -119,7 +115,6 @@ toolset = ACIToolset(
 )
 
 agent = Agent('gateway/openai:gpt-5', toolsets=[toolset])
-
 ```
 
 ```python
@@ -137,13 +132,12 @@ toolset = ACIToolset(
 )
 
 agent = Agent('openai:gpt-5', toolsets=[toolset])
-
 ```
 
 ## See Also
 
-- [Function Tools](../tools/) - Basic tool concepts and registration
-- [Toolsets](../toolsets/) - Managing collections of tools
-- [MCP Client](../mcp/client/) - Using MCP servers with Pydantic AI
-- [LangChain Toolsets](../toolsets/#langchain-tools) - Using LangChain toolsets
-- [ACI.dev Toolsets](../toolsets/#aci-tools) - Using ACI.dev toolsets
+- [Function Tools](https://ai.pydantic.dev/tools/index.md) - Basic tool concepts and registration
+- [Toolsets](https://ai.pydantic.dev/toolsets/index.md) - Managing collections of tools
+- [MCP Client](https://ai.pydantic.dev/mcp/client/index.md) - Using MCP servers with Pydantic AI
+- [LangChain Toolsets](https://ai.pydantic.dev/toolsets/#langchain-tools) - Using LangChain toolsets
+- [ACI.dev Toolsets](https://ai.pydantic.dev/toolsets/#aci-tools) - Using ACI.dev toolsets

@@ -6,7 +6,6 @@
 OutputDataT = TypeVar(
     "OutputDataT", default=str, covariant=True
 )
-
 ```
 
 Covariant type variable for the output data type of a run.
@@ -17,7 +16,9 @@ Bases: `Generic[OutputDataT]`
 
 Marker class to use a tool for output and optionally customize the tool.
 
-Example: tool_output.py
+Example:
+
+tool_output.py
 
 ```python
 from pydantic import BaseModel
@@ -45,7 +46,6 @@ agent = Agent(
 result = agent.run_sync('What is a banana?')
 print(repr(result.output))
 #> Fruit(name='banana', color='yellow')
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/output.py`
@@ -110,14 +110,12 @@ class ToolOutput(Generic[OutputDataT]):
         self.description = description
         self.max_retries = max_retries
         self.strict = strict
-
 ````
 
 #### output
 
 ```python
 output: OutputTypeOrFunction[OutputDataT] = type_
-
 ```
 
 An output type or function.
@@ -126,7 +124,6 @@ An output type or function.
 
 ```python
 name: str | None = name
-
 ```
 
 The name of the tool that will be passed to the model. If not specified and only one output is provided, `final_result` will be used. If multiple outputs are provided, the name of the output type or function will be added to the tool name.
@@ -135,7 +132,6 @@ The name of the tool that will be passed to the model. If not specified and only
 
 ```python
 description: str | None = description
-
 ```
 
 The description of the tool that will be passed to the model. If not specified, the docstring of the output type or function will be used.
@@ -144,7 +140,6 @@ The description of the tool that will be passed to the model. If not specified, 
 
 ```python
 max_retries: int | None = max_retries
-
 ```
 
 The maximum number of retries for the tool.
@@ -153,7 +148,6 @@ The maximum number of retries for the tool.
 
 ```python
 strict: bool | None = strict
-
 ```
 
 Whether to use strict mode for the tool.
@@ -164,7 +158,9 @@ Bases: `Generic[OutputDataT]`
 
 Marker class to use the model's native structured outputs functionality for outputs and optionally customize the name and description.
 
-Example: native_output.py
+Example:
+
+native_output.py
 
 ```python
 from pydantic_ai import Agent, NativeOutput
@@ -182,7 +178,6 @@ agent = Agent(
 result = agent.run_sync('What is a Ford Explorer?')
 print(repr(result.output))
 #> Vehicle(name='Ford Explorer', wheels=4)
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/output.py`
@@ -220,6 +215,11 @@ class NativeOutput(Generic[OutputDataT]):
     """The description of the structured output that will be passed to the model. If not specified and only one output is provided, the docstring of the output type or function will be used."""
     strict: bool | None
     """Whether to use strict mode for the output, if the model supports it."""
+    template: str | None
+    """Template for the prompt passed to the model.
+    The '{schema}' placeholder will be replaced with the output JSON schema.
+    If no template is specified but the model's profile indicates that it requires the schema to be sent as a prompt, the default template specified on the profile will be used.
+    """
 
     def __init__(
         self,
@@ -228,12 +228,13 @@ class NativeOutput(Generic[OutputDataT]):
         name: str | None = None,
         description: str | None = None,
         strict: bool | None = None,
+        template: str | None = None,
     ):
         self.outputs = outputs
         self.name = name
         self.description = description
         self.strict = strict
-
+        self.template = template
 ````
 
 #### outputs
@@ -243,7 +244,6 @@ outputs: (
     OutputTypeOrFunction[OutputDataT]
     | Sequence[OutputTypeOrFunction[OutputDataT]]
 ) = outputs
-
 ```
 
 The output types or functions.
@@ -252,7 +252,6 @@ The output types or functions.
 
 ```python
 name: str | None = name
-
 ```
 
 The name of the structured output that will be passed to the model. If not specified and only one output is provided, the name of the output type or function will be used.
@@ -261,7 +260,6 @@ The name of the structured output that will be passed to the model. If not speci
 
 ```python
 description: str | None = description
-
 ```
 
 The description of the structured output that will be passed to the model. If not specified and only one output is provided, the docstring of the output type or function will be used.
@@ -270,10 +268,17 @@ The description of the structured output that will be passed to the model. If no
 
 ```python
 strict: bool | None = strict
-
 ```
 
 Whether to use strict mode for the output, if the model supports it.
+
+#### template
+
+```python
+template: str | None = template
+```
+
+Template for the prompt passed to the model. The '{schema}' placeholder will be replaced with the output JSON schema. If no template is specified but the model's profile indicates that it requires the schema to be sent as a prompt, the default template specified on the profile will be used.
 
 ### PromptedOutput
 
@@ -281,7 +286,9 @@ Bases: `Generic[OutputDataT]`
 
 Marker class to use a prompt to tell the model what to output and optionally customize the prompt.
 
-Example: prompted_output.py
+Example:
+
+prompted_output.py
 
 ```python
 from pydantic import BaseModel
@@ -318,7 +325,6 @@ agent = Agent(
 result = agent.run_sync('What is a Ford Explorer?')
 print(repr(result.output))
 #> Vehicle(name='Ford Explorer', wheels=4)
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/output.py`
@@ -391,7 +397,6 @@ class PromptedOutput(Generic[OutputDataT]):
         self.name = name
         self.description = description
         self.template = template
-
 ````
 
 #### outputs
@@ -401,7 +406,6 @@ outputs: (
     OutputTypeOrFunction[OutputDataT]
     | Sequence[OutputTypeOrFunction[OutputDataT]]
 ) = outputs
-
 ```
 
 The output types or functions.
@@ -410,7 +414,6 @@ The output types or functions.
 
 ```python
 name: str | None = name
-
 ```
 
 The name of the structured output that will be passed to the model. If not specified and only one output is provided, the name of the output type or function will be used.
@@ -419,7 +422,6 @@ The name of the structured output that will be passed to the model. If not speci
 
 ```python
 description: str | None = description
-
 ```
 
 The description that will be passed to the model. If not specified and only one output is provided, the docstring of the output type or function will be used.
@@ -428,7 +430,6 @@ The description that will be passed to the model. If not specified and only one 
 
 ```python
 template: str | None = template
-
 ```
 
 Template for the prompt passed to the model. The '{schema}' placeholder will be replaced with the output JSON schema. If not specified, the default template specified on the model's profile will be used.
@@ -456,7 +457,6 @@ agent = Agent(
 result = agent.run_sync('Who was Albert Einstein?')
 print(result.output)
 #> ['Albert', 'Einstein', 'was', 'a', 'German-born', 'theoretical', 'physicist.']
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/output.py`
@@ -487,14 +487,12 @@ class TextOutput(Generic[OutputDataT]):
 
     output_function: TextOutputFunc[OutputDataT]
     """The function that will be called to process the model's plain text output. The function must take a single string argument."""
-
 ````
 
 #### output_function
 
 ```python
 output_function: TextOutputFunc[OutputDataT]
-
 ```
 
 The function that will be called to process the model's plain text output. The function must take a single string argument.
@@ -507,16 +505,21 @@ StructuredDict(
     name: str | None = None,
     description: str | None = None,
 ) -> type[JsonSchemaValue]
-
 ```
 
 Returns a `dict[str, Any]` subclass with a JSON schema attached that will be used for structured output.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `json_schema` | `JsonSchemaValue` | A JSON schema of type object defining the structure of the dictionary content. | *required* | | `name` | `str | None` | Optional name of the structured output. If not provided, the title field of the JSON schema will be used if it's present. | `None` | | `description` | `str | None` | Optional description of the structured output. If not provided, the description field of the JSON schema will be used if it's present. | `None` |
+| Name          | Type              | Description                                                                    | Default                                                                                                                                |
+| ------------- | ----------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `json_schema` | `JsonSchemaValue` | A JSON schema of type object defining the structure of the dictionary content. | *required*                                                                                                                             |
+| `name`        | \`str             | None\`                                                                         | Optional name of the structured output. If not provided, the title field of the JSON schema will be used if it's present.              |
+| `description` | \`str             | None\`                                                                         | Optional description of the structured output. If not provided, the description field of the JSON schema will be used if it's present. |
 
-Example: structured_dict.py
+Example:
+
+structured_dict.py
 
 ```python
 from pydantic_ai import Agent, StructuredDict
@@ -534,7 +537,6 @@ agent = Agent('openai:gpt-4o', output_type=StructuredDict(schema))
 result = agent.run_sync('Create a person')
 print(result.output)
 #> {'name': 'John Doe', 'age': 30}
-
 ```
 
 Source code in `pydantic_ai_slim/pydantic_ai/output.py`
@@ -605,7 +607,6 @@ def StructuredDict(
             return json_schema
 
     return _StructuredDict
-
 ````
 
 ### DeferredToolRequests
@@ -616,7 +617,7 @@ This can be used as an agent's `output_type` and will be used as the output of t
 
 Results can be passed to the next agent run using a DeferredToolResults object with the same tool call IDs.
 
-See [deferred tools docs](../../deferred-tools/#deferred-tools) for more information.
+See [deferred tools docs](https://ai.pydantic.dev/deferred-tools/#deferred-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/tools.py`
 
@@ -638,14 +639,12 @@ class DeferredToolRequests:
     """Tool calls that require human-in-the-loop approval."""
     metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
     """Metadata for deferred tool calls, keyed by `tool_call_id`."""
-
 ```
 
 #### calls
 
 ```python
 calls: list[ToolCallPart] = field(default_factory=list)
-
 ```
 
 Tool calls that require external execution.
@@ -654,7 +653,6 @@ Tool calls that require external execution.
 
 ```python
 approvals: list[ToolCallPart] = field(default_factory=list)
-
 ```
 
 Tool calls that require human-in-the-loop approval.
@@ -665,7 +663,6 @@ Tool calls that require human-in-the-loop approval.
 metadata: dict[str, dict[str, Any]] = field(
     default_factory=dict
 )
-
 ```
 
 Metadata for deferred tool calls, keyed by `tool_call_id`.

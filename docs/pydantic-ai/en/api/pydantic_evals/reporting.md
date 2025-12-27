@@ -40,14 +40,12 @@ class ReportCase(Generic[InputsT, OutputT, MetadataT]):
     """The span ID of the case span."""
 
     evaluator_failures: list[EvaluatorFailure] = field(default_factory=list)
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the case.
@@ -56,7 +54,6 @@ The name of the case.
 
 ```python
 inputs: InputsT
-
 ```
 
 The inputs to the task, from Case.inputs.
@@ -65,7 +62,6 @@ The inputs to the task, from Case.inputs.
 
 ```python
 metadata: MetadataT | None
-
 ```
 
 Any metadata associated with the case, from Case.metadata.
@@ -74,7 +70,6 @@ Any metadata associated with the case, from Case.metadata.
 
 ```python
 expected_output: OutputT | None
-
 ```
 
 The expected output of the task, from Case.expected_output.
@@ -83,7 +78,6 @@ The expected output of the task, from Case.expected_output.
 
 ```python
 output: OutputT
-
 ```
 
 The output of the task execution.
@@ -92,7 +86,6 @@ The output of the task execution.
 
 ```python
 trace_id: str | None = None
-
 ```
 
 The trace ID of the case span.
@@ -101,7 +94,6 @@ The trace ID of the case span.
 
 ```python
 span_id: str | None = None
-
 ```
 
 The span ID of the case span.
@@ -137,14 +129,12 @@ class ReportCaseFailure(Generic[InputsT, OutputT, MetadataT]):
     """The trace ID of the case span."""
     span_id: str | None = None
     """The span ID of the case span."""
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the case.
@@ -153,7 +143,6 @@ The name of the case.
 
 ```python
 inputs: InputsT
-
 ```
 
 The inputs to the task, from Case.inputs.
@@ -162,7 +151,6 @@ The inputs to the task, from Case.inputs.
 
 ```python
 metadata: MetadataT | None
-
 ```
 
 Any metadata associated with the case, from Case.metadata.
@@ -171,7 +159,6 @@ Any metadata associated with the case, from Case.metadata.
 
 ```python
 expected_output: OutputT | None
-
 ```
 
 The expected output of the task, from Case.expected_output.
@@ -180,7 +167,6 @@ The expected output of the task, from Case.expected_output.
 
 ```python
 error_message: str
-
 ```
 
 The message of the exception that caused the failure.
@@ -189,7 +175,6 @@ The message of the exception that caused the failure.
 
 ```python
 error_stacktrace: str
-
 ```
 
 The stacktrace of the exception that caused the failure.
@@ -198,7 +183,6 @@ The stacktrace of the exception that caused the failure.
 
 ```python
 trace_id: str | None = None
-
 ```
 
 The trace ID of the case span.
@@ -207,7 +191,6 @@ The trace ID of the case span.
 
 ```python
 span_id: str | None = None
-
 ```
 
 The span ID of the case span.
@@ -296,14 +279,12 @@ class ReportCaseAggregate(BaseModel):
             task_duration=average_task_duration,
             total_duration=average_total_duration,
         )
-
 ```
 
 #### average
 
 ```python
 average(cases: list[ReportCase]) -> ReportCaseAggregate
-
 ```
 
 Produce a synthetic "summary" case by averaging quantitative attributes.
@@ -374,7 +355,6 @@ def average(cases: list[ReportCase]) -> ReportCaseAggregate:
         task_duration=average_task_duration,
         total_duration=average_total_duration,
     )
-
 ```
 
 ### EvaluationReport
@@ -703,14 +683,12 @@ class EvaluationReport(Generic[InputsT, OutputT, MetadataT]):
     def __str__(self) -> str:  # pragma: lax no cover
         """Return a string representation of the report."""
         return self.render()
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the report.
@@ -719,7 +697,6 @@ The name of the report.
 
 ```python
 cases: list[ReportCase[InputsT, OutputT, MetadataT]]
-
 ```
 
 The cases in the report.
@@ -730,7 +707,6 @@ The cases in the report.
 failures: list[
     ReportCaseFailure[InputsT, OutputT, MetadataT]
 ] = field(default_factory=list)
-
 ```
 
 The failures in the report. These are cases where task execution raised an exception.
@@ -739,7 +715,6 @@ The failures in the report. These are cases where task execution raised an excep
 
 ```python
 experiment_metadata: dict[str, Any] | None = None
-
 ```
 
 Metadata associated with the specific experiment represented by this report.
@@ -748,7 +723,6 @@ Metadata associated with the specific experiment represented by this report.
 
 ```python
 trace_id: str | None = None
-
 ```
 
 The trace ID of the evaluation.
@@ -757,7 +731,6 @@ The trace ID of the evaluation.
 
 ```python
 span_id: str | None = None
-
 ```
 
 The span ID of the evaluation.
@@ -797,7 +770,6 @@ render(
     duration_config: RenderNumberConfig | None = None,
     include_reasons: bool = False
 ) -> str
-
 ```
 
 Render this report to a nicely-formatted string, optionally comparing it to a baseline report.
@@ -863,7 +835,6 @@ def render(
         include_reasons=include_reasons,
     )
     return io_file.getvalue()
-
 ```
 
 #### print
@@ -902,7 +873,6 @@ print(
     duration_config: RenderNumberConfig | None = None,
     include_reasons: bool = False
 ) -> None
-
 ```
 
 Print this report to the console, optionally comparing it to a baseline report.
@@ -982,7 +952,6 @@ def print(
             metadata_config=metadata_config,
         )
         console.print(failures_table, style='red')
-
 ```
 
 #### console_table
@@ -1018,7 +987,6 @@ console_table(
     include_reasons: bool = False,
     with_title: bool = True
 ) -> Table
-
 ```
 
 Return a table containing the data from this report.
@@ -1081,7 +1049,6 @@ def console_table(
         return renderer.build_table(self, with_title=with_title)
     else:
         return renderer.build_diff_table(self, baseline, with_title=with_title)
-
 ```
 
 #### failures_table
@@ -1097,7 +1064,6 @@ failures_table(
     input_config: RenderValueConfig | None = None,
     metadata_config: RenderValueConfig | None = None
 ) -> Table
-
 ```
 
 Return a table containing the failures in this report.
@@ -1139,14 +1105,12 @@ def failures_table(
         include_evaluator_failures=False,  # Not applicable for failures table
     )
     return renderer.build_failures_table(self)
-
 ```
 
 #### __str__
 
 ```python
 __str__() -> str
-
 ```
 
 Return a string representation of the report.
@@ -1157,7 +1121,6 @@ Source code in `pydantic_evals/pydantic_evals/reporting/__init__.py`
 def __str__(self) -> str:  # pragma: lax no cover
     """Return a string representation of the report."""
     return self.render()
-
 ```
 
 ### RenderValueConfig
@@ -1176,7 +1139,6 @@ class RenderValueConfig(TypedDict, total=False):
     diff_checker: Callable[[Any, Any], bool] | None
     diff_formatter: Callable[[Any, Any], str | None] | None
     diff_style: str
-
 ```
 
 ### RenderNumberConfig
@@ -1249,14 +1211,12 @@ class RenderNumberConfig(TypedDict, total=False):
 
     If not provided, use red for scores and green for metrics. You can also use arbitrary `rich` styles, such as "bold red".
     """
-
 ```
 
 #### value_formatter
 
 ```python
 value_formatter: str | Callable[[float | int], str]
-
 ```
 
 The logic to use for formatting values.
@@ -1273,7 +1233,6 @@ diff_formatter: (
     | Callable[[float | int, float | int], str | None]
     | None
 )
-
 ```
 
 The logic to use for formatting details about the diff.
@@ -1289,7 +1248,6 @@ The strings produced by the value_formatter will always be included in the repor
 
 ```python
 diff_atol: float
-
 ```
 
 The absolute tolerance for considering a difference "significant".
@@ -1304,7 +1262,6 @@ If not provided, use 1e-6.
 
 ```python
 diff_rtol: float
-
 ```
 
 The relative tolerance for considering a difference "significant".
@@ -1317,7 +1274,6 @@ If not provided, use 0.001 if all values are ints, otherwise 0.05.
 
 ```python
 diff_increase_style: str
-
 ```
 
 The style to apply to diffed values that have a significant increase.
@@ -1330,7 +1286,6 @@ If not provided, use green for scores and red for metrics. You can also use arbi
 
 ```python
 diff_decrease_style: str
-
 ```
 
 The style to apply to diffed values that have significant decrease.
@@ -1757,14 +1712,12 @@ class ReportCaseRenderer:
         if baseline_str == new_str:
             return baseline_str  # pragma: no cover
         return f'{baseline_str}\n→\n{new_str}'
-
 ```
 
 #### build_base_table
 
 ```python
 build_base_table(title: str) -> Table
-
 ```
 
 Build and return a Rich Table for the diff output.
@@ -1797,14 +1750,12 @@ def build_base_table(self, title: str) -> Table:
     if self.include_durations:
         table.add_column('Durations' if self.include_total_duration else 'Duration', justify='right')
     return table
-
 ```
 
 #### build_failures_table
 
 ```python
 build_failures_table(title: str) -> Table
-
 ```
 
 Build and return a Rich Table for the failures output.
@@ -1827,14 +1778,12 @@ def build_failures_table(self, title: str) -> Table:
     if self.include_error_stacktrace:
         table.add_column('Error Stacktrace', overflow='fold')
     return table
-
 ```
 
 #### build_row
 
 ```python
 build_row(case: ReportCase) -> list[str]
-
 ```
 
 Build a table row for a single case.
@@ -1877,7 +1826,6 @@ def build_row(self, case: ReportCase) -> list[str]:
         row.append(self._render_durations(case))
 
     return row
-
 ```
 
 #### build_aggregate_row
@@ -1886,7 +1834,6 @@ def build_row(self, case: ReportCase) -> list[str]:
 build_aggregate_row(
     aggregate: ReportCaseAggregate,
 ) -> list[str]
-
 ```
 
 Build a table row for an aggregated case.
@@ -1929,7 +1876,6 @@ def build_aggregate_row(self, aggregate: ReportCaseAggregate) -> list[str]:
         row.append(self._render_durations(aggregate))
 
     return row
-
 ```
 
 #### build_diff_row
@@ -1938,7 +1884,6 @@ def build_aggregate_row(self, aggregate: ReportCaseAggregate) -> list[str]:
 build_diff_row(
     new_case: ReportCase, baseline: ReportCase
 ) -> list[str]
-
 ```
 
 Build a table row for a given case ID.
@@ -2013,7 +1958,6 @@ def build_diff_row(
         row.append(durations_diff)
 
     return row
-
 ```
 
 #### build_diff_aggregate_row
@@ -2022,7 +1966,6 @@ def build_diff_row(
 build_diff_aggregate_row(
     new: ReportCaseAggregate, baseline: ReportCaseAggregate
 ) -> list[str]
-
 ```
 
 Build a table row for a given case ID.
@@ -2075,14 +2018,12 @@ def build_diff_aggregate_row(
         row.append(durations_diff)
 
     return row
-
 ```
 
 #### build_failure_row
 
 ```python
 build_failure_row(case: ReportCaseFailure) -> list[str]
-
 ```
 
 Build a table row for a single case failure.
@@ -2110,7 +2051,6 @@ def build_failure_row(self, case: ReportCaseFailure) -> list[str]:
         row.append(case.error_stacktrace or EMPTY_CELL_STR)
 
     return row
-
 ```
 
 ### EvaluationRenderer
@@ -2370,7 +2310,6 @@ class EvaluationRenderer:
         if self.include_total_duration:
             all_durations += [x.total_duration for x in all_cases]
         return _NumberRenderer.infer_from_config(self.duration_config, 'duration', all_durations)
-
 ```
 
 #### build_table
@@ -2379,18 +2318,22 @@ class EvaluationRenderer:
 build_table(
     report: EvaluationReport, *, with_title: bool = True
 ) -> Table
-
 ```
 
 Build a table for the report.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `report` | `EvaluationReport` | The evaluation report to render | *required* | | `with_title` | `bool` | Whether to include the title in the table (default True) | `True` |
+| Name         | Type               | Description                                              | Default    |
+| ------------ | ------------------ | -------------------------------------------------------- | ---------- |
+| `report`     | `EvaluationReport` | The evaluation report to render                          | *required* |
+| `with_title` | `bool`             | Whether to include the title in the table (default True) | `True`     |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Table` | A Rich Table object |
+| Type    | Description         |
+| ------- | ------------------- |
+| `Table` | A Rich Table object |
 
 Source code in `pydantic_evals/pydantic_evals/reporting/__init__.py`
 
@@ -2419,7 +2362,6 @@ def build_table(self, report: EvaluationReport, *, with_title: bool = True) -> T
             table.add_row(*case_renderer.build_aggregate_row(average))
 
     return table
-
 ```
 
 #### build_diff_table
@@ -2431,18 +2373,23 @@ build_diff_table(
     *,
     with_title: bool = True
 ) -> Table
-
 ```
 
 Build a diff table comparing report to baseline.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `report` | `EvaluationReport` | The evaluation report to compare | *required* | | `baseline` | `EvaluationReport` | The baseline report to compare against | *required* | | `with_title` | `bool` | Whether to include the title in the table (default True) | `True` |
+| Name         | Type               | Description                                              | Default    |
+| ------------ | ------------------ | -------------------------------------------------------- | ---------- |
+| `report`     | `EvaluationReport` | The evaluation report to compare                         | *required* |
+| `baseline`   | `EvaluationReport` | The baseline report to compare against                   | *required* |
+| `with_title` | `bool`             | Whether to include the title in the table (default True) | `True`     |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Table` | A Rich Table object |
+| Type    | Description         |
+| ------- | ------------------- |
+| `Table` | A Rich Table object |
 
 Source code in `pydantic_evals/pydantic_evals/reporting/__init__.py`
 
@@ -2505,5 +2452,4 @@ def build_diff_table(
         table.add_row(*case_renderer.build_diff_aggregate_row(report_average, baseline_average))
 
     return table
-
 ```

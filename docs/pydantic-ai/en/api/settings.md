@@ -178,14 +178,12 @@ class ModelSettings(TypedDict, total=False):
     * Groq
     * Outlines (all providers)
     """
-
 ```
 
 #### max_tokens
 
 ```python
 max_tokens: int
-
 ```
 
 The maximum number of tokens to generate before stopping.
@@ -206,7 +204,6 @@ Supported by:
 
 ```python
 temperature: float
-
 ```
 
 Amount of randomness injected into the response.
@@ -230,7 +227,6 @@ Supported by:
 
 ```python
 top_p: float
-
 ```
 
 An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
@@ -254,7 +250,6 @@ Supported by:
 
 ```python
 timeout: float | Timeout
-
 ```
 
 Override the client-level default timeout for a request, in seconds.
@@ -271,7 +266,6 @@ Supported by:
 
 ```python
 parallel_tool_calls: bool
-
 ```
 
 Whether to allow parallel tool calls.
@@ -286,7 +280,6 @@ Supported by:
 
 ```python
 seed: int
-
 ```
 
 The random seed to use for the model, theoretically allowing for deterministic results.
@@ -304,7 +297,6 @@ Supported by:
 
 ```python
 presence_penalty: float
-
 ```
 
 Penalize new tokens based on whether they have appeared in the text so far.
@@ -322,7 +314,6 @@ Supported by:
 
 ```python
 frequency_penalty: float
-
 ```
 
 Penalize new tokens based on their existing frequency in the text so far.
@@ -340,7 +331,6 @@ Supported by:
 
 ```python
 logit_bias: dict[str, int]
-
 ```
 
 Modify the likelihood of specified tokens appearing in the completion.
@@ -355,7 +345,6 @@ Supported by:
 
 ```python
 stop_sequences: list[str]
-
 ```
 
 Sequences that will cause the model to stop generating.
@@ -374,7 +363,6 @@ Supported by:
 
 ```python
 extra_headers: dict[str, str]
-
 ```
 
 Extra headers to send to the model.
@@ -389,7 +377,6 @@ Supported by:
 
 ```python
 extra_body: object
-
 ```
 
 Extra body to send to the model.

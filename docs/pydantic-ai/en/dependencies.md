@@ -1,6 +1,6 @@
 # Dependencies
 
-Pydantic AI uses a dependency injection system to provide data and services to your agent's [system prompts](../agents/#system-prompts), [tools](../tools/) and [output validators](../output/#output-validator-functions).
+Pydantic AI uses a dependency injection system to provide data and services to your agent's [system prompts](https://ai.pydantic.dev/agents/#system-prompts), [tools](https://ai.pydantic.dev/tools/index.md) and [output validators](https://ai.pydantic.dev/output/#output-validator-functions).
 
 Matching Pydantic AI's design philosophy, our dependency system tries to use existing best practice in Python development rather than inventing esoteric "magic", this should make dependencies type-safe, understandable, easier to test, and ultimately easier to deploy in production.
 
@@ -12,7 +12,7 @@ Here's an example of defining an agent that requires dependencies.
 
 (**Note:** dependencies aren't actually used in this example, see [Accessing Dependencies](#accessing-dependencies) below)
 
-[Learn about Gateway](../gateway) unused_dependencies.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) unused_dependencies.py
 
 ```python
 from dataclasses import dataclass
@@ -43,7 +43,6 @@ async def main():
         )
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. Define a dataclass to hold dependencies.
@@ -81,7 +80,6 @@ async def main():
         )
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. Define a dataclass to hold dependencies.
@@ -94,7 +92,7 @@ async def main():
 
 Dependencies are accessed through the RunContext type, this should be the first parameter of system prompt functions etc.
 
-[Learn about Gateway](../gateway) system_prompt_dependencies.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) system_prompt_dependencies.py
 
 ```python
 from dataclasses import dataclass
@@ -132,7 +130,6 @@ async def main():
         result = await agent.run('Tell me a joke.', deps=deps)
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. RunContext may optionally be passed to a system_prompt function as the only argument.
@@ -178,7 +175,6 @@ async def main():
         result = await agent.run('Tell me a joke.', deps=deps)
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. RunContext may optionally be passed to a system_prompt function as the only argument.
@@ -190,7 +186,7 @@ async def main():
 
 ### Asynchronous vs. Synchronous dependencies
 
-[System prompt functions](../agents/#system-prompts), [function tools](../tools/) and [output validators](../output/#output-validator-functions) are all run in the async context of an agent run.
+[System prompt functions](https://ai.pydantic.dev/agents/#system-prompts), [function tools](https://ai.pydantic.dev/tools/index.md) and [output validators](https://ai.pydantic.dev/output/#output-validator-functions) are all run in the async context of an agent run.
 
 If these functions are not coroutines (e.g. `async def`) they are called with run_in_executor in a thread pool. It's therefore marginally preferable to use `async` methods where dependencies perform IO, although synchronous dependencies should work fine too.
 
@@ -200,7 +196,7 @@ Whether you use synchronous or asynchronous dependencies is completely independe
 
 Here's the same example as above, but with a synchronous dependency:
 
-[Learn about Gateway](../gateway) sync_dependencies.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) sync_dependencies.py
 
 ```python
 from dataclasses import dataclass
@@ -239,7 +235,6 @@ async def main():
     )
     print(result.output)
     #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. Here we use a synchronous `httpx.Client` instead of an asynchronous `httpx.AsyncClient`.
@@ -284,7 +279,6 @@ async def main():
     )
     print(result.output)
     #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. Here we use a synchronous `httpx.Client` instead of an asynchronous `httpx.AsyncClient`.
@@ -294,9 +288,9 @@ async def main():
 
 ## Full Example
 
-As well as system prompts, dependencies can be used in [tools](../tools/) and [output validators](../output/#output-validator-functions).
+As well as system prompts, dependencies can be used in [tools](https://ai.pydantic.dev/tools/index.md) and [output validators](https://ai.pydantic.dev/output/#output-validator-functions).
 
-[Learn about Gateway](../gateway) full_example.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) full_example.py
 
 ```python
 from dataclasses import dataclass
@@ -355,7 +349,6 @@ async def main():
         result = await agent.run('Tell me a joke.', deps=deps)
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. To pass `RunContext` to a tool, use the tool decorator.
@@ -420,7 +413,6 @@ async def main():
         result = await agent.run('Tell me a joke.', deps=deps)
         print(result.output)
         #> Did you hear about the toothpaste scandal? They called it Colgate.
-
 ```
 
 1. To pass `RunContext` to a tool, use the tool decorator.
@@ -436,7 +428,7 @@ While this can sometimes be done by calling the agent directly within unit tests
 
 This is done via the override method on the agent.
 
-[Learn about Gateway](../gateway) joke_app.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) joke_app.py
 
 ```python
 from dataclasses import dataclass
@@ -473,7 +465,6 @@ async def application_code(prompt: str) -> str:  # (3)!
         app_deps = MyDeps('foobar', client)
         result = await joke_agent.run(prompt, deps=app_deps)  # (4)!
     return result.output
-
 ```
 
 1. Define a method on the dependency to make the system prompt easier to customise.
@@ -518,7 +509,6 @@ async def application_code(prompt: str) -> str:  # (3)!
         app_deps = MyDeps('foobar', client)
         result = await joke_agent.run(prompt, deps=app_deps)  # (4)!
     return result.output
-
 ```
 
 1. Define a method on the dependency to make the system prompt easier to customise.
@@ -544,7 +534,6 @@ async def test_application_code():
     with joke_agent.override(deps=test_deps):  # (3)!
         joke = await application_code('Tell me a joke.')  # (4)!
     assert joke.startswith('Did you hear about the toothpaste scandal?')
-
 ```
 
 1. Define a subclass of `MyDeps` in tests to customise the system prompt factory.
@@ -556,6 +545,6 @@ async def test_application_code():
 
 The following examples demonstrate how to use dependencies in Pydantic AI:
 
-- [Weather Agent](../examples/weather-agent/)
-- [SQL Generation](../examples/sql-gen/)
-- [RAG](../examples/rag/)
+- [Weather Agent](https://ai.pydantic.dev/examples/weather-agent/index.md)
+- [SQL Generation](https://ai.pydantic.dev/examples/sql-gen/index.md)
+- [RAG](https://ai.pydantic.dev/examples/rag/index.md)

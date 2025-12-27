@@ -8,7 +8,6 @@ This module provides the main `Graph` class and `GraphRun` execution engine that
 
 ```python
 StateT = TypeVar('StateT', infer_variance=True)
-
 ```
 
 Type variable for graph state.
@@ -17,7 +16,6 @@ Type variable for graph state.
 
 ```python
 DepsT = TypeVar('DepsT', infer_variance=True)
-
 ```
 
 Type variable for graph dependencies.
@@ -26,7 +24,6 @@ Type variable for graph dependencies.
 
 ```python
 InputT = TypeVar('InputT', infer_variance=True)
-
 ```
 
 Type variable for graph inputs.
@@ -35,7 +32,6 @@ Type variable for graph inputs.
 
 ```python
 OutputT = TypeVar('OutputT', infer_variance=True)
-
 ```
 
 Type variable for graph outputs.
@@ -50,7 +46,9 @@ EndMarker is used internally to signal that the graph has completed execution an
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `OutputT` | | The type of the final output value | *required* |
+| Name      | Bound or Constraints | Description                        | Default    |
+| --------- | -------------------- | ---------------------------------- | ---------- |
+| `OutputT` |                      | The type of the final output value | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -76,7 +74,6 @@ class EndMarker(Generic[OutputT]):
     @property
     def value(self) -> OutputT:
         return self._value
-
 ```
 
 ### JoinItem
@@ -104,14 +101,12 @@ class JoinItem:
 
     fork_stack: ForkStack
     """The stack of ForkStackItems that led to producing this join item."""
-
 ```
 
 #### join_id
 
 ```python
 join_id: JoinID
-
 ```
 
 The ID of the join node this item is targeting.
@@ -120,7 +115,6 @@ The ID of the join node this item is targeting.
 
 ```python
 inputs: Any
-
 ```
 
 The input data for the join operation.
@@ -129,7 +123,6 @@ The input data for the join operation.
 
 ```python
 fork_stack: ForkStack
-
 ```
 
 The stack of ForkStackItems that led to producing this join item.
@@ -144,7 +137,12 @@ The Graph class represents a complete workflow graph with typed inputs, outputs,
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `InputT` | | The type of the input data | *required* | | `OutputT` | | The type of the output data | *required* |
+| Name      | Bound or Constraints | Description                  | Default    |
+| --------- | -------------------- | ---------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state  | *required* |
+| `DepsT`   |                      | The type of the dependencies | *required* |
+| `InputT`  |                      | The type of the input data   | *required* |
+| `OutputT` |                      | The type of the output data  | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -346,14 +344,12 @@ class Graph(Generic[StateT, DepsT, InputT, OutputT]):
             A string containing the Mermaid diagram of the graph
         """
         return self.render()
-
 ```
 
 #### name
 
 ```python
 name: str | None
-
 ```
 
 Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method.
@@ -362,7 +358,6 @@ Optional name for the graph, if not provided the name will be inferred from the 
 
 ```python
 state_type: type[StateT]
-
 ```
 
 The type of the graph state.
@@ -371,7 +366,6 @@ The type of the graph state.
 
 ```python
 deps_type: type[DepsT]
-
 ```
 
 The type of the dependencies.
@@ -380,7 +374,6 @@ The type of the dependencies.
 
 ```python
 input_type: type[InputT]
-
 ```
 
 The type of the input data.
@@ -389,7 +382,6 @@ The type of the input data.
 
 ```python
 output_type: type[OutputT]
-
 ```
 
 The type of the output data.
@@ -398,7 +390,6 @@ The type of the output data.
 
 ```python
 auto_instrument: bool
-
 ```
 
 Whether to automatically create instrumentation spans.
@@ -407,7 +398,6 @@ Whether to automatically create instrumentation spans.
 
 ```python
 nodes: dict[NodeID, AnyNode]
-
 ```
 
 All nodes in the graph indexed by their ID.
@@ -416,7 +406,6 @@ All nodes in the graph indexed by their ID.
 
 ```python
 edges_by_source: dict[NodeID, list[Path]]
-
 ```
 
 Outgoing paths from each source node.
@@ -425,7 +414,6 @@ Outgoing paths from each source node.
 
 ```python
 parent_forks: dict[JoinID, ParentFork[NodeID]]
-
 ```
 
 Parent fork information for each join node.
@@ -434,7 +422,6 @@ Parent fork information for each join node.
 
 ```python
 intermediate_join_nodes: dict[JoinID, set[JoinID]]
-
 ```
 
 For each join, the set of other joins that appear between it and its parent fork.
@@ -445,22 +432,27 @@ Used to determine which joins are "final" (have no other joins as intermediates)
 
 ```python
 get_parent_fork(join_id: JoinID) -> ParentFork[NodeID]
-
 ```
 
 Get the parent fork information for a join node.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `join_id` | `JoinID` | The ID of the join node | *required* |
+| Name      | Type     | Description             | Default    |
+| --------- | -------- | ----------------------- | ---------- |
+| `join_id` | `JoinID` | The ID of the join node | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ParentFork[NodeID]` | The parent fork information for the join |
+| Type                 | Description                              |
+| -------------------- | ---------------------------------------- |
+| `ParentFork[NodeID]` | The parent fork information for the join |
 
 Raises:
 
-| Type | Description | | --- | --- | | `RuntimeError` | If the join ID is not found or has no parent fork |
+| Type           | Description                                       |
+| -------------- | ------------------------------------------------- |
+| `RuntimeError` | If the join ID is not found or has no parent fork |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -481,14 +473,12 @@ def get_parent_fork(self, join_id: JoinID) -> ParentFork[NodeID]:
     if result is None:
         raise RuntimeError(f'Node {join_id} is not a join node or did not have a dominating fork (this is a bug)')
     return result
-
 ```
 
 #### is_final_join
 
 ```python
 is_final_join(join_id: JoinID) -> bool
-
 ```
 
 Check if a join is 'final' (has no downstream joins with the same parent fork).
@@ -497,11 +487,15 @@ A join is non-final if it appears as an intermediate node for another join with 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `join_id` | `JoinID` | The ID of the join node | *required* |
+| Name      | Type     | Description             | Default    |
+| --------- | -------- | ----------------------- | ---------- |
+| `join_id` | `JoinID` | The ID of the join node | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `bool` | True if the join is final, False if it's non-final |
+| Type   | Description                                        |
+| ------ | -------------------------------------------------- |
+| `bool` | True if the join is final, False if it's non-final |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -523,7 +517,6 @@ def is_final_join(self, join_id: JoinID) -> bool:
         if join_id in intermediate_joins:
             return False
     return True
-
 ```
 
 #### run
@@ -539,7 +532,6 @@ run(
     ) = None,
     infer_name: bool = True
 ) -> OutputT
-
 ```
 
 Execute the graph and return the final output.
@@ -548,11 +540,19 @@ This is the main entry point for graph execution. It runs the graph to completio
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `state` | `StateT` | The graph state instance | `None` | | `deps` | `DepsT` | The dependencies instance | `None` | | `inputs` | `InputT` | The input data for the graph | `None` | | `span` | `AbstractContextManager[AbstractSpan] | None` | Optional span for tracing/instrumentation | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name         | Type                                   | Description                                             | Default                                   |
+| ------------ | -------------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
+| `state`      | `StateT`                               | The graph state instance                                | `None`                                    |
+| `deps`       | `DepsT`                                | The dependencies instance                               | `None`                                    |
+| `inputs`     | `InputT`                               | The input data for the graph                            | `None`                                    |
+| `span`       | \`AbstractContextManager[AbstractSpan] | None\`                                                  | Optional span for tracing/instrumentation |
+| `infer_name` | `bool`                                 | Whether to infer the graph name from the calling frame. | `True`                                    |
 
 Returns:
 
-| Type | Description | | --- | --- | | `OutputT` | The final output from the graph execution |
+| Type      | Description                               |
+| --------- | ----------------------------------------- |
+| `OutputT` | The final output from the graph execution |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -597,7 +597,6 @@ async def run(
             except StopAsyncIteration:
                 assert isinstance(event, EndMarker), 'Graph run should end with an EndMarker.'
                 return cast(EndMarker[OutputT], event).value
-
 ```
 
 #### iter
@@ -613,7 +612,6 @@ iter(
     ) = None,
     infer_name: bool = True
 ) -> AsyncIterator[GraphRun[StateT, DepsT, OutputT]]
-
 ```
 
 Create an iterator for step-by-step graph execution.
@@ -622,11 +620,19 @@ This method allows for more fine-grained control over graph execution, enabling 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `state` | `StateT` | The graph state instance | `None` | | `deps` | `DepsT` | The dependencies instance | `None` | | `inputs` | `InputT` | The input data for the graph | `None` | | `span` | `AbstractContextManager[AbstractSpan] | None` | Optional span for tracing/instrumentation | `None` | | `infer_name` | `bool` | Whether to infer the graph name from the calling frame. | `True` |
+| Name         | Type                                   | Description                                             | Default                                   |
+| ------------ | -------------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
+| `state`      | `StateT`                               | The graph state instance                                | `None`                                    |
+| `deps`       | `DepsT`                                | The dependencies instance                               | `None`                                    |
+| `inputs`     | `InputT`                               | The input data for the graph                            | `None`                                    |
+| `span`       | \`AbstractContextManager[AbstractSpan] | None\`                                                  | Optional span for tracing/instrumentation |
+| `infer_name` | `bool`                                 | Whether to infer the graph name from the calling frame. | `True`                                    |
 
 Yields:
 
-| Type | Description | | --- | --- | | `AsyncIterator[GraphRun[StateT, DepsT, OutputT]]` | A GraphRun instance that can be iterated for step-by-step execution |
+| Type                                              | Description                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------------- |
+| `AsyncIterator[GraphRun[StateT, DepsT, OutputT]]` | A GraphRun instance that can be iterated for step-by-step execution |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -677,7 +683,6 @@ async def iter(
             traceparent=traceparent,
         ) as graph_run:
             yield graph_run
-
 ```
 
 #### render
@@ -688,18 +693,22 @@ render(
     title: str | None = None,
     direction: StateDiagramDirection | None = None
 ) -> str
-
 ```
 
 Render the graph as a Mermaid diagram string.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `title` | `str | None` | Optional title for the diagram | `None` | | `direction` | `StateDiagramDirection | None` | Optional direction for the diagram layout | `None` |
+| Name        | Type                    | Description | Default                                   |
+| ----------- | ----------------------- | ----------- | ----------------------------------------- |
+| `title`     | \`str                   | None\`      | Optional title for the diagram            |
+| `direction` | \`StateDiagramDirection | None\`      | Optional direction for the diagram layout |
 
 Returns:
 
-| Type | Description | | --- | --- | | `str` | A string containing the Mermaid diagram representation |
+| Type  | Description                                            |
+| ----- | ------------------------------------------------------ |
+| `str` | A string containing the Mermaid diagram representation |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -717,21 +726,21 @@ def render(self, *, title: str | None = None, direction: StateDiagramDirection |
     from pydantic_graph.beta.mermaid import build_mermaid_graph
 
     return build_mermaid_graph(self.nodes, self.edges_by_source).render(title=title, direction=direction)
-
 ```
 
 #### __str__
 
 ```python
 __str__() -> str
-
 ```
 
 Return a Mermaid diagram representation of the graph.
 
 Returns:
 
-| Type | Description | | --- | --- | | `str` | A string containing the Mermaid diagram of the graph |
+| Type  | Description                                          |
+| ----- | ---------------------------------------------------- |
+| `str` | A string containing the Mermaid diagram of the graph |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -743,7 +752,6 @@ def __str__(self) -> str:
         A string containing the Mermaid diagram of the graph
     """
     return self.render()
-
 ```
 
 ### GraphTaskRequest
@@ -774,14 +782,12 @@ class GraphTaskRequest:
 
     Used by the GraphRun to decide when to proceed through joins.
     """
-
 ```
 
 #### node_id
 
 ```python
 node_id: NodeID
-
 ```
 
 The ID of the node to execute.
@@ -790,7 +796,6 @@ The ID of the node to execute.
 
 ```python
 inputs: Any
-
 ```
 
 The input data for the node.
@@ -799,7 +804,6 @@ The input data for the node.
 
 ```python
 fork_stack: ForkStack = field(repr=False)
-
 ```
 
 Stack of forks that have been entered.
@@ -835,14 +839,12 @@ class GraphTask(GraphTaskRequest):
         if isinstance(request, GraphTask):
             return request
         return GraphTask(request.node_id, request.inputs, request.fork_stack, get_task_id())
-
 ```
 
 #### task_id
 
 ```python
 task_id: TaskID = field(repr=False)
-
 ```
 
 Unique identifier for this task.
@@ -857,7 +859,11 @@ GraphRun manages the execution state for a single run of a graph, including task
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `OutputT` | | The type of the output data | *required* |
+| Name      | Bound or Constraints | Description                  | Default    |
+| --------- | -------------------- | ---------------------------- | ---------- |
+| `StateT`  |                      | The type of the graph state  | *required* |
+| `DepsT`   |                      | The type of the dependencies | *required* |
+| `OutputT` |                      | The type of the output data  | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -1042,7 +1048,6 @@ class GraphRun(Generic[StateT, DepsT, OutputT]):
         next_id = NodeRunID(f'task:{self._next_node_run_id}')
         self._next_node_run_id += 1
         return next_id
-
 ```
 
 #### __init__
@@ -1056,14 +1061,19 @@ __init__(
     inputs: InputT,
     traceparent: str | None
 )
-
 ```
 
 Initialize a graph run.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `graph` | `Graph[StateT, DepsT, InputT, OutputT]` | The graph to execute | *required* | | `state` | `StateT` | The graph state instance | *required* | | `deps` | `DepsT` | The dependencies instance | *required* | | `inputs` | `InputT` | The input data for the graph | *required* | | `traceparent` | `str | None` | Optional trace parent for instrumentation | *required* |
+| Name          | Type                                    | Description                  | Default                                   |
+| ------------- | --------------------------------------- | ---------------------------- | ----------------------------------------- |
+| `graph`       | `Graph[StateT, DepsT, InputT, OutputT]` | The graph to execute         | *required*                                |
+| `state`       | `StateT`                                | The graph state instance     | *required*                                |
+| `deps`        | `DepsT`                                 | The dependencies instance    | *required*                                |
+| `inputs`      | `InputT`                                | The input data for the graph | *required*                                |
+| `traceparent` | \`str                                   | None\`                       | Optional trace parent for instrumentation |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -1123,14 +1133,12 @@ def __init__(
 
     self.__traceparent = traceparent
     self._async_exit_stack = AsyncExitStack()
-
 ```
 
 #### graph
 
 ```python
 graph = graph
-
 ```
 
 The graph being executed.
@@ -1139,7 +1147,6 @@ The graph being executed.
 
 ```python
 state = state
-
 ```
 
 The graph state instance.
@@ -1148,7 +1155,6 @@ The graph state instance.
 
 ```python
 deps = deps
-
 ```
 
 The dependencies instance.
@@ -1157,7 +1163,6 @@ The dependencies instance.
 
 ```python
 inputs = inputs
-
 ```
 
 The initial input data.
@@ -1168,14 +1173,15 @@ The initial input data.
 __aiter__() -> (
     AsyncIterator[EndMarker[OutputT] | Sequence[GraphTask]]
 )
-
 ```
 
 Return self as an async iterator.
 
 Returns:
 
-| Type | Description | | --- | --- | | `AsyncIterator[EndMarker[OutputT] | Sequence[GraphTask]]` | Self for async iteration |
+| Type                                | Description             |
+| ----------------------------------- | ----------------------- |
+| \`AsyncIterator\[EndMarker[OutputT] | Sequence[GraphTask]\]\` |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -1187,21 +1193,21 @@ def __aiter__(self) -> AsyncIterator[EndMarker[OutputT] | Sequence[GraphTask]]:
         Self for async iteration
     """
     return self
-
 ```
 
 #### __anext__
 
 ```python
 __anext__() -> EndMarker[OutputT] | Sequence[GraphTask]
-
 ```
 
 Get the next item in the async iteration.
 
 Returns:
 
-| Type | Description | | --- | --- | | `EndMarker[OutputT] | Sequence[GraphTask]` | The next execution result from the graph |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| \`EndMarker[OutputT] | Sequence[GraphTask]\` |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -1217,7 +1223,6 @@ async def __anext__(self) -> EndMarker[OutputT] | Sequence[GraphTask]:
     else:
         self._next = await self._iterator.asend(self._next)
     return self._next
-
 ```
 
 #### next
@@ -1230,7 +1235,6 @@ next(
         | None
     ) = None,
 ) -> EndMarker[OutputT] | Sequence[GraphTask]
-
 ```
 
 Advance the graph execution by one step.
@@ -1239,11 +1243,15 @@ This method allows for sending a value to the iterator, which is useful for resu
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `value` | `EndMarker[OutputT] | Sequence[GraphTaskRequest] | None` | Optional value to send to the iterator | `None` |
+| Name    | Type                 | Description                | Default |
+| ------- | -------------------- | -------------------------- | ------- |
+| `value` | \`EndMarker[OutputT] | Sequence[GraphTaskRequest] | None\`  |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EndMarker[OutputT] | Sequence[GraphTask]` | The next execution result: either an EndMarker, or sequence of GraphTasks |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| \`EndMarker[OutputT] | Sequence[GraphTask]\` |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph.py`
 
@@ -1272,31 +1280,32 @@ async def next(
         else:
             self._next = [GraphTask.from_request(gtr, self._get_next_task_id) for gtr in value]
     return await anext(self)
-
 ```
 
 #### next_task
 
 ```python
 next_task: EndMarker[OutputT] | Sequence[GraphTask]
-
 ```
 
 Get the next task(s) to be executed.
 
 Returns:
 
-| Type | Description | | --- | --- | | `EndMarker[OutputT] | Sequence[GraphTask]` | The next execution item, or the initial task if none is set |
+| Type                 | Description           |
+| -------------------- | --------------------- |
+| \`EndMarker[OutputT] | Sequence[GraphTask]\` |
 
 #### output
 
 ```python
 output: OutputT | None
-
 ```
 
 Get the final output if the graph has completed.
 
 Returns:
 
-| Type | Description | | --- | --- | | `OutputT | None` | The output value if execution is complete, None otherwise |
+| Type      | Description |
+| --------- | ----------- |
+| \`OutputT | None\`      |

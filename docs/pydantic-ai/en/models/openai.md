@@ -6,12 +6,10 @@ To use OpenAI models or OpenAI-compatible APIs, you need to either install `pyda
 
 ```bash
 pip install "pydantic-ai-slim[openai]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[openai]"
-
 ```
 
 ## Configuration
@@ -24,19 +22,17 @@ Once you have the API key, you can set it as an environment variable:
 
 ```bash
 export OPENAI_API_KEY='your-api-key'
-
 ```
 
 You can then use `OpenAIChatModel` by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/openai:gpt-5')
 ...
-
 ```
 
 ```python
@@ -44,7 +40,6 @@ from pydantic_ai import Agent
 
 agent = Agent('openai:gpt-5')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -56,7 +51,6 @@ from pydantic_ai.models.openai import OpenAIChatModel
 model = OpenAIChatModel('gpt-5')
 agent = Agent(model)
 ...
-
 ```
 
 By default, the `OpenAIChatModel` uses the `OpenAIProvider` with the `base_url` set to `https://api.openai.com/v1`.
@@ -73,7 +67,6 @@ from pydantic_ai.providers.openai import OpenAIProvider
 model = OpenAIChatModel('gpt-5', provider=OpenAIProvider(api_key='your-api-key'))
 agent = Agent(model)
 ...
-
 ```
 
 ## Custom OpenAI Client
@@ -93,7 +86,6 @@ client = AsyncOpenAI(max_retries=3)
 model = OpenAIChatModel('gpt-5', provider=OpenAIProvider(openai_client=client))
 agent = Agent(model)
 ...
-
 ```
 
 You could also use the [`AsyncAzureOpenAI`](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/switching-endpoints) client to use the Azure OpenAI API. Note that the `AsyncAzureOpenAI` is a subclass of `AsyncOpenAI`.
@@ -117,7 +109,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ## OpenAI Responses API
@@ -126,14 +117,13 @@ Pydantic AI also supports OpenAI's [Responses API](https://platform.openai.com/d
 
 You can use OpenAIResponsesModel by name:
 
-[Learn about Gateway](../../gateway)
+[Learn about Gateway](https://ai.pydantic.dev/gateway)
 
 ```python
 from pydantic_ai import Agent
 
 agent = Agent('gateway/openai-responses:gpt-5')
 ...
-
 ```
 
 ```python
@@ -141,7 +131,6 @@ from pydantic_ai import Agent
 
 agent = Agent('openai-responses:gpt-5')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -153,7 +142,6 @@ from pydantic_ai.models.openai import OpenAIResponsesModel
 model = OpenAIResponsesModel('gpt-5')
 agent = Agent(model)
 ...
-
 ```
 
 You can learn more about the differences between the Responses API and Chat Completions API in the [OpenAI API docs](https://platform.openai.com/docs/guides/migrate-to-responses).
@@ -168,7 +156,7 @@ The Responses API has built-in tools that you can use instead of building your o
 - [File search](https://platform.openai.com/docs/guides/tools-file-search): allow models to search your files for relevant information before generating a response.
 - [Computer use](https://platform.openai.com/docs/guides/tools-computer-use): allow models to use a computer to perform tasks on your behalf.
 
-Web search, Code interpreter, Image generation, and File search are natively supported through the [Built-in tools](../../builtin-tools/) feature.
+Web search, Code interpreter, Image generation, and File search are natively supported through the [Built-in tools](https://ai.pydantic.dev/builtin-tools/index.md) feature.
 
 Computer use can be enabled by passing an [`openai.types.responses.ComputerToolParam`](https://github.com/openai/openai-python/blob/main/src/openai/types/responses/computer_tool_param.py) in the `openai_builtin_tools` setting on OpenAIResponsesModelSettings. It doesn't currently generate BuiltinToolCallPart or BuiltinToolReturnPart parts in the message history, or streamed events; please submit an issue if you need native support for this built-in tool.
 
@@ -192,7 +180,6 @@ agent = Agent(model=model, model_settings=model_settings)
 
 result = agent.run_sync('Open a new browser tab')
 print(result.output)
-
 ```
 
 #### Referencing earlier responses
@@ -213,7 +200,6 @@ model_settings = OpenAIResponsesModelSettings(
 result = agent.run_sync('What is the secret code?', model_settings=model_settings)
 print(result.output)
 #> 1234
-
 ```
 
 By passing the `provider_response_id` from an earlier run, you can allow the model to build on its own prior reasoning without needing to resend the full message history.
@@ -243,7 +229,6 @@ result2 = agent.run_sync(
 )
 print(result2.output)
 #> This is an excellent joke invented by Samuel Colvin, it needs no explanation.
-
 ```
 
 ## OpenAI-compatible Models
@@ -265,7 +250,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 Various providers also have their own provider classes so that you don't need to specify the base URL yourself and you can use the standard `<PROVIDER>_API_KEY` environment variable to set the API key. When a provider has its own provider class, you can use the `Agent("<provider>:<model>")` shorthand, e.g. `Agent("deepseek:deepseek-chat")` or `Agent("moonshotai:kimi-k2-0711-preview")`, instead of building the `OpenAIChatModel` explicitly. Similarly, you can pass the provider name as a string to the `provider` argument on `OpenAIChatModel` instead of building instantiating the provider class explicitly.
@@ -293,7 +277,6 @@ model = OpenAIChatModel(
     )
 )
 agent = Agent(model)
-
 ```
 
 ### DeepSeek
@@ -307,7 +290,6 @@ from pydantic_ai import Agent
 
 agent = Agent('deepseek:deepseek-chat')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -323,7 +305,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 You can also customize any provider with a custom `http_client`:
@@ -344,7 +325,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Alibaba Cloud Model Studio (DashScope)
@@ -356,7 +336,6 @@ from pydantic_ai import Agent
 
 agent = Agent('alibaba:qwen-max')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -372,7 +351,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 The `AlibabaProvider` uses the international DashScope compatible endpoint `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` by default. You can override this by passing a custom `base_url`:
@@ -391,7 +369,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Ollama
@@ -407,7 +384,6 @@ from pydantic_ai import Agent
 
 agent = Agent('ollama:gpt-oss:20b')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -436,7 +412,6 @@ print(result.output)
 #> city='London' country='United Kingdom'
 print(result.usage())
 #> RunUsage(input_tokens=57, output_tokens=8, requests=1)
-
 ```
 
 1. For Ollama Cloud, use the `base_url='https://ollama.com/v1'` and set the `OLLAMA_API_KEY` environment variable.
@@ -450,7 +425,6 @@ from pydantic_ai import Agent
 
 agent = Agent('azure:gpt-5')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -470,7 +444,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Vercel AI Gateway
@@ -484,7 +457,6 @@ from pydantic_ai import Agent
 
 agent = Agent('vercel:anthropic/claude-4-sonnet')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -500,7 +472,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Grok (xAI)
@@ -514,7 +485,6 @@ from pydantic_ai import Agent
 
 agent = Agent('grok:grok-2-1212')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -530,7 +500,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### MoonshotAI
@@ -544,7 +513,6 @@ from pydantic_ai import Agent
 
 agent = Agent('moonshotai:kimi-k2-0711-preview')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -560,7 +528,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### GitHub Models
@@ -574,7 +541,6 @@ from pydantic_ai import Agent
 
 agent = Agent('github:xai/grok-3-mini')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -590,7 +556,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 GitHub Models supports various model families with different prefixes. You can see the full list on the [GitHub Marketplace](https://github.com/marketplace?type=models) or the public [catalog endpoint](https://models.github.ai/catalog/models).
@@ -613,7 +578,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Fireworks AI
@@ -627,7 +591,6 @@ from pydantic_ai import Agent
 
 agent = Agent('fireworks:accounts/fireworks/models/qwq-32b')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -643,7 +606,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Together AI
@@ -657,7 +619,6 @@ from pydantic_ai import Agent
 
 agent = Agent('together:meta-llama/Llama-3.3-70B-Instruct-Turbo-Free')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -673,7 +634,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### Heroku AI
@@ -687,7 +647,6 @@ from pydantic_ai import Agent
 
 agent = Agent('heroku:claude-sonnet-4-5')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -703,7 +662,6 @@ model = OpenAIChatModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ### LiteLLM
@@ -732,7 +690,6 @@ result = agent.run_sync('What is the capital of France?')
 print(result.output)
 #> The capital of France is Paris.
 ...
-
 ```
 
 ### Nebius AI Studio
@@ -748,7 +705,6 @@ agent = Agent('nebius:Qwen/Qwen3-32B-fast')
 result = agent.run_sync('What is the capital of France?')
 print(result.output)
 #> The capital of France is Paris.
-
 ```
 
 Or initialise the model and provider directly:
@@ -766,7 +722,6 @@ agent = Agent(model)
 result = agent.run_sync('What is the capital of France?')
 print(result.output)
 #> The capital of France is Paris.
-
 ```
 
 ### OVHcloud AI Endpoints
@@ -784,7 +739,6 @@ agent = Agent('ovhcloud:gpt-oss-120b')
 result = agent.run_sync('What is the capital of France?')
 print(result.output)
 #> The capital of France is Paris.
-
 ```
 
 If you need to configure the provider, you can use the OVHcloudProvider class:
@@ -802,5 +756,4 @@ agent = Agent(model)
 result = agent.run_sync('What is the capital of France?')
 print(result.output)
 #> The capital of France is Paris.
-
 ```

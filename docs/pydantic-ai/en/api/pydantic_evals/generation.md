@@ -8,7 +8,6 @@ This module provides functions for generating sample datasets for testing and ex
 
 ```python
 InputsT = TypeVar('InputsT', default=Any)
-
 ```
 
 Generic type for the inputs to the task being evaluated.
@@ -17,7 +16,6 @@ Generic type for the inputs to the task being evaluated.
 
 ```python
 OutputT = TypeVar('OutputT', default=Any)
-
 ```
 
 Generic type for the expected output of the task being evaluated.
@@ -26,7 +24,6 @@ Generic type for the expected output of the task being evaluated.
 
 ```python
 MetadataT = TypeVar('MetadataT', default=Any)
-
 ```
 
 Generic type for the metadata associated with the task being evaluated.
@@ -47,7 +44,6 @@ generate_dataset(
     n_examples: int = 3,
     extra_instructions: str | None = None
 ) -> Dataset[InputsT, OutputT, MetadataT]
-
 ```
 
 Use an LLM to generate a dataset of test cases, each consisting of input, expected output, and metadata.
@@ -56,15 +52,26 @@ This function creates a properly structured dataset with the specified input, ou
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `path` | `Path | str | None` | Optional path to save the generated dataset. If provided, the dataset will be saved to this location. | `None` | | `dataset_type` | `type[Dataset[InputsT, OutputT, MetadataT]]` | The type of dataset to generate, with the desired input, output, and metadata types. | *required* | | `custom_evaluator_types` | `Sequence[type[Evaluator[InputsT, OutputT, MetadataT]]]` | Optional sequence of custom evaluator classes to include in the schema. | `()` | | `model` | `Model | KnownModelName` | The Pydantic AI model to use for generation. Defaults to 'gpt-4o'. | `'openai:gpt-4o'` | | `n_examples` | `int` | Number of examples to generate. Defaults to 3. | `3` | | `extra_instructions` | `str | None` | Optional additional instructions to provide to the LLM. | `None` |
+| Name                     | Type                                                     | Description                                                                          | Default                                                            |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `path`                   | \`Path                                                   | str                                                                                  | None\`                                                             |
+| `dataset_type`           | `type[Dataset[InputsT, OutputT, MetadataT]]`             | The type of dataset to generate, with the desired input, output, and metadata types. | *required*                                                         |
+| `custom_evaluator_types` | `Sequence[type[Evaluator[InputsT, OutputT, MetadataT]]]` | Optional sequence of custom evaluator classes to include in the schema.              | `()`                                                               |
+| `model`                  | \`Model                                                  | KnownModelName\`                                                                     | The Pydantic AI model to use for generation. Defaults to 'gpt-4o'. |
+| `n_examples`             | `int`                                                    | Number of examples to generate. Defaults to 3.                                       | `3`                                                                |
+| `extra_instructions`     | \`str                                                    | None\`                                                                               | Optional additional instructions to provide to the LLM.            |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Dataset[InputsT, OutputT, MetadataT]` | A properly structured Dataset object with generated test cases. |
+| Type                                   | Description                                                     |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `Dataset[InputsT, OutputT, MetadataT]` | A properly structured Dataset object with generated test cases. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValidationError` | If the LLM's response cannot be parsed as a valid dataset. |
+| Type              | Description                                                |
+| ----------------- | ---------------------------------------------------------- |
+| `ValidationError` | If the LLM's response cannot be parsed as a valid dataset. |
 
 Source code in `pydantic_evals/pydantic_evals/generation.py`
 
@@ -122,5 +129,4 @@ async def generate_dataset(
     if path is not None:
         result.to_file(path, custom_evaluator_types=custom_evaluator_types)  # pragma: no cover
     return result
-
 ```

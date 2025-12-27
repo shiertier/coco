@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Bedrock](../../../models/bedrock/).
+For details on how to set up authentication with this model, see [model configuration for Bedrock](https://ai.pydantic.dev/models/bedrock/index.md).
 
 ### LatestBedrockModelNames
 
@@ -64,7 +64,6 @@ LatestBedrockModelNames = Literal[
     "mistral.mistral-large-2402-v1:0",
     "mistral.mistral-large-2407-v1:0",
 ]
-
 ```
 
 Latest Bedrock models.
@@ -73,7 +72,6 @@ Latest Bedrock models.
 
 ```python
 BedrockModelName = str | LatestBedrockModelNames
-
 ```
 
 Possible Bedrock model names.
@@ -163,13 +161,17 @@ class BedrockModelSettings(ModelSettings, total=False):
     See https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html for more information.
     """
 
+    bedrock_service_tier: ServiceTierTypeDef
+    """Setting for optimizing performance and cost
+
+    See more about it on <https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html>.
+    """
 ```
 
 #### bedrock_guardrail_config
 
 ```python
 bedrock_guardrail_config: GuardrailConfigurationTypeDef
-
 ```
 
 Content moderation and safety settings for Bedrock API requests.
@@ -182,7 +184,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/APIReference/AP
 bedrock_performance_configuration: (
     PerformanceConfigurationTypeDef
 )
-
 ```
 
 Performance optimization settings for model inference.
@@ -193,7 +194,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/APIReference/AP
 
 ```python
 bedrock_request_metadata: dict[str, str]
-
 ```
 
 Additional metadata to attach to Bedrock API requests.
@@ -204,7 +204,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/APIReference/AP
 
 ```python
 bedrock_additional_model_response_fields_paths: list[str]
-
 ```
 
 JSON paths to extract additional fields from model responses.
@@ -217,7 +216,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/userguide/model
 bedrock_prompt_variables: Mapping[
     str, PromptVariableValuesTypeDef
 ]
-
 ```
 
 Variables for substitution into prompt templates.
@@ -228,7 +226,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/APIReference/AP
 
 ```python
 bedrock_additional_model_requests_fields: Mapping[str, Any]
-
 ```
 
 Additional model-specific parameters to include in requests.
@@ -239,7 +236,6 @@ See more about it on <https://docs.aws.amazon.com/bedrock/latest/userguide/model
 
 ```python
 bedrock_cache_tool_definitions: bool
-
 ```
 
 Whether to add a cache point after the last tool definition.
@@ -250,7 +246,6 @@ When enabled, the last tool in the `tools` array will include a `cachePoint`, al
 
 ```python
 bedrock_cache_instructions: bool
-
 ```
 
 Whether to add a cache point after the system prompt blocks.
@@ -261,7 +256,6 @@ When enabled, an extra `cachePoint` is appended to the system prompt so Bedrock 
 
 ```python
 bedrock_cache_messages: bool
-
 ```
 
 Convenience setting to enable caching for the last user message.
@@ -269,6 +263,16 @@ Convenience setting to enable caching for the last user message.
 When enabled, this automatically adds a cache point to the last content block in the final user message, which is useful for caching conversation history or context in multi-turn conversations.
 
 Note: Uses 1 of Bedrock's 4 available cache points per request. Any additional CachePoint markers in messages will be automatically limited to respect the 4-cache-point maximum. See https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html for more information.
+
+#### bedrock_service_tier
+
+```python
+bedrock_service_tier: ServiceTierTypeDef
+```
+
+Setting for optimizing performance and cost
+
+See more about it on <https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html>.
 
 ### BedrockConverseModel
 
@@ -528,6 +532,8 @@ class BedrockConverseModel(Model):
                 params['additionalModelRequestFields'] = additional_model_requests_fields
             if prompt_variables := model_settings.get('bedrock_prompt_variables', None):
                 params['promptVariables'] = prompt_variables
+            if service_tier := model_settings.get('bedrock_service_tier', None):
+                params['serviceTier'] = service_tier
 
         try:
             if stream:
@@ -921,7 +927,6 @@ class BedrockConverseModel(Model):
             if model_name.startswith(f'{prefix}.'):
                 return model_name.removeprefix(f'{prefix}.')
         return model_name
-
 ```
 
 #### __init__
@@ -936,14 +941,19 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize a Bedrock model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `BedrockModelName` | The name of the model to use. | *required* | | `model_name` | `BedrockModelName` | The name of the Bedrock model to use. List of model names available here. | *required* | | `provider` | `Literal['bedrock', 'gateway'] | Provider[BaseClient]` | The provider to use for authentication and API access. Can be either the string 'bedrock' or an instance of Provider[BaseClient]. If not provided, a new provider will be created using the other parameters. | `'bedrock'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                            | Description                                                               | Default                                                                                                                                                                                                       |
+| ------------ | ------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name` | `BedrockModelName`              | The name of the model to use.                                             | *required*                                                                                                                                                                                                    |
+| `model_name` | `BedrockModelName`              | The name of the Bedrock model to use. List of model names available here. | *required*                                                                                                                                                                                                    |
+| `provider`   | \`Literal['bedrock', 'gateway'] | Provider[BaseClient]\`                                                    | The provider to use for authentication and API access. Can be either the string 'bedrock' or an instance of Provider[BaseClient]. If not provided, a new provider will be created using the other parameters. |
+| `profile`    | \`ModelProfileSpec              | None\`                                                                    | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                                                                               |
+| `settings`   | \`ModelSettings                 | None\`                                                                    | Model-specific settings that will be used as defaults for this model.                                                                                                                                         |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/bedrock.py`
 
@@ -976,14 +986,12 @@ def __init__(
     self.client = cast('BedrockRuntimeClient', provider.client)
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -992,7 +1000,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.
@@ -1005,7 +1012,6 @@ count_tokens(
     model_settings: ModelSettings | None,
     model_request_parameters: ModelRequestParameters,
 ) -> RequestUsage
-
 ```
 
 Count the number of tokens, works with limited models.
@@ -1045,7 +1051,6 @@ async def count_tokens(
             raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.response) from e
         raise ModelAPIError(model_name=self.model_name, message=str(e)) from e
     return usage.RequestUsage(input_tokens=response['inputTokens'])
-
 ```
 
 ### BedrockStreamedResponse
@@ -1168,14 +1173,12 @@ class BedrockStreamedResponse(StreamedResponse):
             cache_read_tokens=metadata['usage'].get('cacheReadInputTokens', 0),
             cache_write_tokens=metadata['usage'].get('cacheWriteInputTokens', 0),
         )
-
 ```
 
 #### model_name
 
 ```python
 model_name: str
-
 ```
 
 Get the model name of the response.
@@ -1184,7 +1187,6 @@ Get the model name of the response.
 
 ```python
 provider_name: str
-
 ```
 
 Get the provider name.
@@ -1193,7 +1195,6 @@ Get the provider name.
 
 ```python
 provider_url: str
-
 ```
 
 Get the provider base URL.

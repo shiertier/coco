@@ -14,7 +14,12 @@ GraphBuilder provides a fluent interface for defining nodes, edges, and routing 
 
 Class Type Parameters:
 
-| Name | Bound or Constraints | Description | Default | | --- | --- | --- | --- | | `StateT` | | The type of the graph state | *required* | | `DepsT` | | The type of the dependencies | *required* | | `GraphInputT` | | The type of the graph input data | *required* | | `GraphOutputT` | | The type of the graph output data | *required* |
+| Name           | Bound or Constraints | Description                       | Default    |
+| -------------- | -------------------- | --------------------------------- | ---------- |
+| `StateT`       |                      | The type of the graph state       | *required* |
+| `DepsT`        |                      | The type of the dependencies      | *required* |
+| `GraphInputT`  |                      | The type of the graph input data  | *required* |
+| `GraphOutputT` |                      | The type of the graph output data | *required* |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -632,7 +637,6 @@ class GraphBuilder(Generic[StateT, DepsT, GraphInputT, GraphOutputT]):
             intermediate_join_nodes=intermediate_join_nodes,
             auto_instrument=self.auto_instrument,
         )
-
 ```
 
 #### __init__
@@ -651,14 +655,20 @@ __init__(
     ] = NoneType,
     auto_instrument: bool = True
 )
-
 ```
 
 Initialize a graph builder.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str | None` | Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method. | `None` | | `state_type` | `TypeOrTypeExpression[StateT]` | The type of the graph state | `NoneType` | | `deps_type` | `TypeOrTypeExpression[DepsT]` | The type of the dependencies | `NoneType` | | `input_type` | `TypeOrTypeExpression[GraphInputT]` | The type of the graph input data | `NoneType` | | `output_type` | `TypeOrTypeExpression[GraphOutputT]` | The type of the graph output data | `NoneType` | | `auto_instrument` | `bool` | Whether to automatically create instrumentation spans | `True` |
+| Name              | Type                                 | Description                                           | Default                                                                                                                            |
+| ----------------- | ------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `name`            | \`str                                | None\`                                                | Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method. |
+| `state_type`      | `TypeOrTypeExpression[StateT]`       | The type of the graph state                           | `NoneType`                                                                                                                         |
+| `deps_type`       | `TypeOrTypeExpression[DepsT]`        | The type of the dependencies                          | `NoneType`                                                                                                                         |
+| `input_type`      | `TypeOrTypeExpression[GraphInputT]`  | The type of the graph input data                      | `NoneType`                                                                                                                         |
+| `output_type`     | `TypeOrTypeExpression[GraphOutputT]` | The type of the graph output data                     | `NoneType`                                                                                                                         |
+| `auto_instrument` | `bool`                               | Whether to automatically create instrumentation spans | `True`                                                                                                                             |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -698,14 +708,12 @@ def __init__(
 
     self._start_node = StartNode[GraphInputT]()
     self._end_node = EndNode[GraphOutputT]()
-
 ```
 
 #### name
 
 ```python
 name: str | None = name
-
 ```
 
 Optional name for the graph, if not provided the name will be inferred from the calling frame on the first call to a graph method.
@@ -714,7 +722,6 @@ Optional name for the graph, if not provided the name will be inferred from the 
 
 ```python
 state_type: TypeOrTypeExpression[StateT] = state_type
-
 ```
 
 The type of the graph state.
@@ -723,7 +730,6 @@ The type of the graph state.
 
 ```python
 deps_type: TypeOrTypeExpression[DepsT] = deps_type
-
 ```
 
 The type of the dependencies.
@@ -732,7 +738,6 @@ The type of the dependencies.
 
 ```python
 input_type: TypeOrTypeExpression[GraphInputT] = input_type
-
 ```
 
 The type of the graph input data.
@@ -743,7 +748,6 @@ The type of the graph input data.
 output_type: TypeOrTypeExpression[GraphOutputT] = (
     output_type
 )
-
 ```
 
 The type of the graph output data.
@@ -752,7 +756,6 @@ The type of the graph output data.
 
 ```python
 auto_instrument: bool = auto_instrument
-
 ```
 
 Whether to automatically create instrumentation spans.
@@ -761,27 +764,29 @@ Whether to automatically create instrumentation spans.
 
 ```python
 start_node: StartNode[GraphInputT]
-
 ```
 
 Get the start node for the graph.
 
 Returns:
 
-| Type | Description | | --- | --- | | `StartNode[GraphInputT]` | The start node that receives the initial graph input |
+| Type                     | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `StartNode[GraphInputT]` | The start node that receives the initial graph input |
 
 #### end_node
 
 ```python
 end_node: EndNode[GraphOutputT]
-
 ```
 
 Get the end node for the graph.
 
 Returns:
 
-| Type | Description | | --- | --- | | `EndNode[GraphOutputT]` | The end node that produces the final graph output |
+| Type                    | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `EndNode[GraphOutputT]` | The end node that produces the final graph output |
 
 #### step
 
@@ -792,7 +797,6 @@ step(
     [StepFunction[StateT, DepsT, InputT, OutputT]],
     Step[StateT, DepsT, InputT, OutputT],
 ]
-
 ```
 
 ```python
@@ -802,7 +806,6 @@ step(
     node_id: str | None = None,
     label: str | None = None
 ) -> Step[StateT, DepsT, InputT, OutputT]
-
 ```
 
 ```python
@@ -820,7 +823,6 @@ step(
         Step[StateT, DepsT, InputT, OutputT],
     ]
 )
-
 ```
 
 Create a step from a step function.
@@ -829,11 +831,17 @@ This method can be used as a decorator or called directly to create a step node 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `call` | `StepFunction[StateT, DepsT, InputT, OutputT] | None` | The step function to wrap | `None` | | `node_id` | `str | None` | Optional ID for the node | `None` | | `label` | `str | None` | Optional human-readable label | `None` |
+| Name      | Type                                           | Description | Default                       |
+| --------- | ---------------------------------------------- | ----------- | ----------------------------- |
+| `call`    | \`StepFunction[StateT, DepsT, InputT, OutputT] | None\`      | The step function to wrap     |
+| `node_id` | \`str                                          | None\`      | Optional ID for the node      |
+| `label`   | \`str                                          | None\`      | Optional human-readable label |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Step[StateT, DepsT, InputT, OutputT] | Callable[[StepFunction[StateT, DepsT, InputT, OutputT]], Step[StateT, DepsT, InputT, OutputT]]` | Either a Step instance or a decorator function |
+| Type                                   | Description                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| \`Step[StateT, DepsT, InputT, OutputT] | Callable\[\[StepFunction[StateT, DepsT, InputT, OutputT]\], Step[StateT, DepsT, InputT, OutputT]\]\` |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -875,7 +883,6 @@ def step(
     step = Step[StateT, DepsT, InputT, OutputT](id=NodeID(node_id), call=call, label=label)
 
     return step
-
 ```
 
 #### stream
@@ -887,7 +894,6 @@ stream(
     [StreamFunction[StateT, DepsT, InputT, OutputT]],
     Step[StateT, DepsT, InputT, AsyncIterable[OutputT]],
 ]
-
 ```
 
 ```python
@@ -897,7 +903,6 @@ stream(
     node_id: str | None = None,
     label: str | None = None
 ) -> Step[StateT, DepsT, InputT, AsyncIterable[OutputT]]
-
 ```
 
 ```python
@@ -916,7 +921,6 @@ stream(
         Step[StateT, DepsT, InputT, AsyncIterable[OutputT]],
     ]
 )
-
 ```
 
 ```python
@@ -935,7 +939,6 @@ stream(
         Step[StateT, DepsT, InputT, AsyncIterable[OutputT]],
     ]
 )
-
 ```
 
 Create a step from an async iterator (which functions like a "stream").
@@ -944,11 +947,17 @@ This method can be used as a decorator or called directly to create a step node 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `call` | `StreamFunction[StateT, DepsT, InputT, OutputT] | None` | The step function to wrap | `None` | | `node_id` | `str | None` | Optional ID for the node | `None` | | `label` | `str | None` | Optional human-readable label | `None` |
+| Name      | Type                                             | Description | Default                       |
+| --------- | ------------------------------------------------ | ----------- | ----------------------------- |
+| `call`    | \`StreamFunction[StateT, DepsT, InputT, OutputT] | None\`      | The step function to wrap     |
+| `node_id` | \`str                                            | None\`      | Optional ID for the node      |
+| `label`   | \`str                                            | None\`      | Optional human-readable label |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Step[StateT, DepsT, InputT, AsyncIterable[OutputT]] | Callable[[StreamFunction[StateT, DepsT, InputT, OutputT]], Step[StateT, DepsT, InputT, AsyncIterable[OutputT]]]` | Either a Step instance or a decorator function |
+| Type                                                    | Description                                                                                                             |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| \`Step\[StateT, DepsT, InputT, AsyncIterable[OutputT]\] | Callable\[\[StreamFunction[StateT, DepsT, InputT, OutputT]\], Step\[StateT, DepsT, InputT, AsyncIterable[OutputT]\]\]\` |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -995,14 +1004,12 @@ def stream(
     node_id = node_id or get_callable_name(call)
 
     return self.step(call=wrapper, node_id=node_id, label=label)
-
 ```
 
 #### add
 
 ```python
 add(*edges: EdgePath[StateT, DepsT]) -> None
-
 ```
 
 Add one or more edge paths to the graph.
@@ -1011,7 +1018,9 @@ This method processes edge paths and automatically creates any necessary fork no
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `*edges` | `EdgePath[StateT, DepsT]` | The edge paths to add to the graph | `()` |
+| Name     | Type                      | Description                        | Default |
+| -------- | ------------------------- | ---------------------------------- | ------- |
+| `*edges` | `EdgePath[StateT, DepsT]` | The edge paths to add to the graph | `()`    |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1081,7 +1090,6 @@ def add(self, *edges: EdgePath[StateT, DepsT]) -> None:  # noqa: C901
             edge = self._edge_from_return_hint(destination, return_hint)
             if edge is not None:
                 self.add(edge)
-
 ```
 
 #### add_edge
@@ -1093,14 +1101,17 @@ add_edge(
     *,
     label: str | None = None
 ) -> None
-
 ```
 
 Add a simple edge between two nodes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `source` | `Source[T]` | The source node | *required* | | `destination` | `Destination[T]` | The destination node | *required* | | `label` | `str | None` | Optional label for the edge | `None` |
+| Name          | Type             | Description          | Default                     |
+| ------------- | ---------------- | -------------------- | --------------------------- |
+| `source`      | `Source[T]`      | The source node      | *required*                  |
+| `destination` | `Destination[T]` | The destination node | *required*                  |
+| `label`       | \`str            | None\`               | Optional label for the edge |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1117,7 +1128,6 @@ def add_edge(self, source: Source[T], destination: Destination[T], *, label: str
     if label is not None:
         builder = builder.label(label)
     self.add(builder.to(destination))
-
 ```
 
 #### add_mapping_edge
@@ -1132,14 +1142,20 @@ add_mapping_edge(
     fork_id: ForkID | None = None,
     downstream_join_id: JoinID | None = None
 ) -> None
-
 ```
 
 Add an edge that maps iterable data across parallel paths.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `source` | `Source[Iterable[T]]` | The source node that produces iterable data | *required* | | `map_to` | `Destination[T]` | The destination node that receives individual items | *required* | | `pre_map_label` | `str | None` | Optional label before the map operation | `None` | | `post_map_label` | `str | None` | Optional label after the map operation | `None` | | `fork_id` | `ForkID | None` | Optional ID for the fork node produced for this map operation | `None` | | `downstream_join_id` | `JoinID | None` | Optional ID of a join node that will always be downstream of this map. Specifying this ensures correct handling if you try to map an empty iterable. | `None` |
+| Name                 | Type                  | Description                                         | Default                                                                                                                                              |
+| -------------------- | --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`             | `Source[Iterable[T]]` | The source node that produces iterable data         | *required*                                                                                                                                           |
+| `map_to`             | `Destination[T]`      | The destination node that receives individual items | *required*                                                                                                                                           |
+| `pre_map_label`      | \`str                 | None\`                                              | Optional label before the map operation                                                                                                              |
+| `post_map_label`     | \`str                 | None\`                                              | Optional label after the map operation                                                                                                               |
+| `fork_id`            | \`ForkID              | None\`                                              | Optional ID for the fork node produced for this map operation                                                                                        |
+| `downstream_join_id` | \`JoinID              | None\`                                              | Optional ID of a join node that will always be downstream of this map. Specifying this ensures correct handling if you try to map an empty iterable. |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1172,7 +1188,6 @@ def add_mapping_edge(
     if post_map_label is not None:
         builder = builder.label(post_map_label)
     self.add(builder.to(map_to))
-
 ```
 
 #### edge_from
@@ -1181,18 +1196,21 @@ def add_mapping_edge(
 edge_from(
     *sources: Source[SourceOutputT],
 ) -> EdgePathBuilder[StateT, DepsT, SourceOutputT]
-
 ```
 
 Create an edge path builder starting from the given source nodes.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `*sources` | `Source[SourceOutputT]` | The source nodes to start the edge path from | `()` |
+| Name       | Type                    | Description                                  | Default |
+| ---------- | ----------------------- | -------------------------------------------- | ------- |
+| `*sources` | `Source[SourceOutputT]` | The source nodes to start the edge path from | `()`    |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EdgePathBuilder[StateT, DepsT, SourceOutputT]` | An EdgePathBuilder for constructing the complete edge path |
+| Type                                            | Description                                                |
+| ----------------------------------------------- | ---------------------------------------------------------- |
+| `EdgePathBuilder[StateT, DepsT, SourceOutputT]` | An EdgePathBuilder for constructing the complete edge path |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1209,7 +1227,6 @@ def edge_from(self, *sources: Source[SourceOutputT]) -> EdgePathBuilder[StateT, 
     return EdgePathBuilder[StateT, DepsT, SourceOutputT](
         sources=sources, path_builder=PathBuilder(working_items=[])
     )
-
 ```
 
 #### decision
@@ -1218,18 +1235,22 @@ def edge_from(self, *sources: Source[SourceOutputT]) -> EdgePathBuilder[StateT, 
 decision(
     *, note: str | None = None, node_id: str | None = None
 ) -> Decision[StateT, DepsT, Never]
-
 ```
 
 Create a new decision node.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `note` | `str | None` | Optional note to describe the decision logic | `None` | | `node_id` | `str | None` | Optional ID for the node produced for this decision logic | `None` |
+| Name      | Type  | Description | Default                                                   |
+| --------- | ----- | ----------- | --------------------------------------------------------- |
+| `note`    | \`str | None\`      | Optional note to describe the decision logic              |
+| `node_id` | \`str | None\`      | Optional ID for the node produced for this decision logic |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Decision[StateT, DepsT, Never]` | A new Decision node with no branches |
+| Type                             | Description                          |
+| -------------------------------- | ------------------------------------ |
+| `Decision[StateT, DepsT, Never]` | A new Decision node with no branches |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1245,7 +1266,6 @@ def decision(self, *, note: str | None = None, node_id: str | None = None) -> De
         A new Decision node with no branches
     """
     return Decision(id=NodeID(node_id or generate_placeholder_node_id('decision')), branches=[], note=note)
-
 ```
 
 #### match
@@ -1258,18 +1278,22 @@ match(
 ) -> DecisionBranchBuilder[
     StateT, DepsT, SourceT, SourceT, Never
 ]
-
 ```
 
 Create a decision branch matcher.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `source` | `TypeOrTypeExpression[SourceT]` | The type or type expression to match against | *required* | | `matches` | `Callable[[Any], bool] | None` | Optional custom matching function | `None` |
+| Name      | Type                            | Description                                  | Default                           |
+| --------- | ------------------------------- | -------------------------------------------- | --------------------------------- |
+| `source`  | `TypeOrTypeExpression[SourceT]` | The type or type expression to match against | *required*                        |
+| `matches` | \`Callable\[[Any], bool\]       | None\`                                       | Optional custom matching function |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranchBuilder[StateT, DepsT, SourceT, SourceT, Never]` | A DecisionBranchBuilder for constructing the branch |
+| Type                                                            | Description                                         |
+| --------------------------------------------------------------- | --------------------------------------------------- |
+| `DecisionBranchBuilder[StateT, DepsT, SourceT, SourceT, Never]` | A DecisionBranchBuilder for constructing the branch |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1295,7 +1319,6 @@ def match(
     decision = Decision[StateT, DepsT, Never](id=node_id, branches=[], note=None)
     new_path_builder = PathBuilder[StateT, DepsT, SourceT](working_items=[])
     return DecisionBranchBuilder(decision=decision, source=source, matches=matches, path_builder=new_path_builder)
-
 ```
 
 #### match_node
@@ -1306,7 +1329,6 @@ match_node(
     *,
     matches: Callable[[Any], bool] | None = None
 ) -> DecisionBranch[SourceNodeT]
-
 ```
 
 Create a decision branch for BaseNode subclasses.
@@ -1315,11 +1337,16 @@ This is similar to match() but specifically designed for matching against BaseNo
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `source` | `type[SourceNodeT]` | The BaseNode subclass to match against | *required* | | `matches` | `Callable[[Any], bool] | None` | Optional custom matching function | `None` |
+| Name      | Type                      | Description                            | Default                           |
+| --------- | ------------------------- | -------------------------------------- | --------------------------------- |
+| `source`  | `type[SourceNodeT]`       | The BaseNode subclass to match against | *required*                        |
+| `matches` | \`Callable\[[Any], bool\] | None\`                                 | Optional custom matching function |
 
 Returns:
 
-| Type | Description | | --- | --- | | `DecisionBranch[SourceNodeT]` | A DecisionBranch for the BaseNode type |
+| Type                          | Description                            |
+| ----------------------------- | -------------------------------------- |
+| `DecisionBranch[SourceNodeT]` | A DecisionBranch for the BaseNode type |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1345,7 +1372,6 @@ def match_node(
     node = NodeStep(source)
     path = Path(items=[DestinationMarker(node.id)])
     return DecisionBranch(source=source, matches=matches, path=path, destinations=[node])
-
 ```
 
 #### node
@@ -1354,7 +1380,6 @@ def match_node(
 node(
     node_type: type[BaseNode[StateT, DepsT, GraphOutputT]],
 ) -> EdgePath[StateT, DepsT]
-
 ```
 
 Create an edge path from a BaseNode class.
@@ -1363,15 +1388,21 @@ This method integrates v1-style BaseNode classes into the v2 graph system by ana
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `node_type` | `type[BaseNode[StateT, DepsT, GraphOutputT]]` | The BaseNode subclass to integrate | *required* |
+| Name        | Type                                          | Description                        | Default    |
+| ----------- | --------------------------------------------- | ---------------------------------- | ---------- |
+| `node_type` | `type[BaseNode[StateT, DepsT, GraphOutputT]]` | The BaseNode subclass to integrate | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EdgePath[StateT, DepsT]` | An EdgePath representing the node and its connections |
+| Type                      | Description                                           |
+| ------------------------- | ----------------------------------------------------- |
+| `EdgePath[StateT, DepsT]` | An EdgePath representing the node and its connections |
 
 Raises:
 
-| Type | Description | | --- | --- | | `GraphSetupError` | If the node type is missing required type hints |
+| Type              | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| `GraphSetupError` | If the node type is missing required type hints |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1410,7 +1441,6 @@ def node(
         raise exceptions.GraphSetupError(f'Node {node_type} is missing a return type hint on its `run` method')
 
     return edge
-
 ```
 
 #### build
@@ -1419,7 +1449,6 @@ def node(
 build(
     validate_graph_structure: bool = True,
 ) -> Graph[StateT, DepsT, GraphInputT, GraphOutputT]
-
 ```
 
 Build the final executable graph from the accumulated nodes and edges.
@@ -1428,15 +1457,21 @@ This method performs validation, normalization, and analysis of the graph struct
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `validate_graph_structure` | `bool` | whether to perform validation of the graph structure See the docstring of \_validate_graph_structure below for more details. | `True` |
+| Name                       | Type   | Description                                                                                                                  | Default |
+| -------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `validate_graph_structure` | `bool` | whether to perform validation of the graph structure See the docstring of \_validate_graph_structure below for more details. | `True`  |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Graph[StateT, DepsT, GraphInputT, GraphOutputT]` | A complete Graph instance ready for execution |
+| Type                                              | Description                                   |
+| ------------------------------------------------- | --------------------------------------------- |
+| `Graph[StateT, DepsT, GraphInputT, GraphOutputT]` | A complete Graph instance ready for execution |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValueError` | If the graph structure is invalid (e.g., join without parent fork) |
+| Type         | Description                                                        |
+| ------------ | ------------------------------------------------------------------ |
+| `ValueError` | If the graph structure is invalid (e.g., join without parent fork) |
 
 Source code in `pydantic_graph/pydantic_graph/beta/graph_builder.py`
 
@@ -1480,5 +1515,4 @@ def build(self, validate_graph_structure: bool = True) -> Graph[StateT, DepsT, G
         intermediate_join_nodes=intermediate_join_nodes,
         auto_instrument=self.auto_instrument,
     )
-
 ```

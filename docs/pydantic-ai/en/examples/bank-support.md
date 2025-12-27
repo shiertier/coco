@@ -2,29 +2,27 @@ Small but complete example of using Pydantic AI to build a support agent for a b
 
 Demonstrates:
 
-- [dynamic system prompt](../../agents/#system-prompts)
-- [structured `output_type`](../../output/#structured-output)
-- [tools](../../tools/)
+- [dynamic system prompt](https://ai.pydantic.dev/agents/#system-prompts)
+- [structured `output_type`](https://ai.pydantic.dev/output/#structured-output)
+- [tools](https://ai.pydantic.dev/tools/index.md)
 
 ## Running the Example
 
-With [dependencies installed and environment variables set](../setup/#usage), run:
+With [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), run:
 
 ```bash
 python -m pydantic_ai_examples.bank_support
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.bank_support
-
 ```
 
 (or `PYDANTIC_AI_MODEL=gemini-2.5-flash ...`)
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [bank_support.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/bank_support.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [bank_support.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/bank_support.py)
 
 ```python
 """Small but complete example of using Pydantic AI to build a support agent for a bank.
@@ -128,7 +126,6 @@ if __name__ == '__main__':
         """
         support_advice="I'm sorry to hear that, John. We are temporarily blocking your card to prevent unauthorized transactions." block_card=True risk=8
         """
-
 ```
 
 [bank_support.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/bank_support.py)
@@ -235,5 +232,4 @@ if __name__ == '__main__':
         """
         support_advice="I'm sorry to hear that, John. We are temporarily blocking your card to prevent unauthorized transactions." block_card=True risk=8
         """
-
 ```

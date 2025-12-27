@@ -271,7 +271,7 @@ Learn how to integrate React Aria with your framework.
         ```ts
         // vite.config.ts
         import {defineConfig} from 'vite';
-        import localesPlugin from '@react-aria/optimize-locales-plugin';
+        import optimizeLocales from '@react-aria/optimize-locales-plugin';
 
         export default defineConfig({
           plugins: [

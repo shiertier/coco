@@ -26,7 +26,7 @@ E.g. you've awaited one of the following coroutines:
 
 Example of accessing methods on a RunResult :
 
-[Learn about Gateway](../gateway) run_result_messages.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) run_result_messages.py
 
 ```python
 from pydantic_ai import Agent
@@ -52,6 +52,7 @@ print(result.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -67,7 +68,6 @@ print(result.all_messages())
     ),
 ]
 """
-
 ```
 
 run_result_messages.py
@@ -96,6 +96,7 @@ print(result.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -111,14 +112,13 @@ print(result.all_messages())
     ),
 ]
 """
-
 ```
 
 *(This example is complete, it can be run "as is")*
 
 Example of accessing methods on a StreamedRunResult :
 
-[Learn about Gateway](../gateway) streamed_run_result_messages.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) streamed_run_result_messages.py
 
 ```python
 from pydantic_ai import Agent
@@ -143,6 +143,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     ),
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ]
@@ -170,6 +171,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     ),
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -185,7 +187,6 @@ async def main():
             ),
         ]
         """
-
 ```
 
 streamed_run_result_messages.py
@@ -213,6 +214,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     ),
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             )
         ]
@@ -240,6 +242,7 @@ async def main():
                         timestamp=datetime.datetime(...),
                     ),
                 ],
+                timestamp=datetime.datetime(...),
                 run_id='...',
             ),
             ModelResponse(
@@ -255,7 +258,6 @@ async def main():
             ),
         ]
         """
-
 ```
 
 *(This example is complete, it can be run "as is" — you'll need to add `asyncio.run(main())` to run `main`)*
@@ -268,7 +270,7 @@ To use existing messages in a run, pass them to the `message_history` parameter 
 
 If `message_history` is set and not empty, a new system prompt is not generated — we assume the existing message history includes a system prompt.
 
-[Learn about Gateway](../gateway) Reusing messages in a conversation
+[Learn about Gateway](https://ai.pydantic.dev/gateway) Reusing messages in a conversation
 
 ```python
 from pydantic_ai import Agent
@@ -297,6 +299,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -317,6 +320,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -332,7 +336,6 @@ print(result2.all_messages())
     ),
 ]
 """
-
 ```
 
 Reusing messages in a conversation
@@ -364,6 +367,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -384,6 +388,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -399,7 +404,6 @@ print(result2.all_messages())
     ),
 ]
 """
-
 ```
 
 *(This example is complete, it can be run "as is")*
@@ -414,7 +418,7 @@ We export ModelMessagesTypeAdapter that can be used for this, or you can create 
 
 Here's an example showing how:
 
-[Learn about Gateway](../gateway) serialize messages to json
+[Learn about Gateway](https://ai.pydantic.dev/gateway) serialize messages to json
 
 ```python
 from pydantic_core import to_jsonable_python
@@ -434,24 +438,25 @@ same_history_as_step_1 = ModelMessagesTypeAdapter.validate_python(as_python_obje
 result2 = agent.run_sync(  # (3)!
     'Tell me a different joke.', message_history=same_history_as_step_1
 )
-
 ```
 
 1. Alternatively, you can create a `TypeAdapter` from scratch:
+
    ```python
    from pydantic import TypeAdapter
    from pydantic_ai import ModelMessage
    ModelMessagesTypeAdapter = TypeAdapter(list[ModelMessage])
-
    ```
+
 1. Alternatively you can serialize to/from JSON directly:
+
    ```python
    from pydantic_core import to_json
    ...
    as_json_objects = to_json(history_step_1)
    same_history_as_step_1 = ModelMessagesTypeAdapter.validate_json(as_json_objects)
-
    ```
+
 1. You can now continue the conversation with history `same_history_as_step_1` despite creating a new agent run.
 
 serialize messages to json
@@ -474,24 +479,25 @@ same_history_as_step_1 = ModelMessagesTypeAdapter.validate_python(as_python_obje
 result2 = agent.run_sync(  # (3)!
     'Tell me a different joke.', message_history=same_history_as_step_1
 )
-
 ```
 
 1. Alternatively, you can create a `TypeAdapter` from scratch:
+
    ```python
    from pydantic import TypeAdapter
    from pydantic_ai import ModelMessage
    ModelMessagesTypeAdapter = TypeAdapter(list[ModelMessage])
-
    ```
+
 1. Alternatively you can serialize to/from JSON directly:
+
    ```python
    from pydantic_core import to_json
    ...
    as_json_objects = to_json(history_step_1)
    same_history_as_step_1 = ModelMessagesTypeAdapter.validate_json(as_json_objects)
-
    ```
+
 1. You can now continue the conversation with history `same_history_as_step_1` despite creating a new agent run.
 
 *(This example is complete, it can be run "as is")*
@@ -504,7 +510,7 @@ The message format is independent of the model used, so you can use messages in 
 
 In the example below, we reuse the message from the first agent run, which uses the `openai:gpt-5` model, in a second agent run using the `google-gla:gemini-2.5-pro` model.
 
-[Learn about Gateway](../gateway) Reusing messages with a different model
+[Learn about Gateway](https://ai.pydantic.dev/gateway) Reusing messages with a different model
 
 ```python
 from pydantic_ai import Agent
@@ -537,6 +543,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -557,6 +564,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -572,7 +580,6 @@ print(result2.all_messages())
     ),
 ]
 """
-
 ```
 
 Reusing messages with a different model
@@ -608,6 +615,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             ),
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -628,6 +636,7 @@ print(result2.all_messages())
                 timestamp=datetime.datetime(...),
             )
         ],
+        timestamp=datetime.datetime(...),
         run_id='...',
     ),
     ModelResponse(
@@ -643,7 +652,6 @@ print(result2.all_messages())
     ),
 ]
 """
-
 ```
 
 ## Processing Message History
@@ -662,7 +670,7 @@ The `history_processors` is a list of callables that take a list of ModelMessage
 
 Each processor is applied in sequence, and processors can be either synchronous or asynchronous.
 
-[Learn about Gateway](../gateway) simple_history_processor.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) simple_history_processor.py
 
 ```python
 from pydantic_ai import (
@@ -690,7 +698,6 @@ message_history = [
 
 # When you run the agent, the history processor will filter out ModelResponse messages
 # result = agent.run_sync('What about 3+3?', message_history=message_history)
-
 ```
 
 simple_history_processor.py
@@ -721,14 +728,13 @@ message_history = [
 
 # When you run the agent, the history processor will filter out ModelResponse messages
 # result = agent.run_sync('What about 3+3?', message_history=message_history)
-
 ```
 
 #### Keep Only Recent Messages
 
 You can use the `history_processor` to only keep the recent messages:
 
-[Learn about Gateway](../gateway) keep_recent_messages.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) keep_recent_messages.py
 
 ```python
 from pydantic_ai import Agent, ModelMessage
@@ -743,7 +749,6 @@ agent = Agent('gateway/openai:gpt-5', history_processors=[keep_recent_messages])
 # Example: Even with a long conversation history, only the last 5 messages are sent to the model
 long_conversation_history: list[ModelMessage] = []  # Your long conversation history here
 # result = agent.run_sync('What did we discuss?', message_history=long_conversation_history)
-
 ```
 
 keep_recent_messages.py
@@ -761,7 +766,6 @@ agent = Agent('openai:gpt-5', history_processors=[keep_recent_messages])
 # Example: Even with a long conversation history, only the last 5 messages are sent to the model
 long_conversation_history: list[ModelMessage] = []  # Your long conversation history here
 # result = agent.run_sync('What did we discuss?', message_history=long_conversation_history)
-
 ```
 
 Be careful when slicing the message history
@@ -772,7 +776,7 @@ When slicing the message history, you need to make sure that tool calls and retu
 
 History processors can optionally accept a RunContext parameter to access additional information about the current run, such as dependencies, model information, and usage statistics:
 
-[Learn about Gateway](../gateway) context_aware_processor.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) context_aware_processor.py
 
 ```python
 from pydantic_ai import Agent, ModelMessage, RunContext
@@ -791,7 +795,6 @@ def context_aware_processor(
     return messages
 
 agent = Agent('gateway/openai:gpt-5', history_processors=[context_aware_processor])
-
 ```
 
 context_aware_processor.py
@@ -813,7 +816,6 @@ def context_aware_processor(
     return messages
 
 agent = Agent('openai:gpt-5', history_processors=[context_aware_processor])
-
 ```
 
 This allows for more sophisticated message processing based on the current state of the agent run.
@@ -822,7 +824,7 @@ This allows for more sophisticated message processing based on the current state
 
 Use an LLM to summarize older messages to preserve context while reducing tokens.
 
-[Learn about Gateway](../gateway) summarize_old_messages.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) summarize_old_messages.py
 
 ```python
 from pydantic_ai import Agent, ModelMessage
@@ -849,7 +851,6 @@ async def summarize_old_messages(messages: list[ModelMessage]) -> list[ModelMess
 
 
 agent = Agent('gateway/openai:gpt-5', history_processors=[summarize_old_messages])
-
 ```
 
 summarize_old_messages.py
@@ -879,7 +880,6 @@ async def summarize_old_messages(messages: list[ModelMessage]) -> list[ModelMess
 
 
 agent = Agent('openai:gpt-5', history_processors=[summarize_old_messages])
-
 ```
 
 Be careful when summarizing the message history
@@ -938,14 +938,13 @@ def test_history_processor(function_model: FunctionModel, received_messages: lis
         ModelRequest(parts=[UserPromptPart(content='Question 1')]),
         ModelRequest(parts=[UserPromptPart(content='Question 2')]),
     ]
-
 ```
 
 ### Multiple Processors
 
 You can also use multiple processors:
 
-[Learn about Gateway](../gateway) multiple_history_processors.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) multiple_history_processors.py
 
 ```python
 from pydantic_ai import Agent, ModelMessage, ModelRequest
@@ -960,7 +959,6 @@ def summarize_old_messages(messages: list[ModelMessage]) -> list[ModelMessage]:
 
 
 agent = Agent('gateway/openai:gpt-5', history_processors=[filter_responses, summarize_old_messages])
-
 ```
 
 multiple_history_processors.py
@@ -978,11 +976,10 @@ def summarize_old_messages(messages: list[ModelMessage]) -> list[ModelMessage]:
 
 
 agent = Agent('openai:gpt-5', history_processors=[filter_responses, summarize_old_messages])
-
 ```
 
 In this case, the `filter_responses` processor will be applied first, and the `summarize_old_messages` processor will be applied second.
 
 ## Examples
 
-For a more complete example of using messages in conversations, see the [chat app](../examples/chat-app/) example.
+For a more complete example of using messages in conversations, see the [chat app](https://ai.pydantic.dev/examples/chat-app/index.md) example.

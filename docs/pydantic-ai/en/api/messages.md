@@ -23,7 +23,6 @@ graph RL
 FinishReason: TypeAlias = Literal[
     "stop", "length", "content_filter", "tool_call", "error"
 ]
-
 ```
 
 Reason the model finished generating the response, normalized to OpenTelemetry values.
@@ -36,7 +35,6 @@ ProviderDetailsDelta: TypeAlias = (
     | Callable[[dict[str, Any] | None], dict[str, Any]]
     | None
 )
-
 ```
 
 Type for provider_details input: can be a static dict, a callback to update existing details, or None.
@@ -84,14 +82,12 @@ class SystemPromptPart:
         return [_otel_messages.TextPart(type='text', **{'content': self.content} if settings.include_content else {})]
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content
 
 ```python
 content: str
-
 ```
 
 The content of the prompt.
@@ -100,7 +96,6 @@ The content of the prompt.
 
 ```python
 timestamp: datetime = field(default_factory=now_utc)
-
 ```
 
 The timestamp of the prompt.
@@ -109,7 +104,6 @@ The timestamp of the prompt.
 
 ```python
 dynamic_ref: str | None = None
-
 ```
 
 The ref of the dynamic system prompt function that generated this part.
@@ -120,7 +114,6 @@ Only set if system prompt is dynamic, see system_prompt for more information.
 
 ```python
 part_kind: Literal['system-prompt'] = 'system-prompt'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -216,14 +209,12 @@ class FileUrl(ABC):
         raise NotImplementedError
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### url
 
 ```python
 url: str = url
-
 ```
 
 The URL of the file.
@@ -232,7 +223,6 @@ The URL of the file.
 
 ```python
 force_download: bool = force_download
-
 ```
 
 For OpenAI and Google APIs it:
@@ -244,7 +234,6 @@ For OpenAI and Google APIs it:
 
 ```python
 vendor_metadata: dict[str, Any] | None = vendor_metadata
-
 ```
 
 Vendor-specific metadata for the file.
@@ -258,7 +247,6 @@ Supported by:
 
 ```python
 media_type: str
-
 ```
 
 Return the media type of the file, based on the URL or the provided `media_type`.
@@ -267,7 +255,6 @@ Return the media type of the file, based on the URL or the provided `media_type`
 
 ```python
 identifier: str
-
 ```
 
 The identifier of the file, such as a unique ID.
@@ -282,7 +269,6 @@ It's also included in inline-text delimiters for providers that require inlining
 
 ```python
 format: str
-
 ```
 
 The file format.
@@ -330,38 +316,27 @@ class VideoUrl(FileUrl):
         )
         self.kind = kind
 
-    def _infer_media_type(self) -> VideoMediaType:
+    def _infer_media_type(self) -> str:
         """Return the media type of the video, based on the url."""
-        if self.url.endswith('.mkv'):
-            return 'video/x-matroska'
-        elif self.url.endswith('.mov'):
-            return 'video/quicktime'
-        elif self.url.endswith('.mp4'):
-            return 'video/mp4'
-        elif self.url.endswith('.webm'):
-            return 'video/webm'
-        elif self.url.endswith('.flv'):
-            return 'video/x-flv'
-        elif self.url.endswith(('.mpeg', '.mpg')):
-            return 'video/mpeg'
-        elif self.url.endswith('.wmv'):
-            return 'video/x-ms-wmv'
-        elif self.url.endswith('.three_gp'):
-            return 'video/3gpp'
         # Assume that YouTube videos are mp4 because there would be no extension
         # to infer from. This should not be a problem, as Gemini disregards media
         # type for YouTube URLs.
-        elif self.is_youtube:
+        if self.is_youtube:
             return 'video/mp4'
-        else:
+
+        mime_type, _ = _mime_types.guess_type(self.url)
+        if mime_type is None:
             raise ValueError(
                 f'Could not infer media type from video URL: {self.url}. Explicitly provide a `media_type` instead.'
             )
+        return mime_type
 
     @property
     def is_youtube(self) -> bool:
         """True if the URL has a YouTube domain."""
-        return self.url.startswith(('https://youtu.be/', 'https://youtube.com/', 'https://www.youtube.com/'))
+        parsed = urlparse(self.url)
+        hostname = parsed.hostname
+        return hostname in ('youtu.be', 'youtube.com', 'www.youtube.com')
 
     @property
     def format(self) -> VideoFormat:
@@ -370,14 +345,12 @@ class VideoUrl(FileUrl):
         The choice of supported formats were based on the Bedrock Converse API. Other APIs don't require to use a format.
         """
         return _video_format_lookup[self.media_type]
-
 ```
 
 #### url
 
 ```python
 url: str
-
 ```
 
 The URL of the video.
@@ -386,7 +359,6 @@ The URL of the video.
 
 ```python
 kind: Literal['video-url'] = kind
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -395,7 +367,6 @@ Type identifier, this is available on all parts as a discriminator.
 
 ```python
 is_youtube: bool
-
 ```
 
 True if the URL has a YouTube domain.
@@ -404,7 +375,6 @@ True if the URL has a YouTube domain.
 
 ```python
 format: VideoFormat
-
 ```
 
 The file format of the video.
@@ -454,41 +424,29 @@ class AudioUrl(FileUrl):
         )
         self.kind = kind
 
-    def _infer_media_type(self) -> AudioMediaType:
+    def _infer_media_type(self) -> str:
         """Return the media type of the audio file, based on the url.
 
         References:
         - Gemini: https://ai.google.dev/gemini-api/docs/audio#supported-formats
         """
-        if self.url.endswith('.mp3'):
-            return 'audio/mpeg'
-        if self.url.endswith('.wav'):
-            return 'audio/wav'
-        if self.url.endswith('.flac'):
-            return 'audio/flac'
-        if self.url.endswith('.oga'):
-            return 'audio/ogg'
-        if self.url.endswith('.aiff'):
-            return 'audio/aiff'
-        if self.url.endswith('.aac'):
-            return 'audio/aac'
-
-        raise ValueError(
-            f'Could not infer media type from audio URL: {self.url}. Explicitly provide a `media_type` instead.'
-        )
+        mime_type, _ = _mime_types.guess_type(self.url)
+        if mime_type is None:
+            raise ValueError(
+                f'Could not infer media type from audio URL: {self.url}. Explicitly provide a `media_type` instead.'
+            )
+        return mime_type
 
     @property
     def format(self) -> AudioFormat:
         """The file format of the audio file."""
         return _audio_format_lookup[self.media_type]
-
 ```
 
 #### url
 
 ```python
 url: str
-
 ```
 
 The URL of the audio file.
@@ -497,7 +455,6 @@ The URL of the audio file.
 
 ```python
 kind: Literal['audio-url'] = kind
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -506,7 +463,6 @@ Type identifier, this is available on all parts as a discriminator.
 
 ```python
 format: AudioFormat
-
 ```
 
 The file format of the audio file.
@@ -554,20 +510,14 @@ class ImageUrl(FileUrl):
         )
         self.kind = kind
 
-    def _infer_media_type(self) -> ImageMediaType:
+    def _infer_media_type(self) -> str:
         """Return the media type of the image, based on the url."""
-        if self.url.endswith(('.jpg', '.jpeg')):
-            return 'image/jpeg'
-        elif self.url.endswith('.png'):
-            return 'image/png'
-        elif self.url.endswith('.gif'):
-            return 'image/gif'
-        elif self.url.endswith('.webp'):
-            return 'image/webp'
-        else:
+        mime_type, _ = _mime_types.guess_type(self.url)
+        if mime_type is None:
             raise ValueError(
                 f'Could not infer media type from image URL: {self.url}. Explicitly provide a `media_type` instead.'
             )
+        return mime_type
 
     @property
     def format(self) -> ImageFormat:
@@ -576,14 +526,12 @@ class ImageUrl(FileUrl):
         The choice of supported formats were based on the Bedrock Converse API. Other APIs don't require to use a format.
         """
         return _image_format_lookup[self.media_type]
-
 ```
 
 #### url
 
 ```python
 url: str
-
 ```
 
 The URL of the image.
@@ -592,7 +540,6 @@ The URL of the image.
 
 ```python
 kind: Literal['image-url'] = kind
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -601,7 +548,6 @@ Type identifier, this is available on all parts as a discriminator.
 
 ```python
 format: ImageFormat
-
 ```
 
 The file format of the image.
@@ -653,33 +599,12 @@ class DocumentUrl(FileUrl):
 
     def _infer_media_type(self) -> str:
         """Return the media type of the document, based on the url."""
-        # Common document types are hardcoded here as mime-type support for these
-        # extensions varies across operating systems.
-        if self.url.endswith(('.md', '.mdx', '.markdown')):
-            return 'text/markdown'
-        elif self.url.endswith('.asciidoc'):
-            return 'text/x-asciidoc'
-        elif self.url.endswith('.txt'):
-            return 'text/plain'
-        elif self.url.endswith('.pdf'):
-            return 'application/pdf'
-        elif self.url.endswith('.rtf'):
-            return 'application/rtf'
-        elif self.url.endswith('.doc'):
-            return 'application/msword'
-        elif self.url.endswith('.docx'):
-            return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        elif self.url.endswith('.xls'):
-            return 'application/vnd.ms-excel'
-        elif self.url.endswith('.xlsx'):
-            return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-
-        type_, _ = guess_type(self.url)
-        if type_ is None:
+        mime_type, _ = _mime_types.guess_type(self.url)
+        if mime_type is None:
             raise ValueError(
                 f'Could not infer media type from document URL: {self.url}. Explicitly provide a `media_type` instead.'
             )
-        return type_
+        return mime_type
 
     @property
     def format(self) -> DocumentFormat:
@@ -692,14 +617,12 @@ class DocumentUrl(FileUrl):
             return _document_format_lookup[media_type]
         except KeyError as e:
             raise ValueError(f'Unknown document media type: {media_type}') from e
-
 ```
 
 #### url
 
 ```python
 url: str
-
 ```
 
 The URL of the document.
@@ -708,7 +631,6 @@ The URL of the document.
 
 ```python
 kind: Literal['document-url'] = kind
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -717,7 +639,6 @@ Type identifier, this is available on all parts as a discriminator.
 
 ```python
 format: DocumentFormat
-
 ```
 
 The file format of the document.
@@ -813,7 +734,7 @@ class BinaryContent:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f'File not found: {path}')
-        media_type, _ = guess_type(path)
+        media_type, _ = _mime_types.guess_type(path)
         if media_type is None:
             media_type = 'application/octet-stream'
 
@@ -882,14 +803,12 @@ class BinaryContent:
             raise ValueError(f'Unknown media type: {self.media_type}') from e
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### data
 
 ```python
 data: bytes = data
-
 ```
 
 The binary file data.
@@ -905,7 +824,6 @@ media_type: (
     | DocumentMediaType
     | str
 ) = media_type
-
 ```
 
 The media type of the binary data.
@@ -914,7 +832,6 @@ The media type of the binary data.
 
 ```python
 vendor_metadata: dict[str, Any] | None = vendor_metadata
-
 ```
 
 Vendor-specific metadata for the file.
@@ -928,7 +845,6 @@ Supported by:
 
 ```python
 kind: Literal['binary'] = kind
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -939,7 +855,6 @@ Type identifier, this is available on all parts as a discriminator.
 narrow_type(
     bc: BinaryContent,
 ) -> BinaryContent | BinaryImage
-
 ```
 
 Narrow the type of the `BinaryContent` to `BinaryImage` if it's an image.
@@ -959,14 +874,12 @@ def narrow_type(bc: BinaryContent) -> BinaryContent | BinaryImage:
         )
     else:
         return bc
-
 ```
 
 #### from_data_uri
 
 ```python
 from_data_uri(data_uri: str) -> BinaryContent
-
 ```
 
 Create a `BinaryContent` from a data URI.
@@ -982,14 +895,12 @@ def from_data_uri(cls, data_uri: str) -> BinaryContent:
         raise ValueError('Data URI must start with "data:"')
     media_type, data = data_uri[len(prefix) :].split(';base64,', 1)
     return cls.narrow_type(cls(data=base64.b64decode(data), media_type=media_type))
-
 ```
 
 #### from_path
 
 ```python
 from_path(path: PathLike[str]) -> BinaryContent
-
 ```
 
 Create a `BinaryContent` from a path.
@@ -998,7 +909,10 @@ Defaults to 'application/octet-stream' if the media type cannot be inferred.
 
 Raises:
 
-| Type | Description | | --- | --- | | `FileNotFoundError` | if the file does not exist. | | `PermissionError` | if the file cannot be read. |
+| Type                | Description                 |
+| ------------------- | --------------------------- |
+| `FileNotFoundError` | if the file does not exist. |
+| `PermissionError`   | if the file cannot be read. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 
@@ -1016,19 +930,17 @@ def from_path(cls, path: PathLike[str]) -> BinaryContent:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f'File not found: {path}')
-    media_type, _ = guess_type(path)
+    media_type, _ = _mime_types.guess_type(path)
     if media_type is None:
         media_type = 'application/octet-stream'
 
     return cls.narrow_type(cls(data=path.read_bytes(), media_type=media_type))
-
 ```
 
 #### identifier
 
 ```python
 identifier: str
-
 ```
 
 Identifier for the binary content, such as a unique ID.
@@ -1043,7 +955,6 @@ It's also included in inline-text delimiters for providers that require inlining
 
 ```python
 data_uri: str
-
 ```
 
 Convert the `BinaryContent` to a data URI.
@@ -1052,7 +963,6 @@ Convert the `BinaryContent` to a data URI.
 
 ```python
 base64: str
-
 ```
 
 Return the binary data as a base64-encoded string. Default encoding is UTF-8.
@@ -1061,7 +971,6 @@ Return the binary data as a base64-encoded string. Default encoding is UTF-8.
 
 ```python
 is_audio: bool
-
 ```
 
 Return `True` if the media type is an audio type.
@@ -1070,7 +979,6 @@ Return `True` if the media type is an audio type.
 
 ```python
 is_image: bool
-
 ```
 
 Return `True` if the media type is an image type.
@@ -1079,7 +987,6 @@ Return `True` if the media type is an image type.
 
 ```python
 is_video: bool
-
 ```
 
 Return `True` if the media type is a video type.
@@ -1088,7 +995,6 @@ Return `True` if the media type is a video type.
 
 ```python
 is_document: bool
-
 ```
 
 Return `True` if the media type is a document type.
@@ -1097,7 +1003,6 @@ Return `True` if the media type is a document type.
 
 ```python
 format: str
-
 ```
 
 The file format of the binary content.
@@ -1131,7 +1036,6 @@ class BinaryImage(BinaryContent):
 
         if not self.is_image:
             raise ValueError('`BinaryImage` must be have a media type that starts with "image/"')  # pragma: no cover
-
 ```
 
 ### CachePoint
@@ -1170,14 +1074,12 @@ class CachePoint:
     Supported by:
 
     * Anthropic (automatically omitted for Bedrock, as it does not support explicit TTL). See https://docs.claude.com/en/docs/build-with-claude/prompt-caching#1-hour-cache-duration for more information."""
-
 ```
 
 #### kind
 
 ```python
 kind: Literal['cache-point'] = 'cache-point'
-
 ```
 
 Type identifier, this is available on all parts as a discriminator.
@@ -1186,7 +1088,6 @@ Type identifier, this is available on all parts as a discriminator.
 
 ```python
 ttl: Literal['5m', '1h'] = '5m'
-
 ```
 
 The cache time-to-live, either "5m" (5 minutes) or "1h" (1 hour).
@@ -1232,14 +1133,12 @@ class ToolReturn:
     kind: Literal['tool-return'] = 'tool-return'
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### return_value
 
 ```python
 return_value: Any
-
 ```
 
 The return value to be used in the tool response.
@@ -1248,7 +1147,6 @@ The return value to be used in the tool response.
 
 ```python
 content: str | Sequence[UserContent] | None = None
-
 ```
 
 The content to be sent to the model as a UserPromptPart.
@@ -1257,7 +1155,6 @@ The content to be sent to the model as a UserPromptPart.
 
 ```python
 metadata: Any = None
-
 ```
 
 Additional data that can be accessed programmatically by the application but is not sent to the LLM.
@@ -1330,14 +1227,12 @@ class UserPromptPart:
         return parts
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content
 
 ```python
 content: str | Sequence[UserContent]
-
 ```
 
 The content of the prompt.
@@ -1346,7 +1241,6 @@ The content of the prompt.
 
 ```python
 timestamp: datetime = field(default_factory=now_utc)
-
 ```
 
 The timestamp of the prompt.
@@ -1355,7 +1249,6 @@ The timestamp of the prompt.
 
 ```python
 part_kind: Literal['user-prompt'] = 'user-prompt'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -1437,14 +1330,12 @@ class BaseToolReturnPart:
         return self.content is not None  # pragma: no cover
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### tool_name
 
 ```python
 tool_name: str
-
 ```
 
 The name of the "tool" was called.
@@ -1453,7 +1344,6 @@ The name of the "tool" was called.
 
 ```python
 content: Any
-
 ```
 
 The return value.
@@ -1464,7 +1354,6 @@ The return value.
 tool_call_id: str = field(
     default_factory=generate_tool_call_id
 )
-
 ```
 
 The tool call identifier, this is used by some models including OpenAI.
@@ -1475,7 +1364,6 @@ In case the tool call id is not provided by the model, Pydantic AI will generate
 
 ```python
 metadata: Any = None
-
 ```
 
 Additional data that can be accessed programmatically by the application but is not sent to the LLM.
@@ -1484,7 +1372,6 @@ Additional data that can be accessed programmatically by the application but is 
 
 ```python
 timestamp: datetime = field(default_factory=now_utc)
-
 ```
 
 The timestamp, when the tool returned.
@@ -1493,7 +1380,6 @@ The timestamp, when the tool returned.
 
 ```python
 model_response_str() -> str
-
 ```
 
 Return a string representation of the content for the model.
@@ -1507,14 +1393,12 @@ def model_response_str(self) -> str:
         return self.content
     else:
         return tool_return_ta.dump_json(self.content).decode()
-
 ```
 
 #### model_response_object
 
 ```python
 model_response_object() -> dict[str, Any]
-
 ```
 
 Return a dictionary representation of the content, wrapping non-dict types appropriately.
@@ -1530,14 +1414,12 @@ def model_response_object(self) -> dict[str, Any]:
         return json_content  # type: ignore[reportUnknownReturn]
     else:
         return {'return_value': json_content}
-
 ```
 
 #### has_content
 
 ```python
 has_content() -> bool
-
 ```
 
 Return `True` if the tool return has content.
@@ -1548,7 +1430,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 def has_content(self) -> bool:
     """Return `True` if the tool return has content."""
     return self.content is not None  # pragma: no cover
-
 ```
 
 ### ToolReturnPart
@@ -1568,14 +1449,12 @@ class ToolReturnPart(BaseToolReturnPart):
 
     part_kind: Literal['tool-return'] = 'tool-return'
     """Part type identifier, this is available on all parts as a discriminator."""
-
 ```
 
 #### part_kind
 
 ```python
 part_kind: Literal['tool-return'] = 'tool-return'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -1605,14 +1484,12 @@ class BuiltinToolReturnPart(BaseToolReturnPart):
 
     part_kind: Literal['builtin-tool-return'] = 'builtin-tool-return'
     """Part type identifier, this is available on all parts as a discriminator."""
-
 ```
 
 #### provider_name
 
 ```python
 provider_name: str | None = None
-
 ```
 
 The name of the provider that generated the response.
@@ -1621,7 +1498,6 @@ The name of the provider that generated the response.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -1634,7 +1510,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 part_kind: Literal["builtin-tool-return"] = (
     "builtin-tool-return"
 )
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -1743,14 +1618,12 @@ class RetryPromptPart:
             return [part]
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ````
 
 #### content
 
 ```python
 content: list[ErrorDetails] | str
-
 ```
 
 Details of why and how the model should retry.
@@ -1761,7 +1634,6 @@ If the retry was triggered by a ValidationError, this will be a list of error de
 
 ```python
 tool_name: str | None = None
-
 ```
 
 The name of the tool that was called, if any.
@@ -1772,7 +1644,6 @@ The name of the tool that was called, if any.
 tool_call_id: str = field(
     default_factory=generate_tool_call_id
 )
-
 ```
 
 The tool call identifier, this is used by some models including OpenAI.
@@ -1783,7 +1654,6 @@ In case the tool call id is not provided by the model, Pydantic AI will generate
 
 ```python
 timestamp: datetime = field(default_factory=now_utc)
-
 ```
 
 The timestamp, when the retry was triggered.
@@ -1792,7 +1662,6 @@ The timestamp, when the retry was triggered.
 
 ```python
 part_kind: Literal['retry-prompt'] = 'retry-prompt'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -1801,7 +1670,6 @@ Part type identifier, this is available on all parts as a discriminator.
 
 ```python
 model_response() -> str
-
 ```
 
 Return a string message describing why the retry is requested.
@@ -1823,7 +1691,6 @@ def model_response(self) -> str:
             f'{len(self.content)} validation error{"s" if plural else ""}:\n```json\n{json_errors.decode()}\n```'
         )
     return f'{description}\n\nFix the errors and try again.'
-
 ````
 
 ### ModelRequestPart
@@ -1836,7 +1703,6 @@ ModelRequestPart = Annotated[
     | RetryPromptPart,
     Discriminator("part_kind"),
 ]
-
 ```
 
 A message part sent by Pydantic AI to a model.
@@ -1857,6 +1723,11 @@ class ModelRequest:
 
     _: KW_ONLY
 
+    # Default is None for backwards compatibility with old serialized messages that don't have this field.
+    # Using a default_factory would incorrectly fill in the current time for deserialized historical messages.
+    timestamp: datetime | None = None
+    """The timestamp when the request was sent to the model."""
+
     instructions: str | None = None
     """The instructions for the model."""
 
@@ -1875,23 +1746,28 @@ class ModelRequest:
         return cls(parts=[UserPromptPart(user_prompt)], instructions=instructions)
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### parts
 
 ```python
 parts: Sequence[ModelRequestPart]
-
 ```
 
 The parts of the user message.
+
+#### timestamp
+
+```python
+timestamp: datetime | None = None
+```
+
+The timestamp when the request was sent to the model.
 
 #### instructions
 
 ```python
 instructions: str | None = None
-
 ```
 
 The instructions for the model.
@@ -1900,7 +1776,6 @@ The instructions for the model.
 
 ```python
 kind: Literal['request'] = 'request'
-
 ```
 
 Message type identifier, this is available on all parts as a discriminator.
@@ -1909,7 +1784,6 @@ Message type identifier, this is available on all parts as a discriminator.
 
 ```python
 run_id: str | None = None
-
 ```
 
 The unique identifier of the agent run in which this message originated.
@@ -1918,7 +1792,6 @@ The unique identifier of the agent run in which this message originated.
 
 ```python
 metadata: dict[str, Any] | None = None
-
 ```
 
 Additional data that can be accessed programmatically by the application but is not sent to the LLM.
@@ -1929,7 +1802,6 @@ Additional data that can be accessed programmatically by the application but is 
 user_text_prompt(
     user_prompt: str, *, instructions: str | None = None
 ) -> ModelRequest
-
 ```
 
 Create a `ModelRequest` with a single user prompt as text.
@@ -1941,7 +1813,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 def user_text_prompt(cls, user_prompt: str, *, instructions: str | None = None) -> ModelRequest:
     """Create a `ModelRequest` with a single user prompt as text."""
     return cls(parts=[UserPromptPart(user_prompt)], instructions=instructions)
-
 ```
 
 ### TextPart
@@ -1976,14 +1847,12 @@ class TextPart:
         return bool(self.content)
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content
 
 ```python
 content: str
-
 ```
 
 The text content of the response.
@@ -1992,7 +1861,6 @@ The text content of the response.
 
 ```python
 id: str | None = None
-
 ```
 
 An optional identifier of the text part.
@@ -2001,7 +1869,6 @@ An optional identifier of the text part.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -2012,7 +1879,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_kind: Literal['text'] = 'text'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -2021,7 +1887,6 @@ Part type identifier, this is available on all parts as a discriminator.
 
 ```python
 has_content() -> bool
-
 ```
 
 Return `True` if the text content is non-empty.
@@ -2032,7 +1897,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 def has_content(self) -> bool:
     """Return `True` if the text content is non-empty."""
     return bool(self.content)
-
 ```
 
 ### ThinkingPart
@@ -2084,14 +1948,12 @@ class ThinkingPart:
         return bool(self.content)
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content
 
 ```python
 content: str
-
 ```
 
 The thinking content of the response.
@@ -2100,7 +1962,6 @@ The thinking content of the response.
 
 ```python
 id: str | None = None
-
 ```
 
 The identifier of the thinking part.
@@ -2109,7 +1970,6 @@ The identifier of the thinking part.
 
 ```python
 signature: str | None = None
-
 ```
 
 The signature of the thinking.
@@ -2125,7 +1985,6 @@ Supported by:
 
 ```python
 provider_name: str | None = None
-
 ```
 
 The name of the provider that generated the response.
@@ -2136,7 +1995,6 @@ Signatures are only sent back to the same provider.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -2147,7 +2005,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_kind: Literal['thinking'] = 'thinking'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -2156,7 +2013,6 @@ Part type identifier, this is available on all parts as a discriminator.
 
 ```python
 has_content() -> bool
-
 ```
 
 Return `True` if the thinking content is non-empty.
@@ -2167,7 +2023,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 def has_content(self) -> bool:
     """Return `True` if the thinking content is non-empty."""
     return bool(self.content)
-
 ```
 
 ### FilePart
@@ -2206,7 +2061,6 @@ class FilePart:
         return bool(self.content.data)
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content
@@ -2215,7 +2069,6 @@ class FilePart:
 content: Annotated[
     BinaryContent, AfterValidator(narrow_type)
 ]
-
 ```
 
 The file content of the response.
@@ -2224,7 +2077,6 @@ The file content of the response.
 
 ```python
 id: str | None = None
-
 ```
 
 The identifier of the file part.
@@ -2233,7 +2085,6 @@ The identifier of the file part.
 
 ```python
 provider_name: str | None = None
-
 ```
 
 The name of the provider that generated the response.
@@ -2242,7 +2093,6 @@ The name of the provider that generated the response.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -2253,7 +2103,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_kind: Literal['file'] = 'file'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -2262,7 +2111,6 @@ Part type identifier, this is available on all parts as a discriminator.
 
 ```python
 has_content() -> bool
-
 ```
 
 Return `True` if the file content is non-empty.
@@ -2273,7 +2121,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 def has_content(self) -> bool:
     """Return `True` if the file content is non-empty."""
     return bool(self.content.data)
-
 ```
 
 ### BaseToolCallPart
@@ -2348,14 +2195,12 @@ class BaseToolCallPart:
             return bool(self.args)
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### tool_name
 
 ```python
 tool_name: str
-
 ```
 
 The name of the tool to call.
@@ -2364,7 +2209,6 @@ The name of the tool to call.
 
 ```python
 args: str | dict[str, Any] | None = None
-
 ```
 
 The arguments to pass to the tool.
@@ -2377,7 +2221,6 @@ This is stored either as a JSON string or a Python dictionary depending on how d
 tool_call_id: str = field(
     default_factory=generate_tool_call_id
 )
-
 ```
 
 The tool call identifier, this is used by some models including OpenAI.
@@ -2388,7 +2231,6 @@ In case the tool call id is not provided by the model, Pydantic AI will generate
 
 ```python
 id: str | None = None
-
 ```
 
 An optional identifier of the tool call part, separate from the tool call ID.
@@ -2399,7 +2241,6 @@ This is used by some APIs like OpenAI Responses.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -2410,7 +2251,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 args_as_dict() -> dict[str, Any]
-
 ```
 
 Return the arguments as a Python dictionary.
@@ -2432,14 +2272,12 @@ def args_as_dict(self) -> dict[str, Any]:
     args = pydantic_core.from_json(self.args)
     assert isinstance(args, dict), 'args should be a dict'
     return cast(dict[str, Any], args)
-
 ```
 
 #### args_as_json_str
 
 ```python
 args_as_json_str() -> str
-
 ```
 
 Return the arguments as a JSON string.
@@ -2459,14 +2297,12 @@ def args_as_json_str(self) -> str:
     if isinstance(self.args, str):
         return self.args
     return pydantic_core.to_json(self.args).decode()
-
 ```
 
 #### has_content
 
 ```python
 has_content() -> bool
-
 ```
 
 Return `True` if the arguments contain any data.
@@ -2482,7 +2318,6 @@ def has_content(self) -> bool:
         return any(self.args.values())
     else:
         return bool(self.args)
-
 ```
 
 ### ToolCallPart
@@ -2502,14 +2337,12 @@ class ToolCallPart(BaseToolCallPart):
 
     part_kind: Literal['tool-call'] = 'tool-call'
     """Part type identifier, this is available on all parts as a discriminator."""
-
 ```
 
 #### part_kind
 
 ```python
 part_kind: Literal['tool-call'] = 'tool-call'
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -2537,14 +2370,12 @@ class BuiltinToolCallPart(BaseToolCallPart):
 
     part_kind: Literal['builtin-tool-call'] = 'builtin-tool-call'
     """Part type identifier, this is available on all parts as a discriminator."""
-
 ```
 
 #### provider_name
 
 ```python
 provider_name: str | None = None
-
 ```
 
 The name of the provider that generated the response.
@@ -2557,7 +2388,6 @@ Built-in tool calls are only sent back to the same provider.
 part_kind: Literal["builtin-tool-call"] = (
     "builtin-tool-call"
 )
-
 ```
 
 Part type identifier, this is available on all parts as a discriminator.
@@ -2574,7 +2404,6 @@ ModelResponsePart = Annotated[
     | FilePart,
     Discriminator("part_kind"),
 ]
-
 ```
 
 A message part returned by a model.
@@ -2605,9 +2434,10 @@ class ModelResponse:
     """The name of the model that generated the response."""
 
     timestamp: datetime = field(default_factory=_now_utc)
-    """The timestamp of the response.
+    """The timestamp when the response was received locally.
 
-    If the model provides a timestamp in the response (as OpenAI does) that will be used.
+    This is always a high-precision local datetime. Provider-specific timestamps
+    (if available) are stored in `provider_details['timestamp']`.
     """
 
     kind: Literal['response'] = 'response'
@@ -2839,14 +2669,12 @@ class ModelResponse:
         return self.provider_response_id
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### parts
 
 ```python
 parts: Sequence[ModelResponsePart]
-
 ```
 
 The parts of the model message.
@@ -2855,7 +2683,6 @@ The parts of the model message.
 
 ```python
 usage: RequestUsage = field(default_factory=RequestUsage)
-
 ```
 
 Usage information for the request.
@@ -2866,7 +2693,6 @@ This has a default to make tests easier, and to support loading old messages whe
 
 ```python
 model_name: str | None = None
-
 ```
 
 The name of the model that generated the response.
@@ -2875,18 +2701,16 @@ The name of the model that generated the response.
 
 ```python
 timestamp: datetime = field(default_factory=now_utc)
-
 ```
 
-The timestamp of the response.
+The timestamp when the response was received locally.
 
-If the model provides a timestamp in the response (as OpenAI does) that will be used.
+This is always a high-precision local datetime. Provider-specific timestamps (if available) are stored in `provider_details['timestamp']`.
 
 #### kind
 
 ```python
 kind: Literal['response'] = 'response'
-
 ```
 
 Message type identifier, this is available on all parts as a discriminator.
@@ -2895,7 +2719,6 @@ Message type identifier, this is available on all parts as a discriminator.
 
 ```python
 provider_name: str | None = None
-
 ```
 
 The name of the LLM provider that generated the response.
@@ -2904,7 +2727,6 @@ The name of the LLM provider that generated the response.
 
 ```python
 provider_url: str | None = None
-
 ```
 
 The base URL of the LLM provider that generated the response.
@@ -2920,7 +2742,6 @@ provider_details: Annotated[
         )
     ),
 ] = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -2936,7 +2757,6 @@ provider_response_id: Annotated[
         )
     ),
 ] = None
-
 ```
 
 request ID as specified by the model provider. This can be used to track the specific request to the model.
@@ -2945,7 +2765,6 @@ request ID as specified by the model provider. This can be used to track the spe
 
 ```python
 finish_reason: FinishReason | None = None
-
 ```
 
 Reason the model finished generating the response, normalized to OpenTelemetry values.
@@ -2954,7 +2773,6 @@ Reason the model finished generating the response, normalized to OpenTelemetry v
 
 ```python
 run_id: str | None = None
-
 ```
 
 The unique identifier of the agent run in which this message originated.
@@ -2963,7 +2781,6 @@ The unique identifier of the agent run in which this message originated.
 
 ```python
 metadata: dict[str, Any] | None = None
-
 ```
 
 Additional data that can be accessed programmatically by the application but is not sent to the LLM.
@@ -2972,7 +2789,6 @@ Additional data that can be accessed programmatically by the application but is 
 
 ```python
 text: str | None
-
 ```
 
 Get the text in the response.
@@ -2981,7 +2797,6 @@ Get the text in the response.
 
 ```python
 thinking: str | None
-
 ```
 
 Get the thinking in the response.
@@ -2990,7 +2805,6 @@ Get the thinking in the response.
 
 ```python
 files: list[BinaryContent]
-
 ```
 
 Get the files in the response.
@@ -2999,7 +2813,6 @@ Get the files in the response.
 
 ```python
 images: list[BinaryImage]
-
 ```
 
 Get the images in the response.
@@ -3008,7 +2821,6 @@ Get the images in the response.
 
 ```python
 tool_calls: list[ToolCallPart]
-
 ```
 
 Get the tool calls in the response.
@@ -3019,7 +2831,6 @@ Get the tool calls in the response.
 builtin_tool_calls: list[
     tuple[BuiltinToolCallPart, BuiltinToolReturnPart]
 ]
-
 ```
 
 Get the builtin tool calls and results in the response.
@@ -3028,7 +2839,6 @@ Get the builtin tool calls and results in the response.
 
 ```python
 price() -> PriceCalculation
-
 ```
 
 Deprecated
@@ -3041,14 +2851,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 @deprecated('`price` is deprecated, use `cost` instead')
 def price(self) -> genai_types.PriceCalculation:  # pragma: no cover
     return self.cost()
-
 ```
 
 #### cost
 
 ```python
 cost() -> PriceCalculation
-
 ```
 
 Calculate the cost of the usage.
@@ -3081,7 +2889,6 @@ def cost(self) -> genai_types.PriceCalculation:
         provider_id=self.provider_name,
         genai_request_timestamp=self.timestamp,
     )
-
 ```
 
 #### otel_events
@@ -3090,7 +2897,6 @@ def cost(self) -> genai_types.PriceCalculation:
 otel_events(
     settings: InstrumentationSettings,
 ) -> list[LogRecord]
-
 ```
 
 Return OpenTelemetry events for the response.
@@ -3145,7 +2951,6 @@ def otel_events(self, settings: InstrumentationSettings) -> list[LogRecord]:
             body['content'] = text_content
 
     return result
-
 ```
 
 ### ModelMessage
@@ -3154,7 +2959,6 @@ def otel_events(self, settings: InstrumentationSettings) -> list[LogRecord]:
 ModelMessage = Annotated[
     ModelRequest | ModelResponse, Discriminator("kind")
 ]
-
 ```
 
 Any message sent to or returned by a model.
@@ -3170,7 +2974,6 @@ ModelMessagesTypeAdapter = TypeAdapter(
         val_json_bytes="base64",
     ),
 )
-
 ```
 
 Pydantic TypeAdapter for (de)serializing messages.
@@ -3220,14 +3023,12 @@ class TextPartDelta:
         )
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content_delta
 
 ```python
 content_delta: str
-
 ```
 
 The incremental text content to add to the existing `TextPart` content.
@@ -3236,7 +3037,6 @@ The incremental text content to add to the existing `TextPart` content.
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -3247,7 +3047,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_delta_kind: Literal['text'] = 'text'
-
 ```
 
 Part delta type identifier, used as a discriminator.
@@ -3256,22 +3055,27 @@ Part delta type identifier, used as a discriminator.
 
 ```python
 apply(part: ModelResponsePart) -> TextPart
-
 ```
 
 Apply this text delta to an existing `TextPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ModelResponsePart` | The existing model response part, which must be a TextPart. | *required* |
+| Name   | Type                | Description                                                 | Default    |
+| ------ | ------------------- | ----------------------------------------------------------- | ---------- |
+| `part` | `ModelResponsePart` | The existing model response part, which must be a TextPart. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `TextPart` | A new TextPart with updated text content. |
+| Type       | Description                               |
+| ---------- | ----------------------------------------- |
+| `TextPart` | A new TextPart with updated text content. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValueError` | If part is not a TextPart. |
+| Type         | Description                |
+| ------------ | -------------------------- |
+| `ValueError` | If part is not a TextPart. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 
@@ -3295,7 +3099,6 @@ def apply(self, part: ModelResponsePart) -> TextPart:
         content=part.content + self.content_delta,
         provider_details={**(part.provider_details or {}), **(self.provider_details or {})} or None,
     )
-
 ```
 
 ### ThinkingPartDelta
@@ -3409,14 +3212,12 @@ class ThinkingPartDelta:
         )
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### content_delta
 
 ```python
 content_delta: str | None = None
-
 ```
 
 The incremental thinking content to add to the existing `ThinkingPart` content.
@@ -3425,7 +3226,6 @@ The incremental thinking content to add to the existing `ThinkingPart` content.
 
 ```python
 signature_delta: str | None = None
-
 ```
 
 Optional signature delta.
@@ -3436,7 +3236,6 @@ Note this is never treated as a delta — it can replace None.
 
 ```python
 provider_name: str | None = None
-
 ```
 
 Optional provider name for the thinking part.
@@ -3447,7 +3246,6 @@ Signatures are only sent back to the same provider.
 
 ```python
 provider_details: ProviderDetailsDelta = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -3460,7 +3258,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_delta_kind: Literal['thinking'] = 'thinking'
-
 ```
 
 Part delta type identifier, used as a discriminator.
@@ -3469,36 +3266,39 @@ Part delta type identifier, used as a discriminator.
 
 ```python
 apply(part: ModelResponsePart) -> ThinkingPart
-
 ```
 
 ```python
 apply(
     part: ModelResponsePart | ThinkingPartDelta,
 ) -> ThinkingPart | ThinkingPartDelta
-
 ```
 
 ```python
 apply(
     part: ModelResponsePart | ThinkingPartDelta,
 ) -> ThinkingPart | ThinkingPartDelta
-
 ```
 
 Apply this thinking delta to an existing `ThinkingPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ModelResponsePart | ThinkingPartDelta` | The existing model response part, which must be a ThinkingPart. | *required* |
+| Name   | Type                | Description         | Default                                                         |
+| ------ | ------------------- | ------------------- | --------------------------------------------------------------- |
+| `part` | \`ModelResponsePart | ThinkingPartDelta\` | The existing model response part, which must be a ThinkingPart. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ThinkingPart | ThinkingPartDelta` | A new ThinkingPart with updated thinking content. |
+| Type           | Description         |
+| -------------- | ------------------- |
+| \`ThinkingPart | ThinkingPartDelta\` |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValueError` | If part is not a ThinkingPart. |
+| Type         | Description                    |
+| ------------ | ------------------------------ |
+| `ValueError` | If part is not a ThinkingPart. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 
@@ -3569,7 +3369,6 @@ def apply(self, part: ModelResponsePart | ThinkingPartDelta) -> ThinkingPart | T
     raise ValueError(  # pragma: no cover
         f'Cannot apply ThinkingPartDeltas to non-ThinkingParts or non-ThinkingPartDeltas ({part=}, {self=})'
     )
-
 ```
 
 ### ToolCallPartDelta
@@ -3724,14 +3523,12 @@ class ToolCallPartDelta:
         return part
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### tool_name_delta
 
 ```python
 tool_name_delta: str | None = None
-
 ```
 
 Incremental text to add to the existing tool name, if any.
@@ -3740,7 +3537,6 @@ Incremental text to add to the existing tool name, if any.
 
 ```python
 args_delta: str | dict[str, Any] | None = None
-
 ```
 
 Incremental data to add to the tool arguments.
@@ -3751,7 +3547,6 @@ If this is a string, it will be appended to existing JSON arguments. If this is 
 
 ```python
 tool_call_id: str | None = None
-
 ```
 
 Optional tool call identifier, this is used by some models including OpenAI.
@@ -3762,7 +3557,6 @@ Note this is never treated as a delta — it can replace None, but otherwise if 
 
 ```python
 provider_details: dict[str, Any] | None = None
-
 ```
 
 Additional data returned by the provider that can't be mapped to standard fields.
@@ -3773,7 +3567,6 @@ This is used for data that is required to be sent back to APIs, as well as data 
 
 ```python
 part_delta_kind: Literal['tool_call'] = 'tool_call'
-
 ```
 
 Part delta type identifier, used as a discriminator.
@@ -3782,14 +3575,15 @@ Part delta type identifier, used as a discriminator.
 
 ```python
 as_part() -> ToolCallPart | None
-
 ```
 
 Convert this delta to a fully formed `ToolCallPart` if possible, otherwise return `None`.
 
 Returns:
 
-| Type | Description | | --- | --- | | `ToolCallPart | None` | A ToolCallPart if tool_name_delta is set, otherwise None. |
+| Type           | Description |
+| -------------- | ----------- |
+| \`ToolCallPart | None\`      |
 
 Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 
@@ -3809,7 +3603,6 @@ def as_part(self) -> ToolCallPart | None:
         self.tool_call_id or _generate_tool_call_id(),
         provider_details=self.provider_details,
     )
-
 ```
 
 #### apply
@@ -3818,36 +3611,40 @@ def as_part(self) -> ToolCallPart | None:
 apply(
     part: ModelResponsePart,
 ) -> ToolCallPart | BuiltinToolCallPart
-
 ```
 
 ```python
 apply(
     part: ModelResponsePart | ToolCallPartDelta,
 ) -> ToolCallPart | BuiltinToolCallPart | ToolCallPartDelta
-
 ```
 
 ```python
 apply(
     part: ModelResponsePart | ToolCallPartDelta,
 ) -> ToolCallPart | BuiltinToolCallPart | ToolCallPartDelta
-
 ```
 
 Apply this delta to a part or delta, returning a new part or delta with the changes applied.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ModelResponsePart | ToolCallPartDelta` | The existing model response part or delta to update. | *required* |
+| Name   | Type                | Description         | Default                                              |
+| ------ | ------------------- | ------------------- | ---------------------------------------------------- |
+| `part` | \`ModelResponsePart | ToolCallPartDelta\` | The existing model response part or delta to update. |
 
 Returns:
 
-| Type | Description | | --- | --- | | `ToolCallPart | BuiltinToolCallPart | ToolCallPartDelta` | Either a new ToolCallPart or BuiltinToolCallPart, or an updated ToolCallPartDelta. |
+| Type           | Description         |
+| -------------- | ------------------- |
+| \`ToolCallPart | BuiltinToolCallPart |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValueError` | If part is neither a ToolCallPart, BuiltinToolCallPart, nor a ToolCallPartDelta. | | `UnexpectedModelBehavior` | If applying JSON deltas to dict arguments or vice versa. |
+| Type                      | Description                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `ValueError`              | If part is neither a ToolCallPart, BuiltinToolCallPart, nor a ToolCallPartDelta. |
+| `UnexpectedModelBehavior` | If applying JSON deltas to dict arguments or vice versa.                         |
 
 Source code in `pydantic_ai_slim/pydantic_ai/messages.py`
 
@@ -3876,7 +3673,6 @@ def apply(
     raise ValueError(  # pragma: no cover
         f'Can only apply ToolCallPartDeltas to ToolCallParts, BuiltinToolCallParts, or ToolCallPartDeltas, not {part}'
     )
-
 ```
 
 ### ModelResponsePartDelta
@@ -3886,7 +3682,6 @@ ModelResponsePartDelta = Annotated[
     TextPartDelta | ThinkingPartDelta | ToolCallPartDelta,
     Discriminator("part_delta_kind"),
 ]
-
 ```
 
 A partial update (delta) for any model response part.
@@ -3926,14 +3721,12 @@ class PartStartEvent:
     """Event type identifier, used as a discriminator."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### index
 
 ```python
 index: int
-
 ```
 
 The index of the part within the overall response parts list.
@@ -3942,7 +3735,6 @@ The index of the part within the overall response parts list.
 
 ```python
 part: ModelResponsePart
-
 ```
 
 The newly started `ModelResponsePart`.
@@ -3961,7 +3753,6 @@ previous_part_kind: (
     ]
     | None
 ) = None
-
 ```
 
 The kind of the previous part, if any.
@@ -3972,7 +3763,6 @@ This is useful for UI event streams to know whether to group parts of the same k
 
 ```python
 event_kind: Literal['part_start'] = 'part_start'
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -3998,14 +3788,12 @@ class PartDeltaEvent:
     """Event type identifier, used as a discriminator."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### index
 
 ```python
 index: int
-
 ```
 
 The index of the part within the overall response parts list.
@@ -4014,7 +3802,6 @@ The index of the part within the overall response parts list.
 
 ```python
 delta: ModelResponsePartDelta
-
 ```
 
 The delta to apply to the specified part.
@@ -4023,7 +3810,6 @@ The delta to apply to the specified part.
 
 ```python
 event_kind: Literal['part_delta'] = 'part_delta'
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4057,14 +3843,12 @@ class PartEndEvent:
     """Event type identifier, used as a discriminator."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### index
 
 ```python
 index: int
-
 ```
 
 The index of the part within the overall response parts list.
@@ -4073,7 +3857,6 @@ The index of the part within the overall response parts list.
 
 ```python
 part: ModelResponsePart
-
 ```
 
 The complete `ModelResponsePart`.
@@ -4092,7 +3875,6 @@ next_part_kind: (
     ]
     | None
 ) = None
-
 ```
 
 The kind of the next part, if any.
@@ -4103,7 +3885,6 @@ This is useful for UI event streams to know whether to group parts of the same k
 
 ```python
 event_kind: Literal['part_end'] = 'part_end'
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4127,14 +3908,12 @@ class FinalResultEvent:
     """Event type identifier, used as a discriminator."""
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### tool_name
 
 ```python
 tool_name: str | None
-
 ```
 
 The name of the output tool that was called. `None` if the result is from text content and not from a tool.
@@ -4143,7 +3922,6 @@ The name of the output tool that was called. `None` if the result is from text c
 
 ```python
 tool_call_id: str | None
-
 ```
 
 The tool call ID, if any, that this result is associated with.
@@ -4152,7 +3930,6 @@ The tool call ID, if any, that this result is associated with.
 
 ```python
 event_kind: Literal['final_result'] = 'final_result'
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4167,7 +3944,6 @@ ModelResponseStreamEvent = Annotated[
     | FinalResultEvent,
     Discriminator("event_kind"),
 ]
-
 ```
 
 An event in the model response stream, starting a new part, applying a delta to an existing one, indicating a part is complete, or indicating the final result.
@@ -4203,14 +3979,12 @@ class FunctionToolCallEvent:
         return self.part.tool_call_id  # pragma: no cover
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### part
 
 ```python
 part: ToolCallPart
-
 ```
 
 The (function) tool call to make.
@@ -4221,7 +3995,6 @@ The (function) tool call to make.
 event_kind: Literal["function_tool_call"] = (
     "function_tool_call"
 )
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4230,7 +4003,6 @@ Event type identifier, used as a discriminator.
 
 ```python
 tool_call_id: str
-
 ```
 
 An ID used for matching details about the call to its result.
@@ -4239,7 +4011,6 @@ An ID used for matching details about the call to its result.
 
 ```python
 call_id: str
-
 ```
 
 An ID used for matching details about the call to its result.
@@ -4272,14 +4043,12 @@ class FunctionToolResultEvent:
         return self.result.tool_call_id
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### result
 
 ```python
 result: ToolReturnPart | RetryPromptPart
-
 ```
 
 The result of the call to the function tool.
@@ -4288,7 +4057,6 @@ The result of the call to the function tool.
 
 ```python
 content: str | Sequence[UserContent] | None = None
-
 ```
 
 The content that will be sent to the model as a UserPromptPart following the result.
@@ -4299,7 +4067,6 @@ The content that will be sent to the model as a UserPromptPart following the res
 event_kind: Literal["function_tool_result"] = (
     "function_tool_result"
 )
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4308,7 +4075,6 @@ Event type identifier, used as a discriminator.
 
 ```python
 tool_call_id: str
-
 ```
 
 An ID used to match the result to its original call.
@@ -4338,14 +4104,12 @@ class BuiltinToolCallEvent:
 
     event_kind: Literal['builtin_tool_call'] = 'builtin_tool_call'
     """Event type identifier, used as a discriminator."""
-
 ```
 
 #### part
 
 ```python
 part: BuiltinToolCallPart
-
 ```
 
 The built-in tool call to make.
@@ -4356,7 +4120,6 @@ The built-in tool call to make.
 event_kind: Literal["builtin_tool_call"] = (
     "builtin_tool_call"
 )
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4386,14 +4149,12 @@ class BuiltinToolResultEvent:
 
     event_kind: Literal['builtin_tool_result'] = 'builtin_tool_result'
     """Event type identifier, used as a discriminator."""
-
 ```
 
 #### result
 
 ```python
 result: BuiltinToolReturnPart
-
 ```
 
 The result of the call to the built-in tool.
@@ -4404,7 +4165,6 @@ The result of the call to the built-in tool.
 event_kind: Literal["builtin_tool_result"] = (
     "builtin_tool_result"
 )
-
 ```
 
 Event type identifier, used as a discriminator.
@@ -4419,7 +4179,6 @@ HandleResponseEvent = Annotated[
     | BuiltinToolResultEvent,
     Discriminator("event_kind"),
 ]
-
 ```
 
 An event yielded when handling a model response, indicating tool calls and results.
@@ -4431,7 +4190,6 @@ AgentStreamEvent = Annotated[
     ModelResponseStreamEvent | HandleResponseEvent,
     Discriminator("event_kind"),
 ]
-
 ```
 
 An event in the agent stream: model response stream events and response-handling events.

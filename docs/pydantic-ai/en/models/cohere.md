@@ -6,12 +6,10 @@ To use `CohereModel`, you need to either install `pydantic-ai`, or install `pyda
 
 ```bash
 pip install "pydantic-ai-slim[cohere]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[cohere]"
-
 ```
 
 ## Configuration
@@ -26,7 +24,6 @@ Once you have the API key, you can set it as an environment variable:
 
 ```bash
 export CO_API_KEY='your-api-key'
-
 ```
 
 You can then use `CohereModel` by name:
@@ -36,7 +33,6 @@ from pydantic_ai import Agent
 
 agent = Agent('cohere:command-r7b-12-2024')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -48,7 +44,6 @@ from pydantic_ai.models.cohere import CohereModel
 model = CohereModel('command-r7b-12-2024')
 agent = Agent(model)
 ...
-
 ```
 
 ## `provider` argument
@@ -63,7 +58,6 @@ from pydantic_ai.providers.cohere import CohereProvider
 model = CohereModel('command-r7b-12-2024', provider=CohereProvider(api_key='your-api-key'))
 agent = Agent(model)
 ...
-
 ```
 
 You can also customize the `CohereProvider` with a custom `http_client`:
@@ -82,5 +76,4 @@ model = CohereModel(
 )
 agent = Agent(model)
 ...
-
 ```

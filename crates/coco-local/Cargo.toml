@@ -1,0 +1,45 @@
+[package]
+name = "coco-local"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+arrow-array = { workspace = true, optional = true }
+arrow-schema = { workspace = true, optional = true }
+axum.workspace = true
+chrono.workspace = true
+clap.workspace = true
+coco-core = { path = "../coco-core" }
+coco-protocol = { path = "../coco-protocol" }
+crossterm.workspace = true
+futures = { workspace = true, optional = true }
+lance-index = { workspace = true, optional = true }
+lancedb = { workspace = true, optional = true }
+notify.workspace = true
+ort.workspace = true
+ratatui.workspace = true
+reqwest.workspace = true
+sea-orm = { workspace = true, features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+sea-orm-migration = { workspace = true, features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+sysinfo.workspace = true
+tokio.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+[features]
+default = []
+local-storage = ["arrow-array", "arrow-schema", "futures", "lance-index", "lancedb"]
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "embedder_bench"
+harness = false

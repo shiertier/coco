@@ -80,7 +80,6 @@ class Contains(Evaluator[object, object, object]):
             failure_reason = f'Containment check failed: {e}'
 
         return EvaluationReason(value=failure_reason is None, reason=failure_reason)
-
 ```
 
 ### Equals
@@ -101,7 +100,6 @@ class Equals(Evaluator[object, object, object]):
 
     def evaluate(self, ctx: EvaluatorContext[object, object, object]) -> bool:
         return ctx.output == self.value
-
 ```
 
 ### EqualsExpected
@@ -123,7 +121,6 @@ class EqualsExpected(Evaluator[object, object, object]):
         if ctx.expected_output is None:
             return {}  # Only compare if expected output is provided
         return ctx.output == ctx.expected_output
-
 ```
 
 ### HasMatchingSpan
@@ -147,7 +144,6 @@ class HasMatchingSpan(Evaluator[object, object, object]):
         ctx: EvaluatorContext[object, object, object],
     ) -> bool:
         return ctx.span_tree.any(self.query)
-
 ```
 
 ### IsInstance
@@ -176,7 +172,6 @@ class IsInstance(Evaluator[object, object, object]):
         if type(output).__qualname__ != type(output).__name__:
             reason += f' (qualname: {type(output).__qualname__})'
         return EvaluationReason(value=False, reason=reason)
-
 ```
 
 ### LLMJudge
@@ -259,7 +254,6 @@ class LLMJudge(Evaluator[object, object, object]):
         # I expect that is rare enough to be worth not solving yet, but common enough that we probably will want to
         # solve it eventually. I'm imagining some kind of model registry, but don't want to work out the details yet.
         return result
-
 ```
 
 ### MaxDuration
@@ -283,7 +277,6 @@ class MaxDuration(Evaluator[object, object, object]):
         if not isinstance(seconds, timedelta):
             seconds = timedelta(seconds=seconds)
         return duration <= seconds
-
 ```
 
 ### OutputConfig
@@ -300,7 +293,6 @@ class OutputConfig(TypedDict, total=False):
 
     evaluation_name: str
     include_reason: bool
-
 ```
 
 ### EvaluatorContext
@@ -326,7 +318,6 @@ class ExactMatch(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:
         # Use the context to access task inputs, outputs, and expected outputs
         return ctx.output == ctx.expected_output
-
 ```
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/context.py`
@@ -405,14 +396,12 @@ class EvaluatorContext(Generic[InputsT, OutputT, MetadataT]):
             # In this case, there was a reason we couldn't record the SpanTree. We raise that now
             raise self._span_tree
         return self._span_tree
-
 ````
 
 #### name
 
 ```python
 name: str | None
-
 ```
 
 The name of the case.
@@ -421,7 +410,6 @@ The name of the case.
 
 ```python
 inputs: InputsT
-
 ```
 
 The inputs provided to the task for this case.
@@ -430,7 +418,6 @@ The inputs provided to the task for this case.
 
 ```python
 metadata: MetadataT | None
-
 ```
 
 Metadata associated with the case, if provided. May be None if no metadata was specified.
@@ -439,7 +426,6 @@ Metadata associated with the case, if provided. May be None if no metadata was s
 
 ```python
 expected_output: OutputT | None
-
 ```
 
 The expected output for the case, if provided. May be None if no expected output was specified.
@@ -448,7 +434,6 @@ The expected output for the case, if provided. May be None if no expected output
 
 ```python
 output: OutputT
-
 ```
 
 The actual output produced by the task for this case.
@@ -457,7 +442,6 @@ The actual output produced by the task for this case.
 
 ```python
 duration: float
-
 ```
 
 The duration of the task run for this case.
@@ -466,7 +450,6 @@ The duration of the task run for this case.
 
 ```python
 attributes: dict[str, Any]
-
 ```
 
 Attributes associated with the task run for this case.
@@ -477,7 +460,6 @@ These can be set by calling `pydantic_evals.dataset.set_eval_attribute` in any c
 
 ```python
 metrics: dict[str, int | float]
-
 ```
 
 Metrics associated with the task run for this case.
@@ -488,7 +470,6 @@ These can be set by calling `pydantic_evals.dataset.increment_eval_metric` in an
 
 ```python
 span_tree: SpanTree
-
 ```
 
 Get the `SpanTree` for this task execution.
@@ -497,11 +478,15 @@ The span tree is a graph where each node corresponds to an OpenTelemetry span re
 
 Returns:
 
-| Type | Description | | --- | --- | | `SpanTree` | The span tree for the task execution. |
+| Type       | Description                           |
+| ---------- | ------------------------------------- |
+| `SpanTree` | The span tree for the task execution. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `SpanTreeRecordingError` | If spans were not captured during execution of the task, e.g. due to not having the necessary dependencies installed. |
+| Type                     | Description                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `SpanTreeRecordingError` | If spans were not captured during execution of the task, e.g. due to not having the necessary dependencies installed. |
 
 ### EvaluationReason
 
@@ -511,7 +496,10 @@ Contains a scalar value and an optional "reason" explaining the value.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `value` | `EvaluationScalar` | The scalar result of the evaluation (boolean, integer, float, or string). | *required* | | `reason` | `str | None` | An optional explanation of the evaluation result. | `None` |
+| Name     | Type               | Description                                                               | Default                                           |
+| -------- | ------------------ | ------------------------------------------------------------------------- | ------------------------------------------------- |
+| `value`  | `EvaluationScalar` | The scalar result of the evaluation (boolean, integer, float, or string). | *required*                                        |
+| `reason` | \`str              | None\`                                                                    | An optional explanation of the evaluation result. |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -529,7 +517,6 @@ class EvaluationReason:
 
     value: EvaluationScalar
     reason: str | None = None
-
 ```
 
 ### EvaluationResult
@@ -542,7 +529,12 @@ Contains the name, value, reason, and source evaluator for a single evaluation.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str` | The name of the evaluation. | *required* | | `value` | `EvaluationScalarT` | The scalar result of the evaluation. | *required* | | `reason` | `str | None` | An optional explanation of the evaluation result. | *required* | | `source` | `EvaluatorSpec` | The spec of the evaluator that produced this result. | *required* |
+| Name     | Type                | Description                                          | Default                                           |
+| -------- | ------------------- | ---------------------------------------------------- | ------------------------------------------------- |
+| `name`   | `str`               | The name of the evaluation.                          | *required*                                        |
+| `value`  | `EvaluationScalarT` | The scalar result of the evaluation.                 | *required*                                        |
+| `reason` | \`str               | None\`                                               | An optional explanation of the evaluation result. |
+| `source` | `EvaluatorSpec`     | The spec of the evaluator that produced this result. | *required*                                        |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -583,7 +575,6 @@ class EvaluationResult(Generic[EvaluationScalarT]):
                     continue
                 return cast(EvaluationResult[T], self)
         return None
-
 ```
 
 #### downcast
@@ -592,18 +583,22 @@ class EvaluationResult(Generic[EvaluationScalarT]):
 downcast(
     *value_types: type[T],
 ) -> EvaluationResult[T] | None
-
 ```
 
 Attempt to downcast this result to a more specific type.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `*value_types` | `type[T]` | The types to check the value against. | `()` |
+| Name           | Type      | Description                           | Default |
+| -------------- | --------- | ------------------------------------- | ------- |
+| `*value_types` | `type[T]` | The types to check the value against. | `()`    |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EvaluationResult[T] | None` | A downcast version of this result if the value is an instance of one of the given types, | | `EvaluationResult[T] | None` | otherwise None. |
+| Type                  | Description |
+| --------------------- | ----------- |
+| \`EvaluationResult[T] | None\`      |
+| \`EvaluationResult[T] | None\`      |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -626,7 +621,6 @@ def downcast(self, *value_types: type[T]) -> EvaluationResult[T] | None:
                 continue
             return cast(EvaluationResult[T], self)
     return None
-
 ```
 
 ### Evaluator
@@ -651,7 +645,6 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 class ExactMatch(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:
         return ctx.output == ctx.expected_output
-
 ```
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
@@ -822,21 +815,21 @@ class Evaluator(Generic[InputsT, OutputT, MetadataT], metaclass=_StrictABCMeta):
         return raw_arguments
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ````
 
 #### get_serialization_name
 
 ```python
 get_serialization_name() -> str
-
 ```
 
 Return the 'name' of this Evaluator to use during serialization.
 
 Returns:
 
-| Type | Description | | --- | --- | | `str` | The name of the Evaluator, which is typically the class name. |
+| Type  | Description                                                   |
+| ----- | ------------------------------------------------------------- |
+| `str` | The name of the Evaluator, which is typically the class name. |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -849,14 +842,12 @@ def get_serialization_name(cls) -> str:
         The name of the Evaluator, which is typically the class name.
     """
     return cls.__name__
-
 ```
 
 #### name
 
 ```python
 name() -> str
-
 ```
 
 Deprecated
@@ -873,14 +864,12 @@ Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 def name(cls) -> str:
     """`name` has been renamed, use `get_serialization_name` instead."""
     return cls.get_serialization_name()
-
 ```
 
 #### get_default_evaluation_name
 
 ```python
 get_default_evaluation_name() -> str
-
 ```
 
 Return the default name to use in reports for the output of this evaluator.
@@ -911,7 +900,6 @@ def get_default_evaluation_name(self) -> str:
         return evaluation_name
 
     return self.get_serialization_name()
-
 ```
 
 #### evaluate
@@ -920,7 +908,6 @@ def get_default_evaluation_name(self) -> str:
 evaluate(
     ctx: EvaluatorContext[InputsT, OutputT, MetadataT],
 ) -> EvaluatorOutput | Awaitable[EvaluatorOutput]
-
 ```
 
 Evaluate the task output in the given context.
@@ -929,11 +916,17 @@ This is the main evaluation method that subclasses must implement. It can be eit
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
+| Name  | Type                                            | Description                                                              | Default    |
+| ----- | ----------------------------------------------- | ------------------------------------------------------------------------ | ---------- |
+| `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EvaluatorOutput | Awaitable[EvaluatorOutput]` | The evaluation result, which can be a scalar value, an EvaluationReason, or a mapping | | `EvaluatorOutput | Awaitable[EvaluatorOutput]` | of evaluation names to either of those. Can be returned either synchronously or as an | | `EvaluatorOutput | Awaitable[EvaluatorOutput]` | awaitable for asynchronous evaluation. |
+| Type              | Description                  |
+| ----------------- | ---------------------------- |
+| \`EvaluatorOutput | Awaitable[EvaluatorOutput]\` |
+| \`EvaluatorOutput | Awaitable[EvaluatorOutput]\` |
+| \`EvaluatorOutput | Awaitable[EvaluatorOutput]\` |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -956,7 +949,6 @@ def evaluate(
         awaitable for asynchronous evaluation.
     """
     raise NotImplementedError('You must implement `evaluate`.')
-
 ```
 
 #### evaluate_sync
@@ -965,7 +957,6 @@ def evaluate(
 evaluate_sync(
     ctx: EvaluatorContext[InputsT, OutputT, MetadataT],
 ) -> EvaluatorOutput
-
 ```
 
 Run the evaluator synchronously, handling both sync and async implementations.
@@ -974,11 +965,16 @@ This method ensures synchronous execution by running any async evaluate implemen
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
+| Name  | Type                                            | Description                                                              | Default    |
+| ----- | ----------------------------------------------- | ------------------------------------------------------------------------ | ---------- |
+| `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EvaluatorOutput` | The evaluation result, which can be a scalar value, an EvaluationReason, or a mapping | | `EvaluatorOutput` | of evaluation names to either of those. |
+| Type              | Description                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `EvaluatorOutput` | The evaluation result, which can be a scalar value, an EvaluationReason, or a mapping |
+| `EvaluatorOutput` | of evaluation names to either of those.                                               |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -1001,7 +997,6 @@ def evaluate_sync(self, ctx: EvaluatorContext[InputsT, OutputT, MetadataT]) -> E
         return get_event_loop().run_until_complete(output)
     else:
         return cast(EvaluatorOutput, output)
-
 ```
 
 #### evaluate_async
@@ -1010,7 +1005,6 @@ def evaluate_sync(self, ctx: EvaluatorContext[InputsT, OutputT, MetadataT]) -> E
 evaluate_async(
     ctx: EvaluatorContext[InputsT, OutputT, MetadataT],
 ) -> EvaluatorOutput
-
 ```
 
 Run the evaluator asynchronously, handling both sync and async implementations.
@@ -1019,11 +1013,16 @@ This method ensures asynchronous execution by properly awaiting any async evalua
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
+| Name  | Type                                            | Description                                                              | Default    |
+| ----- | ----------------------------------------------- | ------------------------------------------------------------------------ | ---------- |
+| `ctx` | `EvaluatorContext[InputsT, OutputT, MetadataT]` | The context containing the inputs, outputs, and metadata for evaluation. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EvaluatorOutput` | The evaluation result, which can be a scalar value, an EvaluationReason, or a mapping | | `EvaluatorOutput` | of evaluation names to either of those. |
+| Type              | Description                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `EvaluatorOutput` | The evaluation result, which can be a scalar value, an EvaluationReason, or a mapping |
+| `EvaluatorOutput` | of evaluation names to either of those.                                               |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -1048,21 +1047,21 @@ async def evaluate_async(self, ctx: EvaluatorContext[InputsT, OutputT, MetadataT
         return await output
     else:
         return cast(EvaluatorOutput, output)
-
 ```
 
 #### serialize
 
 ```python
 serialize(info: SerializationInfo) -> Any
-
 ```
 
 Serialize this Evaluator to a JSON-serializable form.
 
 Returns:
 
-| Type | Description | | --- | --- | | `Any` | A JSON-serializable representation of this evaluator as an EvaluatorSpec. |
+| Type  | Description                                                               |
+| ----- | ------------------------------------------------------------------------- |
+| `Any` | A JSON-serializable representation of this evaluator as an EvaluatorSpec. |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -1079,14 +1078,12 @@ def serialize(self, info: SerializationInfo) -> Any:
         context=info.context,
         serialize_unknown=True,
     )
-
 ```
 
 #### build_serialization_arguments
 
 ```python
 build_serialization_arguments() -> dict[str, Any]
-
 ```
 
 Build the arguments for serialization.
@@ -1095,7 +1092,9 @@ Evaluators are serialized for inclusion as the "source" in an `EvaluationResult`
 
 Returns:
 
-| Type | Description | | --- | --- | | `dict[str, Any]` | A dictionary of arguments to be used during serialization. |
+| Type             | Description                                                |
+| ---------------- | ---------------------------------------------------------- |
+| `dict[str, Any]` | A dictionary of arguments to be used during serialization. |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/evaluator.py`
 
@@ -1121,7 +1120,6 @@ def build_serialization_arguments(self) -> dict[str, Any]:
                 continue
         raw_arguments[field.name] = value
     return raw_arguments
-
 ```
 
 ### EvaluatorFailure
@@ -1139,7 +1137,6 @@ class EvaluatorFailure:
     error_message: str
     error_stacktrace: str
     source: EvaluatorSpec
-
 ```
 
 ### EvaluatorOutput
@@ -1150,7 +1147,6 @@ EvaluatorOutput = (
     | EvaluationReason
     | Mapping[str, EvaluationScalar | EvaluationReason]
 )
-
 ```
 
 Type for the output of an evaluator, which can be a scalar, an EvaluationReason, or a mapping of names to either.
@@ -1258,14 +1254,12 @@ class EvaluatorSpec(BaseModel):
                 return {self.name: self.arguments}
         else:
             return handler(self)
-
 ```
 
 #### name
 
 ```python
 name: str
-
 ```
 
 The name of the evaluator class; should be the value returned by `EvaluatorClass.get_serialization_name()`
@@ -1274,7 +1268,6 @@ The name of the evaluator class; should be the value returned by `EvaluatorClass
 
 ```python
 arguments: None | tuple[Any] | dict[str, Any]
-
 ```
 
 The arguments to pass to the evaluator's constructor.
@@ -1285,27 +1278,29 @@ Can be None (no arguments), a tuple (a single positional argument), or a dict (k
 
 ```python
 args: tuple[Any, ...]
-
 ```
 
 Get the positional arguments for the evaluator.
 
 Returns:
 
-| Type | Description | | --- | --- | | `tuple[Any, ...]` | A tuple of positional arguments if arguments is a tuple, otherwise an empty tuple. |
+| Type              | Description                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `tuple[Any, ...]` | A tuple of positional arguments if arguments is a tuple, otherwise an empty tuple. |
 
 #### kwargs
 
 ```python
 kwargs: dict[str, Any]
-
 ```
 
 Get the keyword arguments for the evaluator.
 
 Returns:
 
-| Type | Description | | --- | --- | | `dict[str, Any]` | A dictionary of keyword arguments if arguments is a dict, otherwise an empty dict. |
+| Type             | Description                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `dict[str, Any]` | A dictionary of keyword arguments if arguments is a dict, otherwise an empty dict. |
 
 #### deserialize
 
@@ -1314,7 +1309,6 @@ deserialize(
     value: Any,
     handler: ModelWrapValidatorHandler[EvaluatorSpec],
 ) -> EvaluatorSpec
-
 ```
 
 Deserialize an EvaluatorSpec from various formats.
@@ -1323,15 +1317,22 @@ This validator handles the various short forms of evaluator specifications, conv
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `value` | `Any` | The value to deserialize. | *required* | | `handler` | `ModelWrapValidatorHandler[EvaluatorSpec]` | The validator handler. | *required* |
+| Name      | Type                                       | Description               | Default    |
+| --------- | ------------------------------------------ | ------------------------- | ---------- |
+| `value`   | `Any`                                      | The value to deserialize. | *required* |
+| `handler` | `ModelWrapValidatorHandler[EvaluatorSpec]` | The validator handler.    | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `EvaluatorSpec` | The deserialized EvaluatorSpec. |
+| Type            | Description                     |
+| --------------- | ------------------------------- |
+| `EvaluatorSpec` | The deserialized EvaluatorSpec. |
 
 Raises:
 
-| Type | Description | | --- | --- | | `ValidationError` | If the value cannot be deserialized. |
+| Type              | Description                          |
+| ----------------- | ------------------------------------ |
+| `ValidationError` | If the value cannot be deserialized. |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/spec.py`
 
@@ -1363,7 +1364,6 @@ def deserialize(cls, value: Any, handler: ModelWrapValidatorHandler[EvaluatorSpe
         except ValidationError:
             raise exc  # raise the original error
         return deserialized.to_evaluator_spec()
-
 ```
 
 #### serialize
@@ -1373,14 +1373,18 @@ serialize(
     handler: SerializerFunctionWrapHandler,
     info: SerializationInfo,
 ) -> Any
-
 ```
 
 Serialize using the appropriate short-form if possible.
 
 Returns:
 
-| Type | Description | | --- | --- | | `Any` | The serialized evaluator specification, using the shortest form possible: | | `Any` | Just the name if there are no arguments | | `Any` | {name: first_arg} if there's a single positional argument | | `Any` | {name: {kwargs}} if there are multiple (keyword) arguments |
+| Type  | Description                                                               |
+| ----- | ------------------------------------------------------------------------- |
+| `Any` | The serialized evaluator specification, using the shortest form possible: |
+| `Any` | Just the name if there are no arguments                                   |
+| `Any` | {name: first_arg} if there's a single positional argument                 |
+| `Any` | {name: {kwargs}} if there are multiple (keyword) arguments                |
 
 Source code in `pydantic_evals/pydantic_evals/evaluators/spec.py`
 
@@ -1404,7 +1408,6 @@ def serialize(self, handler: SerializerFunctionWrapHandler, info: SerializationI
             return {self.name: self.arguments}
     else:
         return handler(self)
-
 ```
 
 ### GradingOutput
@@ -1422,7 +1425,6 @@ class GradingOutput(BaseModel, populate_by_name=True):
     reason: str
     pass_: bool = Field(validation_alias='pass', serialization_alias='pass')
     score: float
-
 ```
 
 ### judge_output
@@ -1434,7 +1436,6 @@ judge_output(
     model: Model | KnownModelName | str | None = None,
     model_settings: ModelSettings | None = None,
 ) -> GradingOutput
-
 ```
 
 Judge the output of a model based on a rubric.
@@ -1459,7 +1460,6 @@ async def judge_output(
     return (
         await _judge_output_agent.run(user_prompt, model=model or _default_model, model_settings=model_settings)
     ).output
-
 ```
 
 ### judge_input_output
@@ -1472,7 +1472,6 @@ judge_input_output(
     model: Model | KnownModelName | str | None = None,
     model_settings: ModelSettings | None = None,
 ) -> GradingOutput
-
 ```
 
 Judge the output of a model based on the inputs and a rubric.
@@ -1499,7 +1498,6 @@ async def judge_input_output(
     return (
         await _judge_input_output_agent.run(user_prompt, model=model or _default_model, model_settings=model_settings)
     ).output
-
 ```
 
 ### judge_input_output_expected
@@ -1513,7 +1511,6 @@ judge_input_output_expected(
     model: Model | KnownModelName | str | None = None,
     model_settings: ModelSettings | None = None,
 ) -> GradingOutput
-
 ```
 
 Judge the output of a model based on the inputs and a rubric.
@@ -1543,7 +1540,6 @@ async def judge_input_output_expected(
             user_prompt, model=model or _default_model, model_settings=model_settings
         )
     ).output
-
 ```
 
 ### judge_output_expected
@@ -1556,7 +1552,6 @@ judge_output_expected(
     model: Model | KnownModelName | str | None = None,
     model_settings: ModelSettings | None = None,
 ) -> GradingOutput
-
 ```
 
 Judge the output of a model based on the expected output, output, and a rubric.
@@ -1584,7 +1579,6 @@ async def judge_output_expected(
             user_prompt, model=model or _default_model, model_settings=model_settings
         )
     ).output
-
 ```
 
 ### set_default_judge_model
@@ -1593,7 +1587,6 @@ async def judge_output_expected(
 set_default_judge_model(
     model: Model | KnownModelName,
 ) -> None
-
 ```
 
 Set the default model used for judging.
@@ -1610,5 +1603,4 @@ def set_default_judge_model(model: models.Model | models.KnownModelName) -> None
     """
     global _default_model
     _default_model = model
-
 ```

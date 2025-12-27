@@ -2,7 +2,7 @@
 
 ## Setup
 
-For details on how to set up authentication with this model, see [model configuration for Cohere](../../../models/cohere/).
+For details on how to set up authentication with this model, see [model configuration for Cohere](https://ai.pydantic.dev/models/cohere/index.md).
 
 ### LatestCohereModelNames
 
@@ -15,7 +15,6 @@ LatestCohereModelNames = Literal[
     "command-r-plus-08-2024",
     "command-r7b-12-2024",
 ]
-
 ```
 
 Latest Cohere models.
@@ -24,7 +23,6 @@ Latest Cohere models.
 
 ```python
 CohereModelName = str | LatestCohereModelNames
-
 ```
 
 Possible Cohere model names.
@@ -42,7 +40,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/models/cohere.py`
 ```python
 class CohereModelSettings(ModelSettings, total=False):
     """Settings used for a Cohere model request."""
-
 ```
 
 ### CohereModel
@@ -289,7 +286,6 @@ class CohereModel(Model):
                     )
             else:
                 assert_never(part)
-
 ```
 
 #### __init__
@@ -304,14 +300,18 @@ __init__(
     profile: ModelProfileSpec | None = None,
     settings: ModelSettings | None = None
 )
-
 ```
 
 Initialize an Cohere model.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `model_name` | `CohereModelName` | The name of the Cohere model to use. List of model names available here. | *required* | | `provider` | `Literal['cohere'] | Provider[AsyncClientV2]` | The provider to use for authentication and API access. Can be either the string 'cohere' or an instance of Provider[AsyncClientV2]. If not provided, a new provider will be created using the other parameters. | `'cohere'` | | `profile` | `ModelProfileSpec | None` | The model profile to use. Defaults to a profile picked by the provider based on the model name. | `None` | | `settings` | `ModelSettings | None` | Model-specific settings that will be used as defaults for this model. | `None` |
+| Name         | Type                | Description                                                              | Default                                                                                                                                                                                                         |
+| ------------ | ------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_name` | `CohereModelName`   | The name of the Cohere model to use. List of model names available here. | *required*                                                                                                                                                                                                      |
+| `provider`   | \`Literal['cohere'] | Provider[AsyncClientV2]\`                                                | The provider to use for authentication and API access. Can be either the string 'cohere' or an instance of Provider[AsyncClientV2]. If not provided, a new provider will be created using the other parameters. |
+| `profile`    | \`ModelProfileSpec  | None\`                                                                   | The model profile to use. Defaults to a profile picked by the provider based on the model name.                                                                                                                 |
+| `settings`   | \`ModelSettings     | None\`                                                                   | Model-specific settings that will be used as defaults for this model.                                                                                                                                           |
 
 Source code in `pydantic_ai_slim/pydantic_ai/models/cohere.py`
 
@@ -343,14 +343,12 @@ def __init__(
     self.client = provider.client
 
     super().__init__(settings=settings, profile=profile or provider.model_profile)
-
 ```
 
 #### model_name
 
 ```python
 model_name: CohereModelName
-
 ```
 
 The model name.
@@ -359,7 +357,6 @@ The model name.
 
 ```python
 system: str
-
 ```
 
 The model provider.

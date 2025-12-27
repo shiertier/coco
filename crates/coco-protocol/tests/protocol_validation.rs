@@ -1,0 +1,242 @@
+use coco_protocol::{
+    validate_indexing_config, validate_search_intent, ChunkingStrategy, CocoError, CocoErrorKind,
+    EmbeddingConfig, ErrorResponse, Filter, FilterOp, FilterValue, HnswParams, IndexingConfig,
+    RetrievalMode, SearchIntent, SearchIntentInput, TextSpan, ValidationContext,
+    VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+};
+
+fn sample_chunking() -> ChunkingStrategy {
+    ChunkingStrategy {
+        strategy_name: "fixed_token".to_string(),
+        chunk_size: 256,
+        chunk_overlap: 32,
+    }
+}
+
+fn sample_embedding() -> EmbeddingConfig {
+    EmbeddingConfig {
+        model_name: "all-MiniLM-L6-v2".to_string(),
+        dimensions: Some(384),
+    }
+}
+
+fn sample_indexing_config(config_id: &str) -> IndexingConfig {
+    IndexingConfig {
+        config_id: config_id.to_string(),
+        chunking: sample_chunking(),
+        embedding: sample_embedding(),
+        vector_metric: VectorMetric::Cosine,
+        index_params: None,
+        vector_backend: None,
+    }
+}
+
+fn sample_intent(mode: RetrievalMode) -> SearchIntentInput {
+    SearchIntentInput {
+        query_text: Some("hello".to_string()),
+        query_embedding: Some(vec![0.1, 0.2]),
+        retrieval_mode: mode,
+        indexing_config_id: None,
+        top_k: 5,
+        hybrid_alpha: 0.5,
+        filters: Vec::new(),
+        reranker: None,
+    }
+}
+
+#[test]
+fn search_intent_indexing_config_id_defaults_to_none() {
+    let json = serde_json::json!({
+        "query_text": "hello",
+        "retrieval_mode": "fts",
+        "top_k": 3,
+        "hybrid_alpha": 0.5,
+        "filters": [],
+        "reranker": null
+    });
+    let intent: SearchIntentInput = serde_json::from_value(json).expect("deserialize intent");
+    assert!(intent.indexing_config_id.is_none());
+}
+
+#[test]
+fn search_intent_serializes_indexing_config_id() {
+    let intent = SearchIntentInput {
+        indexing_config_id: Some("default".to_string()),
+        ..sample_intent(RetrievalMode::Fts)
+    };
+    let value = serde_json::to_value(&intent).expect("serialize intent");
+    assert_eq!(value["indexing_config_id"], "default");
+}
+
+#[test]
+fn vector_record_serializes_config_id() {
+    let record = VectorRecord {
+        chunk_id: "chunk-1".into(),
+        embedding: vec![0.1, 0.2],
+        metadata: VectorMetadata {
+            config_id: Some("default".to_string()),
+            doc_id: "doc-1".into(),
+            content: "hello".to_string(),
+            span: TextSpan { start: 0, end: 5 },
+        },
+    };
+    let value = serde_json::to_value(&record).expect("serialize record");
+    assert_eq!(value["metadata"]["config_id"], "default");
+    let decoded: VectorRecord = serde_json::from_value(value).expect("deserialize record");
+    assert_eq!(decoded, record);
+}
+
+#[test]
+fn validate_search_intent_rejects_missing_query_embedding_for_vector() {
+    let mut intent = sample_intent(RetrievalMode::Vector);
+    intent.query_embedding = None;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_missing_query_text_for_fts() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.query_text = None;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_missing_query_text_for_hybrid() {
+    let mut intent = sample_intent(RetrievalMode::Hybrid);
+    intent.query_text = None;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_missing_query_embedding_for_hybrid() {
+    let mut intent = sample_intent(RetrievalMode::Hybrid);
+    intent.query_embedding = None;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_zero_top_k() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.top_k = 0;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_out_of_range_alpha() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.hybrid_alpha = 1.5;
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_enforces_filter_allowlist() {
+    let intent = SearchIntentInput {
+        filters: vec![Filter {
+            field: "path".to_string(),
+            op: FilterOp::Contains,
+            value: FilterValue::String("src".to_string()),
+        }],
+        ..sample_intent(RetrievalMode::Fts)
+    };
+    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    let context = ValidationContext {
+        allowed_filter_fields: Some(vec!["doc_id".to_string()]),
+        ..ValidationContext::default()
+    };
+    assert!(validate_search_intent(&intent, &context).is_err());
+}
+
+#[test]
+fn vector_index_params_serialize_and_validate() {
+    let params = VectorIndexParams {
+        hnsw: Some(HnswParams {
+            m: Some(16),
+            ef_construction: Some(128),
+        }),
+        ivf_pq: None,
+    };
+    let config = IndexingConfig {
+        index_params: Some(params.clone()),
+        ..sample_indexing_config("default")
+    };
+    let value = serde_json::to_value(&params).expect("serialize params");
+    assert!(value.get("hnsw").is_some());
+    assert!(validate_indexing_config(&config, &ValidationContext::default()).is_ok());
+}
+
+#[test]
+fn vector_index_params_rejects_multiple_kinds() {
+    let params = VectorIndexParams {
+        hnsw: Some(HnswParams {
+            m: Some(16),
+            ef_construction: Some(128),
+        }),
+        ivf_pq: Some(Default::default()),
+    };
+    let config = IndexingConfig {
+        index_params: Some(params),
+        ..sample_indexing_config("default")
+    };
+    assert!(validate_indexing_config(&config, &ValidationContext::default()).is_err());
+}
+
+#[test]
+fn vector_index_params_rejects_empty_params() {
+    let params = VectorIndexParams {
+        hnsw: None,
+        ivf_pq: None,
+    };
+    let config = IndexingConfig {
+        index_params: Some(params),
+        ..sample_indexing_config("default")
+    };
+    assert!(validate_indexing_config(&config, &ValidationContext::default()).is_err());
+}
+
+#[test]
+fn indexing_config_requires_vector_metric() {
+    let json = serde_json::json!({
+        "config_id": "default",
+        "chunking": {
+            "strategy_name": "fixed_token",
+            "chunk_size": 256,
+            "chunk_overlap": 32
+        },
+        "embedding": {
+            "model_name": "all-MiniLM-L6-v2",
+            "dimensions": 384
+        }
+    });
+    let decoded = serde_json::from_value::<IndexingConfig>(json);
+    assert!(decoded.is_err());
+}
+
+#[test]
+fn config_id_validation_rejects_leading_separator() {
+    assert!(coco_protocol::normalize_config_id("-bad").is_err());
+    assert!(coco_protocol::normalize_config_id("_bad").is_err());
+}
+
+#[test]
+fn config_id_validation_rejects_trim_changes() {
+    let config = sample_indexing_config(" default");
+    assert!(validate_indexing_config(&config, &ValidationContext::default()).is_err());
+}
+
+#[test]
+fn config_id_length_enforced() {
+    let ok = "a".repeat(63);
+    let too_long = "a".repeat(64);
+    assert!(coco_protocol::normalize_config_id(&ok).is_ok());
+    assert!(coco_protocol::normalize_config_id(&too_long).is_err());
+}
+
+#[test]
+fn error_response_serialization_is_stable() {
+    let response = ErrorResponse::from(CocoError::user("bad input"));
+    let value = serde_json::to_value(&response).expect("serialize error response");
+    let object = value.as_object().expect("error response object");
+    assert_eq!(object.len(), 2);
+    assert_eq!(value["kind"], serde_json::to_value(CocoErrorKind::User).unwrap());
+    assert_eq!(value["message"], "bad input");
+}

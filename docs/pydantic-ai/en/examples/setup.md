@@ -14,30 +14,26 @@ If you've installed `pydantic-ai` via pip/uv, you can install the extra dependen
 
 ```bash
 pip install "pydantic-ai[examples]"
-
 ```
 
 ```bash
 uv add "pydantic-ai[examples]"
-
 ```
 
 If you clone the repo, you should instead use `uv sync --extra examples` to install extra dependencies.
 
 ### Setting model environment variables
 
-These examples will need you to set up authentication with one or more of the LLMs, see the [model configuration](../../models/overview/) docs for details on how to do this.
+These examples will need you to set up authentication with one or more of the LLMs, see the [model configuration](https://ai.pydantic.dev/models/overview/index.md) docs for details on how to do this.
 
 TL;DR: in most cases you'll need to set one of the following environment variables:
 
 ```bash
 export OPENAI_API_KEY=your-api-key
-
 ```
 
 ```bash
 export GEMINI_API_KEY=your-api-key
-
 ```
 
 ### Running Examples
@@ -46,24 +42,20 @@ To run the examples (this will work whether you installed `pydantic_ai`, or clon
 
 ```bash
 python -m pydantic_ai_examples.<example_module_name>
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.<example_module_name>
-
 ```
 
-For examples, to run the very simple [`pydantic_model`](../pydantic-model/) example:
+For examples, to run the very simple [`pydantic_model`](https://ai.pydantic.dev/examples/pydantic-model/index.md) example:
 
 ```bash
 python -m pydantic_ai_examples.pydantic_model
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.pydantic_model
-
 ```
 
 If you like one-liners and you're using uv, you can run a pydantic-ai example with zero setup:
@@ -72,7 +64,6 @@ If you like one-liners and you're using uv, you can run a pydantic-ai example wi
 OPENAI_API_KEY='your-api-key' \
   uv run --with "pydantic-ai[examples]" \
   -m pydantic_ai_examples.pydantic_model
-
 ```
 
 ______________________________________________________________________
@@ -81,10 +72,8 @@ You'll probably want to edit examples in addition to just running them. You can 
 
 ```bash
 python -m pydantic_ai_examples --copy-to examples/
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples --copy-to examples/
-
 ```

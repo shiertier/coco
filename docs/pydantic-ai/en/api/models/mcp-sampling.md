@@ -16,14 +16,12 @@ class MCPSamplingModelSettings(ModelSettings, total=False):
 
     mcp_model_preferences: ModelPreferences
     """Model preferences to use for MCP Sampling."""
-
 ```
 
 #### mcp_model_preferences
 
 ```python
 mcp_model_preferences: ModelPreferences
-
 ```
 
 Model preferences to use for MCP Sampling.
@@ -111,14 +109,12 @@ class MCPSamplingModel(Model):
     def system(self) -> str:
         """The system / model provider, returns `'MCP'`."""
         return 'MCP'
-
 ```
 
 #### session
 
 ```python
 session: ServerSession
-
 ```
 
 The MCP server session to use for sampling.
@@ -127,7 +123,6 @@ The MCP server session to use for sampling.
 
 ```python
 default_max_tokens: int = 16384
-
 ```
 
 Default max tokens to use if not set in ModelSettings.
@@ -138,7 +133,6 @@ Max tokens is a required parameter for MCP Sampling, but optional on ModelSettin
 
 ```python
 model_name: str
-
 ```
 
 The model name.
@@ -149,7 +143,6 @@ Since the model name isn't known until the request is made, this property always
 
 ```python
 system: str
-
 ```
 
 The system / model provider, returns `'MCP'`.

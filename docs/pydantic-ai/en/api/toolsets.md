@@ -12,7 +12,7 @@ It is responsible for:
 - Validating the arguments of the tools
 - Calling the tools
 
-See [toolset docs](../../toolsets/) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/index.md) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -147,14 +147,12 @@ class AbstractToolset(ABC, Generic[AgentDepsT]):
         from .approval_required import ApprovalRequiredToolset
 
         return ApprovalRequiredToolset(self, approval_required_func)
-
 ```
 
 #### id
 
 ```python
 id: str | None
-
 ```
 
 An ID for the toolset that is unique among all toolsets registered with the same agent.
@@ -167,7 +165,6 @@ A toolset needs to have an ID in order to be used in a durable execution environ
 
 ```python
 label: str
-
 ```
 
 The name of the toolset for use in error messages.
@@ -176,7 +173,6 @@ The name of the toolset for use in error messages.
 
 ```python
 tool_name_conflict_hint: str
-
 ```
 
 A hint for how to avoid name conflicts with other toolsets for use in error messages.
@@ -185,7 +181,6 @@ A hint for how to avoid name conflicts with other toolsets for use in error mess
 
 ```python
 __aenter__() -> Self
-
 ```
 
 Enter the toolset context.
@@ -201,14 +196,12 @@ async def __aenter__(self) -> Self:
     This is where you can set up network connections in a concrete implementation.
     """
     return self
-
 ```
 
 #### __aexit__
 
 ```python
 __aexit__(*args: Any) -> bool | None
-
 ```
 
 Exit the toolset context.
@@ -224,7 +217,6 @@ async def __aexit__(self, *args: Any) -> bool | None:
     This is where you can tear down network connections in a concrete implementation.
     """
     return None
-
 ```
 
 #### get_tools
@@ -233,7 +225,6 @@ async def __aexit__(self, *args: Any) -> bool | None:
 get_tools(
     ctx: RunContext[AgentDepsT],
 ) -> dict[str, ToolsetTool[AgentDepsT]]
-
 ```
 
 The tools that are available in this toolset.
@@ -245,7 +236,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 async def get_tools(self, ctx: RunContext[AgentDepsT]) -> dict[str, ToolsetTool[AgentDepsT]]:
     """The tools that are available in this toolset."""
     raise NotImplementedError()
-
 ```
 
 #### call_tool
@@ -257,14 +247,18 @@ call_tool(
     ctx: RunContext[AgentDepsT],
     tool: ToolsetTool[AgentDepsT],
 ) -> Any
-
 ```
 
 Call a tool with the given arguments.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `name` | `str` | The name of the tool to call. | *required* | | `tool_args` | `dict[str, Any]` | The arguments to pass to the tool. | *required* | | `ctx` | `RunContext[AgentDepsT]` | The run context. | *required* | | `tool` | `ToolsetTool[AgentDepsT]` | The tool definition returned by get_tools that was called. | *required* |
+| Name        | Type                      | Description                                                | Default    |
+| ----------- | ------------------------- | ---------------------------------------------------------- | ---------- |
+| `name`      | `str`                     | The name of the tool to call.                              | *required* |
+| `tool_args` | `dict[str, Any]`          | The arguments to pass to the tool.                         | *required* |
+| `ctx`       | `RunContext[AgentDepsT]`  | The run context.                                           | *required* |
+| `tool`      | `ToolsetTool[AgentDepsT]` | The tool definition returned by get_tools that was called. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -282,7 +276,6 @@ async def call_tool(
         tool: The tool definition returned by [`get_tools`][pydantic_ai.toolsets.AbstractToolset.get_tools] that was called.
     """
     raise NotImplementedError()
-
 ```
 
 #### apply
@@ -291,7 +284,6 @@ async def call_tool(
 apply(
     visitor: Callable[[AbstractToolset[AgentDepsT]], None],
 ) -> None
-
 ```
 
 Run a visitor function on all "leaf" toolsets (i.e. those that implement their own tool listing and calling).
@@ -302,7 +294,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 def apply(self, visitor: Callable[[AbstractToolset[AgentDepsT]], None]) -> None:
     """Run a visitor function on all "leaf" toolsets (i.e. those that implement their own tool listing and calling)."""
     visitor(self)
-
 ```
 
 #### visit_and_replace
@@ -314,7 +305,6 @@ visit_and_replace(
         AbstractToolset[AgentDepsT],
     ],
 ) -> AbstractToolset[AgentDepsT]
-
 ```
 
 Run a visitor function on all "leaf" toolsets (i.e. those that implement their own tool listing and calling) and replace them in the hierarchy with the result of the function.
@@ -327,7 +317,6 @@ def visit_and_replace(
 ) -> AbstractToolset[AgentDepsT]:
     """Run a visitor function on all "leaf" toolsets (i.e. those that implement their own tool listing and calling) and replace them in the hierarchy with the result of the function."""
     return visitor(self)
-
 ```
 
 #### filtered
@@ -338,12 +327,11 @@ filtered(
         [RunContext[AgentDepsT], ToolDefinition], bool
     ],
 ) -> FilteredToolset[AgentDepsT]
-
 ```
 
 Returns a new toolset that filters this toolset's tools using a filter function that takes the agent context and the tool definition.
 
-See [toolset docs](../../toolsets/#filtering-tools) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#filtering-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -358,19 +346,17 @@ def filtered(
     from .filtered import FilteredToolset
 
     return FilteredToolset(self, filter_func)
-
 ```
 
 #### prefixed
 
 ```python
 prefixed(prefix: str) -> PrefixedToolset[AgentDepsT]
-
 ```
 
 Returns a new toolset that prefixes the names of this toolset's tools.
 
-See [toolset docs](../../toolsets/#prefixing-tool-names) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#prefixing-tool-names) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -383,7 +369,6 @@ def prefixed(self, prefix: str) -> PrefixedToolset[AgentDepsT]:
     from .prefixed import PrefixedToolset
 
     return PrefixedToolset(self, prefix)
-
 ```
 
 #### prepared
@@ -392,12 +377,11 @@ def prefixed(self, prefix: str) -> PrefixedToolset[AgentDepsT]:
 prepared(
     prepare_func: ToolsPrepareFunc[AgentDepsT],
 ) -> PreparedToolset[AgentDepsT]
-
 ```
 
 Returns a new toolset that prepares this toolset's tools using a prepare function that takes the agent context and the original tool definitions.
 
-See [toolset docs](../../toolsets/#preparing-tool-definitions) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#preparing-tool-definitions) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -410,7 +394,6 @@ def prepared(self, prepare_func: ToolsPrepareFunc[AgentDepsT]) -> PreparedToolse
     from .prepared import PreparedToolset
 
     return PreparedToolset(self, prepare_func)
-
 ```
 
 #### renamed
@@ -419,12 +402,11 @@ def prepared(self, prepare_func: ToolsPrepareFunc[AgentDepsT]) -> PreparedToolse
 renamed(
     name_map: dict[str, str],
 ) -> RenamedToolset[AgentDepsT]
-
 ```
 
 Returns a new toolset that renames this toolset's tools using a dictionary mapping new names to original names.
 
-See [toolset docs](../../toolsets/#renaming-tools) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#renaming-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -437,7 +419,6 @@ def renamed(self, name_map: dict[str, str]) -> RenamedToolset[AgentDepsT]:
     from .renamed import RenamedToolset
 
     return RenamedToolset(self, name_map)
-
 ```
 
 #### approval_required
@@ -453,12 +434,11 @@ approval_required(
         bool,
     ] = lambda ctx, tool_def, tool_args: True
 ) -> ApprovalRequiredToolset[AgentDepsT]
-
 ```
 
 Returns a new toolset that requires (some) calls to tools it contains to be approved.
 
-See [toolset docs](../../toolsets/#requiring-tool-approval) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#requiring-tool-approval) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/abstract.py`
 
@@ -476,7 +456,6 @@ def approval_required(
     from .approval_required import ApprovalRequiredToolset
 
     return ApprovalRequiredToolset(self, approval_required_func)
-
 ```
 
 ### CombinedToolset
@@ -485,7 +464,7 @@ Bases: `AbstractToolset[AgentDepsT]`
 
 A toolset that combines multiple toolsets.
 
-See [toolset docs](../../toolsets/#combining-toolsets) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#combining-toolsets) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/combined.py`
 
@@ -565,7 +544,6 @@ class CombinedToolset(AbstractToolset[AgentDepsT]):
         self, visitor: Callable[[AbstractToolset[AgentDepsT]], AbstractToolset[AgentDepsT]]
     ) -> AbstractToolset[AgentDepsT]:
         return replace(self, toolsets=[toolset.visit_and_replace(visitor) for toolset in self.toolsets])
-
 ```
 
 ### ExternalToolset
@@ -574,7 +552,7 @@ Bases: `AbstractToolset[AgentDepsT]`
 
 A toolset that holds tools whose results will be produced outside of the Pydantic AI agent run in which they were called.
 
-See [toolset docs](../../toolsets/#external-toolset) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#external-toolset) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/external.py`
 
@@ -611,7 +589,6 @@ class ExternalToolset(AbstractToolset[AgentDepsT]):
         self, name: str, tool_args: dict[str, Any], ctx: RunContext[AgentDepsT], tool: ToolsetTool[AgentDepsT]
     ) -> Any:
         raise NotImplementedError('External tools cannot be called directly')
-
 ```
 
 ### ApprovalRequiredToolset
@@ -620,7 +597,7 @@ Bases: `WrapperToolset[AgentDepsT]`
 
 A toolset that requires (some) calls to tools it contains to be approved.
 
-See [toolset docs](../../toolsets/#requiring-tool-approval) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#requiring-tool-approval) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/approval_required.py`
 
@@ -643,7 +620,6 @@ class ApprovalRequiredToolset(WrapperToolset[AgentDepsT]):
             raise ApprovalRequired
 
         return await super().call_tool(name, tool_args, ctx, tool)
-
 ```
 
 ### FilteredToolset
@@ -652,7 +628,7 @@ Bases: `WrapperToolset[AgentDepsT]`
 
 A toolset that filters the tools it contains using a filter function that takes the agent context and the tool definition.
 
-See [toolset docs](../../toolsets/#filtering-tools) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#filtering-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/filtered.py`
 
@@ -670,7 +646,6 @@ class FilteredToolset(WrapperToolset[AgentDepsT]):
         return {
             name: tool for name, tool in (await super().get_tools(ctx)).items() if self.filter_func(ctx, tool.tool_def)
         }
-
 ```
 
 ### FunctionToolset
@@ -679,7 +654,7 @@ Bases: `AbstractToolset[AgentDepsT]`
 
 A toolset that lets Python functions be used as tools.
 
-See [toolset docs](../../toolsets/#function-toolset) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#function-toolset) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/function.py`
 
@@ -1031,7 +1006,6 @@ class FunctionToolset(AbstractToolset[AgentDepsT]):
                 raise ModelRetry(f'Timed out after {timeout} seconds.') from None
         else:
             return await tool.call_func(tool_args, ctx)
-
 ````
 
 #### __init__
@@ -1055,14 +1029,25 @@ __init__(
     metadata: dict[str, Any] | None = None,
     id: str | None = None
 )
-
 ```
 
 Build a new function toolset.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `tools` | `Sequence[Tool[AgentDepsT] | ToolFuncEither[AgentDepsT, ...]]` | The tools to add to the toolset. | `[]` | | `max_retries` | `int` | The maximum number of retries for each tool during a run. Applies to all tools, unless overridden when adding a tool. | `1` | | `timeout` | `float | None` | Timeout in seconds for tool execution. If a tool takes longer than this, a retry prompt is returned to the model. Individual tools can override this with their own timeout. Defaults to None (no timeout). | `None` | | `docstring_format` | `DocstringFormat` | Format of tool docstring, see DocstringFormat. Defaults to 'auto', such that the format is inferred from the structure of the docstring. Applies to all tools, unless overridden when adding a tool. | `'auto'` | | `require_parameter_descriptions` | `bool` | If True, raise an error if a parameter description is missing. Defaults to False. Applies to all tools, unless overridden when adding a tool. | `False` | | `schema_generator` | `type[GenerateJsonSchema]` | The JSON schema generator class to use for this tool. Defaults to GenerateToolJsonSchema. Applies to all tools, unless overridden when adding a tool. | `GenerateToolJsonSchema` | | `strict` | `bool | None` | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. | `None` | | `sequential` | `bool` | Whether the function requires a sequential/serial execution environment. Defaults to False. Applies to all tools, unless overridden when adding a tool. | `False` | | `requires_approval` | `bool` | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. Applies to all tools, unless overridden when adding a tool. | `False` | | `metadata` | `dict[str, Any] | None` | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. Applies to all tools, unless overridden when adding a tool, which will be merged with the toolset's metadata. | `None` | | `id` | `str | None` | An optional unique ID for the toolset. A toolset needs to have an ID in order to be used in a durable execution environment like Temporal, in which case the ID will be used to identify the toolset's activities within the workflow. | `None` |
+| Name                             | Type                         | Description                                                                                                                                                                                          | Default                                                                                                                                                                                                                                    |
+| -------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tools`                          | \`Sequence\[Tool[AgentDepsT] | ToolFuncEither[AgentDepsT, ...]\]\`                                                                                                                                                                  | The tools to add to the toolset.                                                                                                                                                                                                           |
+| `max_retries`                    | `int`                        | The maximum number of retries for each tool during a run. Applies to all tools, unless overridden when adding a tool.                                                                                | `1`                                                                                                                                                                                                                                        |
+| `timeout`                        | \`float                      | None\`                                                                                                                                                                                               | Timeout in seconds for tool execution. If a tool takes longer than this, a retry prompt is returned to the model. Individual tools can override this with their own timeout. Defaults to None (no timeout).                                |
+| `docstring_format`               | `DocstringFormat`            | Format of tool docstring, see DocstringFormat. Defaults to 'auto', such that the format is inferred from the structure of the docstring. Applies to all tools, unless overridden when adding a tool. | `'auto'`                                                                                                                                                                                                                                   |
+| `require_parameter_descriptions` | `bool`                       | If True, raise an error if a parameter description is missing. Defaults to False. Applies to all tools, unless overridden when adding a tool.                                                        | `False`                                                                                                                                                                                                                                    |
+| `schema_generator`               | `type[GenerateJsonSchema]`   | The JSON schema generator class to use for this tool. Defaults to GenerateToolJsonSchema. Applies to all tools, unless overridden when adding a tool.                                                | `GenerateToolJsonSchema`                                                                                                                                                                                                                   |
+| `strict`                         | \`bool                       | None\`                                                                                                                                                                                               | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info.                                                                                                                                         |
+| `sequential`                     | `bool`                       | Whether the function requires a sequential/serial execution environment. Defaults to False. Applies to all tools, unless overridden when adding a tool.                                              | `False`                                                                                                                                                                                                                                    |
+| `requires_approval`              | `bool`                       | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. Applies to all tools, unless overridden when adding a tool.                     | `False`                                                                                                                                                                                                                                    |
+| `metadata`                       | \`dict[str, Any]             | None\`                                                                                                                                                                                               | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. Applies to all tools, unless overridden when adding a tool, which will be merged with the toolset's metadata. |
+| `id`                             | \`str                        | None\`                                                                                                                                                                                               | An optional unique ID for the toolset. A toolset needs to have an ID in order to be used in a durable execution environment like Temporal, in which case the ID will be used to identify the toolset's activities within the workflow.     |
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/function.py`
 
@@ -1127,7 +1112,6 @@ def __init__(
             self.add_tool(tool)
         else:
             self.add_function(tool)
-
 ```
 
 #### tool
@@ -1136,7 +1120,6 @@ def __init__(
 tool(
     func: ToolFuncEither[AgentDepsT, ToolParams],
 ) -> ToolFuncEither[AgentDepsT, ToolParams]
-
 ```
 
 ```python
@@ -1160,7 +1143,6 @@ tool(
     [ToolFuncEither[AgentDepsT, ToolParams]],
     ToolFuncEither[AgentDepsT, ToolParams],
 ]
-
 ```
 
 ```python
@@ -1185,14 +1167,13 @@ tool(
     metadata: dict[str, Any] | None = None,
     timeout: float | None = None,
 ) -> Any
-
 ```
 
 Decorator to register a tool function which takes RunContext as its first argument.
 
 Can decorate a sync or async functions.
 
-The docstring is inspected to extract both the tool description and description of each parameter, [learn more](../../tools/#function-tools-and-schema).
+The docstring is inspected to extract both the tool description and description of each parameter, [learn more](https://ai.pydantic.dev/tools/#function-tools-and-schema).
 
 We can't add overloads for every possible signature of tool, since the return type is a recursive union so the signature of functions decorated with `@toolset.tool` is obscured.
 
@@ -1215,12 +1196,25 @@ agent = Agent('test', toolsets=[toolset], deps_type=int)
 result = agent.run_sync('foobar', deps=1)
 print(result.output)
 #> {"foobar":1,"spam":1.0}
-
 ```
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `func` | `ToolFuncEither[AgentDepsT, ToolParams] | None` | The tool function to register. | `None` | | `name` | `str | None` | The name of the tool, defaults to the function name. | `None` | | `description` | `str | None` | The description of the tool,defaults to the function docstring. | `None` | | `retries` | `int | None` | The number of retries to allow for this tool, defaults to the agent's default retries, which defaults to 1. | `None` | | `prepare` | `ToolPrepareFunc[AgentDepsT] | None` | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc. | `None` | | `docstring_format` | `DocstringFormat | None` | The format of the docstring, see DocstringFormat. If None, the default value is determined by the toolset. | `None` | | `require_parameter_descriptions` | `bool | None` | If True, raise an error if a parameter description is missing. If None, the default value is determined by the toolset. | `None` | | `schema_generator` | `type[GenerateJsonSchema] | None` | The JSON schema generator class to use for this tool. If None, the default value is determined by the toolset. | `None` | | `strict` | `bool | None` | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. If None, the default value is determined by the toolset. | `None` | | `sequential` | `bool | None` | Whether the function requires a sequential/serial execution environment. Defaults to False. If None, the default value is determined by the toolset. | `None` | | `requires_approval` | `bool | None` | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. If None, the default value is determined by the toolset. | `None` | | `metadata` | `dict[str, Any] | None` | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. If None, the default value is determined by the toolset. If provided, it will be merged with the toolset's metadata. | `None` | | `timeout` | `float | None` | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout). | `None` |
+| Name                             | Type                                     | Description | Default                                                                                                                                                                                                                                           |
+| -------------------------------- | ---------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `func`                           | \`ToolFuncEither[AgentDepsT, ToolParams] | None\`      | The tool function to register.                                                                                                                                                                                                                    |
+| `name`                           | \`str                                    | None\`      | The name of the tool, defaults to the function name.                                                                                                                                                                                              |
+| `description`                    | \`str                                    | None\`      | The description of the tool,defaults to the function docstring.                                                                                                                                                                                   |
+| `retries`                        | \`int                                    | None\`      | The number of retries to allow for this tool, defaults to the agent's default retries, which defaults to 1.                                                                                                                                       |
+| `prepare`                        | \`ToolPrepareFunc[AgentDepsT]            | None\`      | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc.                 |
+| `docstring_format`               | \`DocstringFormat                        | None\`      | The format of the docstring, see DocstringFormat. If None, the default value is determined by the toolset.                                                                                                                                        |
+| `require_parameter_descriptions` | \`bool                                   | None\`      | If True, raise an error if a parameter description is missing. If None, the default value is determined by the toolset.                                                                                                                           |
+| `schema_generator`               | \`type[GenerateJsonSchema]               | None\`      | The JSON schema generator class to use for this tool. If None, the default value is determined by the toolset.                                                                                                                                    |
+| `strict`                         | \`bool                                   | None\`      | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. If None, the default value is determined by the toolset.                                                                                       |
+| `sequential`                     | \`bool                                   | None\`      | Whether the function requires a sequential/serial execution environment. Defaults to False. If None, the default value is determined by the toolset.                                                                                              |
+| `requires_approval`              | \`bool                                   | None\`      | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. If None, the default value is determined by the toolset.                                                                     |
+| `metadata`                       | \`dict[str, Any]                         | None\`      | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. If None, the default value is determined by the toolset. If provided, it will be merged with the toolset's metadata. |
+| `timeout`                        | \`float                                  | None\`      | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout).                                                                                                          |
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/function.py`
 
@@ -1325,7 +1319,6 @@ def tool(
         return func_
 
     return tool_decorator if func is None else tool_decorator(func)
-
 ````
 
 #### add_function
@@ -1349,18 +1342,32 @@ add_function(
     metadata: dict[str, Any] | None = None,
     timeout: float | None = None,
 ) -> None
-
 ```
 
 Add a function as a tool to the toolset.
 
 Can take a sync or async function.
 
-The docstring is inspected to extract both the tool description and description of each parameter, [learn more](../../tools/#function-tools-and-schema).
+The docstring is inspected to extract both the tool description and description of each parameter, [learn more](https://ai.pydantic.dev/tools/#function-tools-and-schema).
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `func` | `ToolFuncEither[AgentDepsT, ToolParams]` | The tool function to register. | *required* | | `takes_ctx` | `bool | None` | Whether the function takes a RunContext as its first argument. If None, this is inferred from the function signature. | `None` | | `name` | `str | None` | The name of the tool, defaults to the function name. | `None` | | `description` | `str | None` | The description of the tool, defaults to the function docstring. | `None` | | `retries` | `int | None` | The number of retries to allow for this tool, defaults to the agent's default retries, which defaults to 1. | `None` | | `prepare` | `ToolPrepareFunc[AgentDepsT] | None` | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc. | `None` | | `docstring_format` | `DocstringFormat | None` | The format of the docstring, see DocstringFormat. If None, the default value is determined by the toolset. | `None` | | `require_parameter_descriptions` | `bool | None` | If True, raise an error if a parameter description is missing. If None, the default value is determined by the toolset. | `None` | | `schema_generator` | `type[GenerateJsonSchema] | None` | The JSON schema generator class to use for this tool. If None, the default value is determined by the toolset. | `None` | | `strict` | `bool | None` | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. If None, the default value is determined by the toolset. | `None` | | `sequential` | `bool | None` | Whether the function requires a sequential/serial execution environment. Defaults to False. If None, the default value is determined by the toolset. | `None` | | `requires_approval` | `bool | None` | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. If None, the default value is determined by the toolset. | `None` | | `metadata` | `dict[str, Any] | None` | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. If None, the default value is determined by the toolset. If provided, it will be merged with the toolset's metadata. | `None` | | `timeout` | `float | None` | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout). | `None` |
+| Name                             | Type                                     | Description                    | Default                                                                                                                                                                                                                                           |
+| -------------------------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `func`                           | `ToolFuncEither[AgentDepsT, ToolParams]` | The tool function to register. | *required*                                                                                                                                                                                                                                        |
+| `takes_ctx`                      | \`bool                                   | None\`                         | Whether the function takes a RunContext as its first argument. If None, this is inferred from the function signature.                                                                                                                             |
+| `name`                           | \`str                                    | None\`                         | The name of the tool, defaults to the function name.                                                                                                                                                                                              |
+| `description`                    | \`str                                    | None\`                         | The description of the tool, defaults to the function docstring.                                                                                                                                                                                  |
+| `retries`                        | \`int                                    | None\`                         | The number of retries to allow for this tool, defaults to the agent's default retries, which defaults to 1.                                                                                                                                       |
+| `prepare`                        | \`ToolPrepareFunc[AgentDepsT]            | None\`                         | custom method to prepare the tool definition for each step, return None to omit this tool from a given step. This is useful if you want to customise a tool at call time, or omit it completely from a step. See ToolPrepareFunc.                 |
+| `docstring_format`               | \`DocstringFormat                        | None\`                         | The format of the docstring, see DocstringFormat. If None, the default value is determined by the toolset.                                                                                                                                        |
+| `require_parameter_descriptions` | \`bool                                   | None\`                         | If True, raise an error if a parameter description is missing. If None, the default value is determined by the toolset.                                                                                                                           |
+| `schema_generator`               | \`type[GenerateJsonSchema]               | None\`                         | The JSON schema generator class to use for this tool. If None, the default value is determined by the toolset.                                                                                                                                    |
+| `strict`                         | \`bool                                   | None\`                         | Whether to enforce JSON schema compliance (only affects OpenAI). See ToolDefinition for more info. If None, the default value is determined by the toolset.                                                                                       |
+| `sequential`                     | \`bool                                   | None\`                         | Whether the function requires a sequential/serial execution environment. Defaults to False. If None, the default value is determined by the toolset.                                                                                              |
+| `requires_approval`              | \`bool                                   | None\`                         | Whether this tool requires human-in-the-loop approval. Defaults to False. See the tools documentation for more info. If None, the default value is determined by the toolset.                                                                     |
+| `metadata`                       | \`dict[str, Any]                         | None\`                         | Optional metadata for the tool. This is not sent to the model but can be used for filtering and tool behavior customization. If None, the default value is determined by the toolset. If provided, it will be merged with the toolset's metadata. |
+| `timeout`                        | \`float                                  | None\`                         | Timeout in seconds for tool execution. If the tool takes longer, a retry prompt is returned to the model. Defaults to None (no timeout).                                                                                                          |
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/function.py`
 
@@ -1448,21 +1455,21 @@ def add_function(
         timeout=timeout,
     )
     self.add_tool(tool)
-
 ```
 
 #### add_tool
 
 ```python
 add_tool(tool: Tool[AgentDepsT]) -> None
-
 ```
 
 Add a tool to the toolset.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `tool` | `Tool[AgentDepsT]` | The tool to add. | *required* |
+| Name   | Type               | Description      | Default    |
+| ------ | ------------------ | ---------------- | ---------- |
+| `tool` | `Tool[AgentDepsT]` | The tool to add. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/function.py`
 
@@ -1480,7 +1487,6 @@ def add_tool(self, tool: Tool[AgentDepsT]) -> None:
     if self.metadata is not None:
         tool.metadata = self.metadata | (tool.metadata or {})
     self.tools[tool.name] = tool
-
 ```
 
 ### PrefixedToolset
@@ -1489,7 +1495,7 @@ Bases: `WrapperToolset[AgentDepsT]`
 
 A toolset that prefixes the names of the tools it contains.
 
-See [toolset docs](../../toolsets/#prefixing-tool-names) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#prefixing-tool-names) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/prefixed.py`
 
@@ -1525,7 +1531,6 @@ class PrefixedToolset(WrapperToolset[AgentDepsT]):
         ctx = replace(ctx, tool_name=original_name)
         tool = replace(tool, tool_def=replace(tool.tool_def, name=original_name))
         return await super().call_tool(original_name, tool_args, ctx, tool)
-
 ```
 
 ### RenamedToolset
@@ -1534,7 +1539,7 @@ Bases: `WrapperToolset[AgentDepsT]`
 
 A toolset that renames the tools it contains using a dictionary mapping new names to original names.
 
-See [toolset docs](../../toolsets/#renaming-tools) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#renaming-tools) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/renamed.py`
 
@@ -1571,7 +1576,6 @@ class RenamedToolset(WrapperToolset[AgentDepsT]):
         ctx = replace(ctx, tool_name=original_name)
         tool = replace(tool, tool_def=replace(tool.tool_def, name=original_name))
         return await super().call_tool(original_name, tool_args, ctx, tool)
-
 ```
 
 ### PreparedToolset
@@ -1580,7 +1584,7 @@ Bases: `WrapperToolset[AgentDepsT]`
 
 A toolset that prepares the tools it contains using a prepare function that takes the agent context and the original tool definitions.
 
-See [toolset docs](../../toolsets/#preparing-tool-definitions) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#preparing-tool-definitions) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/prepared.py`
 
@@ -1610,7 +1614,6 @@ class PreparedToolset(WrapperToolset[AgentDepsT]):
             name: replace(original_tools[name], tool_def=tool_def)
             for name, tool_def in prepared_tool_defs_by_name.items()
         }
-
 ```
 
 ### WrapperToolset
@@ -1619,7 +1622,7 @@ Bases: `AbstractToolset[AgentDepsT]`
 
 A toolset that wraps another toolset and delegates to it.
 
-See [toolset docs](../../toolsets/#wrapping-a-toolset) for more information.
+See [toolset docs](https://ai.pydantic.dev/toolsets/#wrapping-a-toolset) for more information.
 
 Source code in `pydantic_ai_slim/pydantic_ai/toolsets/wrapper.py`
 
@@ -1663,7 +1666,6 @@ class WrapperToolset(AbstractToolset[AgentDepsT]):
         self, visitor: Callable[[AbstractToolset[AgentDepsT]], AbstractToolset[AgentDepsT]]
     ) -> AbstractToolset[AgentDepsT]:
         return replace(self, wrapped=self.wrapped.visit_and_replace(visitor))
-
 ```
 
 ### ToolsetFunc
@@ -1675,7 +1677,6 @@ ToolsetFunc: TypeAlias = Callable[
     | None
     | Awaitable[AbstractToolset[AgentDepsT] | None],
 ]
-
 ```
 
 A sync/async function which takes a run context and returns a toolset.
@@ -1811,14 +1812,12 @@ class FastMCPToolset(AbstractToolset[AgentDepsT]):
             max_retries=self.max_retries,
             args_validator=TOOL_SCHEMA_VALIDATOR,
         )
-
 ```
 
 #### client
 
 ```python
 client: Client[Any]
-
 ```
 
 The FastMCP client to use.
@@ -1827,7 +1826,6 @@ The FastMCP client to use.
 
 ```python
 max_retries: int = max_retries
-
 ```
 
 The maximum number of retries to attempt if a tool call fails.
@@ -1838,7 +1836,6 @@ The maximum number of retries to attempt if a tool call fails.
 tool_error_behavior: Literal["model_retry", "error"] = (
     tool_error_behavior
 )
-
 ```
 
 The behavior to take when a tool error occurs.

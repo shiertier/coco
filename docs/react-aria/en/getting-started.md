@@ -12,7 +12,7 @@ npm install react-aria-components
 
 ## Quick start
 
-The documentation for each component includes vanilla CSS and [Tailwind](https://tailwindcss.com) examples. Copy and paste these into your project and make them your own. You can also download each example as a ZIP or open in StackBlitz.
+Copy and paste the CSS or [Tailwind](https://tailwindcss.com) examples into your project and make them your own. You can also download each example as a ZIP, open in StackBlitz, or install with [shadcn](https://ui.shadcn.com/docs/cli).
 
 ## Vanilla CSS example
 
@@ -234,12 +234,9 @@ export function SelectSection<T extends object>(props: DropdownSectionProps<T>) 
 
 ### shadcn CLI
 
-Each example can also be installed with the [shadcn](https://ui.shadcn.com/docs/cli) CLI. This will add the component source code, styles, and all dependencies to your project automatically.
+Use the [shadcn](https://ui.shadcn.com/docs/cli) CLI to add the example code, styles, and dependencies to your project. Install individual components using the menu on each example, or add all components with the command below.
 
-<ShadcnCommand
-  type="vanilla"
-  component="Select"
-/>
+<ShadcnCommand/>
 
 ### Storybook starter kits
 

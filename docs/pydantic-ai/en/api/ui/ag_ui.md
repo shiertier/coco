@@ -149,18 +149,16 @@ class AGUIAdapter(UIAdapter[RunAgentInput, Message, BaseEvent, AgentDepsT, Outpu
                             )
                         )
 
-                case ActivityMessage():  # pragma: no cover
-                    raise ValueError(f'Unsupported message type: {type(msg)}')
+                case ActivityMessage():
+                    pass
 
         return builder.messages
-
 ```
 
 #### build_run_input
 
 ```python
 build_run_input(body: bytes) -> RunAgentInput
-
 ```
 
 Build an AG-UI run input object from the request body.
@@ -172,7 +170,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/ag_ui/_adapter.py`
 def build_run_input(cls, body: bytes) -> RunAgentInput:
     """Build an AG-UI run input object from the request body."""
     return RunAgentInput.model_validate_json(body)
-
 ```
 
 #### build_event_stream
@@ -183,7 +180,6 @@ build_event_stream() -> (
         RunAgentInput, BaseEvent, AgentDepsT, OutputDataT
     ]
 )
-
 ```
 
 Build an AG-UI event stream transformer.
@@ -194,14 +190,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/ag_ui/_adapter.py`
 def build_event_stream(self) -> UIEventStream[RunAgentInput, BaseEvent, AgentDepsT, OutputDataT]:
     """Build an AG-UI event stream transformer."""
     return AGUIEventStream(self.run_input, accept=self.accept)
-
 ```
 
 #### messages
 
 ```python
 messages: list[ModelMessage]
-
 ```
 
 Pydantic AI messages from the AG-UI run input.
@@ -210,7 +204,6 @@ Pydantic AI messages from the AG-UI run input.
 
 ```python
 toolset: AbstractToolset[AgentDepsT] | None
-
 ```
 
 Toolset representing frontend tools from the AG-UI run input.
@@ -219,7 +212,6 @@ Toolset representing frontend tools from the AG-UI run input.
 
 ```python
 state: dict[str, Any] | None
-
 ```
 
 Frontend state from the AG-UI run input.
@@ -230,7 +222,6 @@ Frontend state from the AG-UI run input.
 load_messages(
     messages: Sequence[Message],
 ) -> list[ModelMessage]
-
 ```
 
 Transform AG-UI messages into Pydantic AI messages.
@@ -340,11 +331,10 @@ def load_messages(cls, messages: Sequence[Message]) -> list[ModelMessage]:  # no
                         )
                     )
 
-            case ActivityMessage():  # pragma: no cover
-                raise ValueError(f'Unsupported message type: {type(msg)}')
+            case ActivityMessage():
+                pass
 
     return builder.messages
-
 ```
 
 ### AGUIEventStream
@@ -536,7 +526,6 @@ class AGUIEventStream(UIEventStream[RunAgentInput, BaseEvent, AgentDepsT, Output
                 for item in possible_event:  # type: ignore[reportUnknownMemberType]
                     if isinstance(item, BaseEvent):  # pragma: no branch
                         yield item
-
 ```
 
 #### handle_event
@@ -545,7 +534,6 @@ class AGUIEventStream(UIEventStream[RunAgentInput, BaseEvent, AgentDepsT, Output
 handle_event(
     event: NativeEvent,
 ) -> AsyncIterator[BaseEvent]
-
 ```
 
 Override to set timestamps on all AG-UI events.
@@ -559,7 +547,6 @@ async def handle_event(self, event: NativeEvent) -> AsyncIterator[BaseEvent]:
         if agui_event.timestamp is None:
             agui_event.timestamp = self._get_timestamp()
         yield agui_event
-
 ```
 
 AG-UI protocol integration for Pydantic AI agents.
@@ -683,7 +670,6 @@ class AGUIApp(Generic[AgentDepsT, OutputDataT], Starlette):
             )
 
         self.router.add_route('/', run_agent, methods=['POST'])
-
 ```
 
 #### __init__
@@ -720,7 +706,6 @@ __init__(
     on_shutdown: Sequence[Callable[[], Any]] | None = None,
     lifespan: Lifespan[Self] | None = None
 ) -> None
-
 ```
 
 An ASGI application that handles every request by running the agent and streaming the response.
@@ -729,7 +714,28 @@ Note that the `deps` will be the same for each request, with the exception of th
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `agent` | `AbstractAgent[AgentDepsT, OutputDataT]` | The agent to run. | *required* | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool] | None` | Optional additional builtin tools for this run. | `None` | | `on_complete` | `OnCompleteFunc[Any] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data. | `None` | | `debug` | `bool` | Boolean indicating if debug tracebacks should be returned on errors. | `False` | | `routes` | `Sequence[BaseRoute] | None` | A list of routes to serve incoming HTTP and WebSocket requests. | `None` | | `middleware` | `Sequence[Middleware] | None` | A list of middleware to run for every request. A starlette application will always automatically include two middleware classes. ServerErrorMiddleware is added as the very outermost middleware, to handle any uncaught errors occurring anywhere in the entire stack. ExceptionMiddleware is added as the very innermost middleware, to deal with handled exception cases occurring in the routing or endpoints. | `None` | | `exception_handlers` | `Mapping[Any, ExceptionHandler] | None` | A mapping of either integer status codes, or exception class types onto callables which handle the exceptions. Exception handler callables should be of the form handler(request, exc) -> response and may be either standard functions, or async functions. | `None` | | `on_startup` | `Sequence[Callable[[], Any]] | None` | A list of callables to run on application startup. Startup handler callables do not take any arguments, and may be either standard functions, or async functions. | `None` | | `on_shutdown` | `Sequence[Callable[[], Any]] | None` | A list of callables to run on application shutdown. Shutdown handler callables do not take any arguments, and may be either standard functions, or async functions. | `None` | | `lifespan` | `Lifespan[Self] | None` | A lifespan context function, which can be used to perform startup and shutdown tasks. This is a newer style that replaces the on_startup and on_shutdown handlers. Use one or the other, not both. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent`                 | `AbstractAgent[AgentDepsT, OutputDataT]`  | The agent to run.                                                           | *required*                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type.                                                                                                                                                                                                                  |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                                                                                                                                                                                                                                                |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                                                                                                                                                                                                                                   |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                                                                                                                                                                                                                                 |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                                                                                                                                                                                                                                             |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                                                                                                                                                                                                                                          |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                                                                                                                                                                                                                                         |
+| `builtin_tools`         | \`Sequence[AbstractBuiltinTool]           | None\`                                                                      | Optional additional builtin tools for this run.                                                                                                                                                                                                                                                                                                                                                                    |
+| `on_complete`           | \`OnCompleteFunc[Any]                     | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can access all_messages() and other result data.                                                                                                                                                                                                                               |
+| `debug`                 | `bool`                                    | Boolean indicating if debug tracebacks should be returned on errors.        | `False`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `routes`                | \`Sequence[BaseRoute]                     | None\`                                                                      | A list of routes to serve incoming HTTP and WebSocket requests.                                                                                                                                                                                                                                                                                                                                                    |
+| `middleware`            | \`Sequence[Middleware]                    | None\`                                                                      | A list of middleware to run for every request. A starlette application will always automatically include two middleware classes. ServerErrorMiddleware is added as the very outermost middleware, to handle any uncaught errors occurring anywhere in the entire stack. ExceptionMiddleware is added as the very innermost middleware, to deal with handled exception cases occurring in the routing or endpoints. |
+| `exception_handlers`    | \`Mapping[Any, ExceptionHandler]          | None\`                                                                      | A mapping of either integer status codes, or exception class types onto callables which handle the exceptions. Exception handler callables should be of the form handler(request, exc) -> response and may be either standard functions, or async functions.                                                                                                                                                       |
+| `on_startup`            | \`Sequence\[Callable\[[], Any\]\]         | None\`                                                                      | A list of callables to run on application startup. Startup handler callables do not take any arguments, and may be either standard functions, or async functions.                                                                                                                                                                                                                                                  |
+| `on_shutdown`           | \`Sequence\[Callable\[[], Any\]\]         | None\`                                                                      | A list of callables to run on application shutdown. Shutdown handler callables do not take any arguments, and may be either standard functions, or async functions.                                                                                                                                                                                                                                                |
+| `lifespan`              | \`Lifespan[Self]                          | None\`                                                                      | A lifespan context function, which can be used to perform startup and shutdown tasks. This is a newer style that replaces the on_startup and on_shutdown handlers. Use one or the other, not both.                                                                                                                                                                                                                 |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/ag_ui/app.py`
 
@@ -841,5 +847,4 @@ def __init__(
         )
 
     self.router.add_route('/', run_agent, methods=['POST'])
-
 ```

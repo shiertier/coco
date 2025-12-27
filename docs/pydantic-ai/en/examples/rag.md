@@ -4,8 +4,8 @@ RAG search example. This demo allows you to ask question of the [logfire](https:
 
 Demonstrates:
 
-- [tools](../../tools/)
-- [agent dependencies](../../dependencies/)
+- [tools](https://ai.pydantic.dev/tools/index.md)
+- [agent dependencies](https://ai.pydantic.dev/dependencies/index.md)
 - RAG search
 
 This is done by creating a database containing each section of the markdown documentation, then registering the search tool with the Pydantic AI agent.
@@ -21,21 +21,18 @@ docker run --rm \
   -p 54320:5432 \
   -v `pwd`/postgres-data:/var/lib/postgresql/data \
   pgvector/pgvector:pg17
-
 ```
 
-As with the [SQL gen](../sql-gen/) example, we run postgres on port `54320` to avoid conflicts with any other postgres instances you may have running. We also mount the PostgreSQL `data` directory locally to persist the data if you need to stop and restart the container.
+As with the [SQL gen](https://ai.pydantic.dev/examples/sql-gen/index.md) example, we run postgres on port `54320` to avoid conflicts with any other postgres instances you may have running. We also mount the PostgreSQL `data` directory locally to persist the data if you need to stop and restart the container.
 
-With that running and [dependencies installed and environment variables set](../setup/#usage), we can build the search database with (**WARNING**: this requires the `OPENAI_API_KEY` env variable and will calling the OpenAI embedding API around 300 times to generate embeddings for each section of the documentation):
+With that running and [dependencies installed and environment variables set](https://ai.pydantic.dev/examples/setup/#usage), we can build the search database with (**WARNING**: this requires the `OPENAI_API_KEY` env variable and will calling the OpenAI embedding API around 300 times to generate embeddings for each section of the documentation):
 
 ```bash
 python -m pydantic_ai_examples.rag build
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.rag build
-
 ```
 
 (Note building the database doesn't use Pydantic AI right now, instead it uses the OpenAI SDK directly.)
@@ -44,17 +41,15 @@ You can then ask the agent a question with:
 
 ```bash
 python -m pydantic_ai_examples.rag search "How do I configure logfire to work with FastAPI?"
-
 ```
 
 ```bash
 uv run -m pydantic_ai_examples.rag search "How do I configure logfire to work with FastAPI?"
-
 ```
 
 ## Example Code
 
-[Learn about Gateway](../../gateway) [rag.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/rag.py)
+[Learn about Gateway](https://ai.pydantic.dev/gateway) [rag.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/rag.py)
 
 ```python
 """RAG example with pydantic-ai — using vector search to augment a chat agent.
@@ -316,7 +311,6 @@ if __name__ == '__main__':
             file=sys.stderr,
         )
         sys.exit(1)
-
 ```
 
 [rag.py](https://github.com/pydantic/pydantic-ai/blob/main/examples/pydantic_ai_examples/rag.py)
@@ -581,5 +575,4 @@ if __name__ == '__main__':
             file=sys.stderr,
         )
         sys.exit(1)
-
 ```

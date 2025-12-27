@@ -29,7 +29,6 @@ class StateDeps(Generic[StateT]):
     """
 
     state: StateT
-
 ```
 
 ### StateHandler
@@ -65,14 +64,12 @@ class StateHandler(Protocol):
             state: The run state.
         """
         ...
-
 ```
 
 #### state
 
 ```python
 state: Any
-
 ```
 
 Get the current state of the agent run.
@@ -201,6 +198,7 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
         model_settings: ModelSettings | None = None,
         usage_limits: UsageLimits | None = None,
         usage: RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -218,6 +216,8 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools to use for this run.
@@ -254,6 +254,7 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
             instructions=instructions,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
@@ -271,6 +272,7 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
         model_settings: ModelSettings | None = None,
         usage_limits: UsageLimits | None = None,
         usage: RunUsage | None = None,
+        metadata: AgentMetadata[AgentDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -289,6 +291,8 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools to use for this run.
@@ -306,6 +310,7 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
@@ -328,6 +333,7 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
         model_settings: ModelSettings | None = None,
         usage_limits: UsageLimits | None = None,
         usage: RunUsage | None = None,
+        metadata: AgentMetadata[DispatchDepsT] | None = None,
         infer_name: bool = True,
         toolsets: Sequence[AbstractToolset[DispatchDepsT]] | None = None,
         builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -348,6 +354,8 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
             model_settings: Optional settings to use for this model's request.
             usage_limits: Optional limits on model request count or token usage.
             usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+            metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+                [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
             infer_name: Whether to try to infer the agent name from the call frame if it's not set.
             toolsets: Optional additional toolsets for this run.
             builtin_tools: Optional additional builtin tools to use for this run.
@@ -389,20 +397,19 @@ class UIAdapter(ABC, Generic[RunInputT, MessageT, EventT, AgentDepsT, OutputData
                 model_settings=model_settings,
                 usage_limits=usage_limits,
                 usage=usage,
+                metadata=metadata,
                 infer_name=infer_name,
                 toolsets=toolsets,
                 builtin_tools=builtin_tools,
                 on_complete=on_complete,
             ),
         )
-
 ```
 
 #### agent
 
 ```python
 agent: AbstractAgent[AgentDepsT, OutputDataT]
-
 ```
 
 The Pydantic AI agent to run.
@@ -411,7 +418,6 @@ The Pydantic AI agent to run.
 
 ```python
 run_input: RunInputT
-
 ```
 
 The protocol-specific run input object.
@@ -420,7 +426,6 @@ The protocol-specific run input object.
 
 ```python
 accept: str | None = None
-
 ```
 
 The `Accept` header value of the request, used to determine how to encode the protocol-specific events for the streaming response.
@@ -435,7 +440,6 @@ from_request(
 ) -> UIAdapter[
     RunInputT, MessageT, EventT, AgentDepsT, OutputDataT
 ]
-
 ```
 
 Create an adapter from a request.
@@ -453,14 +457,12 @@ async def from_request(
         run_input=cls.build_run_input(await request.body()),
         accept=request.headers.get('accept'),
     )
-
 ```
 
 #### build_run_input
 
 ```python
 build_run_input(body: bytes) -> RunInputT
-
 ```
 
 Build a protocol-specific run input object from the request body.
@@ -473,7 +475,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 def build_run_input(cls, body: bytes) -> RunInputT:
     """Build a protocol-specific run input object from the request body."""
     raise NotImplementedError
-
 ```
 
 #### load_messages
@@ -482,7 +483,6 @@ def build_run_input(cls, body: bytes) -> RunInputT:
 load_messages(
     messages: Sequence[MessageT],
 ) -> list[ModelMessage]
-
 ```
 
 Transform protocol-specific messages into Pydantic AI messages.
@@ -495,7 +495,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 def load_messages(cls, messages: Sequence[MessageT]) -> list[ModelMessage]:
     """Transform protocol-specific messages into Pydantic AI messages."""
     raise NotImplementedError
-
 ```
 
 #### dump_messages
@@ -504,7 +503,6 @@ def load_messages(cls, messages: Sequence[MessageT]) -> list[ModelMessage]:
 dump_messages(
     messages: Sequence[ModelMessage],
 ) -> list[MessageT]
-
 ```
 
 Transform Pydantic AI messages into protocol-specific messages.
@@ -516,7 +514,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 def dump_messages(cls, messages: Sequence[ModelMessage]) -> list[MessageT]:
     """Transform Pydantic AI messages into protocol-specific messages."""
     raise NotImplementedError
-
 ```
 
 #### build_event_stream
@@ -527,7 +524,6 @@ build_event_stream() -> (
         RunInputT, EventT, AgentDepsT, OutputDataT
     ]
 )
-
 ```
 
 Build a protocol-specific event stream transformer.
@@ -539,14 +535,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 def build_event_stream(self) -> UIEventStream[RunInputT, EventT, AgentDepsT, OutputDataT]:
     """Build a protocol-specific event stream transformer."""
     raise NotImplementedError
-
 ```
 
 #### messages
 
 ```python
 messages: list[ModelMessage]
-
 ```
 
 Pydantic AI messages from the protocol-specific run input.
@@ -555,7 +549,6 @@ Pydantic AI messages from the protocol-specific run input.
 
 ```python
 toolset: AbstractToolset[AgentDepsT] | None
-
 ```
 
 Toolset representing frontend tools from the protocol-specific run input.
@@ -564,7 +557,6 @@ Toolset representing frontend tools from the protocol-specific run input.
 
 ```python
 state: dict[str, Any] | None
-
 ```
 
 Frontend state from the protocol-specific run input.
@@ -576,14 +568,16 @@ transform_stream(
     stream: AsyncIterator[NativeEvent],
     on_complete: OnCompleteFunc[EventT] | None = None,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Transform a stream of Pydantic AI events into protocol-specific events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `stream` | `AsyncIterator[NativeEvent]` | The stream of Pydantic AI events to transform. | *required* | | `on_complete` | `OnCompleteFunc[EventT] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. | `None` |
+| Name          | Type                         | Description                                    | Default                                                                                                                                                                                       |
+| ------------- | ---------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stream`      | `AsyncIterator[NativeEvent]` | The stream of Pydantic AI events to transform. | *required*                                                                                                                                                                                    |
+| `on_complete` | \`OnCompleteFunc[EventT]     | None\`                                         | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -601,7 +595,6 @@ def transform_stream(
             The callback receives the completed [`AgentRunResult`][pydantic_ai.agent.AgentRunResult] and can optionally yield additional protocol-specific events.
     """
     return self.build_event_stream().transform_stream(stream, on_complete=on_complete)
-
 ```
 
 #### encode_stream
@@ -610,14 +603,15 @@ def transform_stream(
 encode_stream(
     stream: AsyncIterator[EventT],
 ) -> AsyncIterator[str]
-
 ```
 
 Encode a stream of protocol-specific events as strings according to the `Accept` header value.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `stream` | `AsyncIterator[EventT]` | The stream of protocol-specific events to encode. | *required* |
+| Name     | Type                    | Description                                       | Default    |
+| -------- | ----------------------- | ------------------------------------------------- | ---------- |
+| `stream` | `AsyncIterator[EventT]` | The stream of protocol-specific events to encode. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -629,7 +623,6 @@ def encode_stream(self, stream: AsyncIterator[EventT]) -> AsyncIterator[str]:
         stream: The stream of protocol-specific events to encode.
     """
     return self.build_event_stream().encode_stream(stream)
-
 ```
 
 #### streaming_response
@@ -638,14 +631,15 @@ def encode_stream(self, stream: AsyncIterator[EventT]) -> AsyncIterator[str]:
 streaming_response(
     stream: AsyncIterator[EventT],
 ) -> StreamingResponse
-
 ```
 
 Generate a streaming response from a stream of protocol-specific events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `stream` | `AsyncIterator[EventT]` | The stream of protocol-specific events to encode. | *required* |
+| Name     | Type                    | Description                                       | Default    |
+| -------- | ----------------------- | ------------------------------------------------- | ---------- |
+| `stream` | `AsyncIterator[EventT]` | The stream of protocol-specific events to encode. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -657,7 +651,6 @@ def streaming_response(self, stream: AsyncIterator[EventT]) -> StreamingResponse
         stream: The stream of protocol-specific events to encode.
     """
     return self.build_event_stream().streaming_response(stream)
-
 ```
 
 #### run_stream_native
@@ -676,6 +669,7 @@ run_stream_native(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -684,14 +678,27 @@ run_stream_native(
         Sequence[AbstractBuiltinTool] | None
     ) = None
 ) -> AsyncIterator[NativeEvent]
-
 ```
 
 Run the agent with the protocol-specific run input and stream Pydantic AI events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool] | None` | Optional additional builtin tools to use for this run. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence[AbstractBuiltinTool]           | None\`                                                                      | Optional additional builtin tools to use for this run.                                                                                                                                            |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -708,6 +715,7 @@ def run_stream_native(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -725,6 +733,8 @@ def run_stream_native(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools to use for this run.
@@ -761,11 +771,11 @@ def run_stream_native(
         instructions=instructions,
         usage_limits=usage_limits,
         usage=usage,
+        metadata=metadata,
         infer_name=infer_name,
         toolsets=toolsets,
         builtin_tools=builtin_tools,
     )
-
 ```
 
 #### run_stream
@@ -784,6 +794,7 @@ run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[AgentDepsT]] | None
@@ -793,14 +804,28 @@ run_stream(
     ) = None,
     on_complete: OnCompleteFunc[EventT] | None = None
 ) -> AsyncIterator[EventT]
-
 ```
 
 Run the agent with the protocol-specific run input and stream protocol-specific events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[AgentDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `AgentDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[AgentDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool] | None` | Optional additional builtin tools to use for this run. | `None` | | `on_complete` | `OnCompleteFunc[EventT] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. | `None` |
+| Name                    | Type                                      | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `output_type`           | \`OutputSpec[Any]                         | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                  | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                     | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                   | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[AgentDepsT]`                | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `AgentDepsT`                              | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                           | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                             | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[AgentDepsT]               | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                    | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[AgentDepsT]\] | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence[AbstractBuiltinTool]           | None\`                                                                      | Optional additional builtin tools to use for this run.                                                                                                                                            |
+| `on_complete`           | \`OnCompleteFunc[EventT]                  | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events.     |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -817,6 +842,7 @@ def run_stream(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[AgentDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[AgentDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -835,6 +861,8 @@ def run_stream(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools to use for this run.
@@ -852,13 +880,13 @@ def run_stream(
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
         ),
         on_complete=on_complete,
     )
-
 ```
 
 #### dispatch_request
@@ -881,6 +909,7 @@ dispatch_request(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[DispatchDepsT] | None = None,
     infer_name: bool = True,
     toolsets: (
         Sequence[AbstractToolset[DispatchDepsT]] | None
@@ -890,18 +919,36 @@ dispatch_request(
     ) = None,
     on_complete: OnCompleteFunc[EventT] | None = None
 ) -> Response
-
 ```
 
 Handle a protocol-specific HTTP request by running the agent and returning a streaming response of protocol-specific events.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `request` | `Request` | The incoming Starlette/FastAPI request. | *required* | | `agent` | `AbstractAgent[DispatchDepsT, DispatchOutputDataT]` | The agent to run. | *required* | | `output_type` | `OutputSpec[Any] | None` | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. | `None` | | `message_history` | `Sequence[ModelMessage] | None` | History of the conversation so far. | `None` | | `deferred_tool_results` | `DeferredToolResults | None` | Optional results for deferred tool calls in the message history. | `None` | | `model` | `Model | KnownModelName | str | None` | Optional model to use for this run, required if model was not set when creating the agent. | `None` | | `instructions` | `Instructions[DispatchDepsT]` | Optional additional instructions to use for this run. | `None` | | `deps` | `DispatchDepsT` | Optional dependencies to use for this run. | `None` | | `model_settings` | `ModelSettings | None` | Optional settings to use for this model's request. | `None` | | `usage_limits` | `UsageLimits | None` | Optional limits on model request count or token usage. | `None` | | `usage` | `RunUsage | None` | Optional usage to start with, useful for resuming a conversation or agents used in tools. | `None` | | `infer_name` | `bool` | Whether to try to infer the agent name from the call frame if it's not set. | `True` | | `toolsets` | `Sequence[AbstractToolset[DispatchDepsT]] | None` | Optional additional toolsets for this run. | `None` | | `builtin_tools` | `Sequence[AbstractBuiltinTool] | None` | Optional additional builtin tools to use for this run. | `None` | | `on_complete` | `OnCompleteFunc[EventT] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. | `None` |
+| Name                    | Type                                                | Description                                                                 | Default                                                                                                                                                                                           |
+| ----------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `request`               | `Request`                                           | The incoming Starlette/FastAPI request.                                     | *required*                                                                                                                                                                                        |
+| `agent`                 | `AbstractAgent[DispatchDepsT, DispatchOutputDataT]` | The agent to run.                                                           | *required*                                                                                                                                                                                        |
+| `output_type`           | \`OutputSpec[Any]                                   | None\`                                                                      | Custom output type to use for this run, output_type may only be used if the agent has no output validators since output validators would expect an argument that matches the agent's output type. |
+| `message_history`       | \`Sequence[ModelMessage]                            | None\`                                                                      | History of the conversation so far.                                                                                                                                                               |
+| `deferred_tool_results` | \`DeferredToolResults                               | None\`                                                                      | Optional results for deferred tool calls in the message history.                                                                                                                                  |
+| `model`                 | \`Model                                             | KnownModelName                                                              | str                                                                                                                                                                                               |
+| `instructions`          | `Instructions[DispatchDepsT]`                       | Optional additional instructions to use for this run.                       | `None`                                                                                                                                                                                            |
+| `deps`                  | `DispatchDepsT`                                     | Optional dependencies to use for this run.                                  | `None`                                                                                                                                                                                            |
+| `model_settings`        | \`ModelSettings                                     | None\`                                                                      | Optional settings to use for this model's request.                                                                                                                                                |
+| `usage_limits`          | \`UsageLimits                                       | None\`                                                                      | Optional limits on model request count or token usage.                                                                                                                                            |
+| `usage`                 | \`RunUsage                                          | None\`                                                                      | Optional usage to start with, useful for resuming a conversation or agents used in tools.                                                                                                         |
+| `metadata`              | \`AgentMetadata[DispatchDepsT]                      | None\`                                                                      | Optional metadata to attach to this run. Accepts a dictionary or a callable taking RunContext; merged with the agent's configured metadata.                                                       |
+| `infer_name`            | `bool`                                              | Whether to try to infer the agent name from the call frame if it's not set. | `True`                                                                                                                                                                                            |
+| `toolsets`              | \`Sequence\[AbstractToolset[DispatchDepsT]\]        | None\`                                                                      | Optional additional toolsets for this run.                                                                                                                                                        |
+| `builtin_tools`         | \`Sequence[AbstractBuiltinTool]                     | None\`                                                                      | Optional additional builtin tools to use for this run.                                                                                                                                            |
+| `on_complete`           | \`OnCompleteFunc[EventT]                            | None\`                                                                      | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events.     |
 
 Returns:
 
-| Type | Description | | --- | --- | | `Response` | A streaming Starlette response with protocol-specific events encoded per the request's Accept header value. |
+| Type       | Description                                                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `Response` | A streaming Starlette response with protocol-specific events encoded per the request's Accept header value. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_adapter.py`
 
@@ -921,6 +968,7 @@ async def dispatch_request(
     model_settings: ModelSettings | None = None,
     usage_limits: UsageLimits | None = None,
     usage: RunUsage | None = None,
+    metadata: AgentMetadata[DispatchDepsT] | None = None,
     infer_name: bool = True,
     toolsets: Sequence[AbstractToolset[DispatchDepsT]] | None = None,
     builtin_tools: Sequence[AbstractBuiltinTool] | None = None,
@@ -941,6 +989,8 @@ async def dispatch_request(
         model_settings: Optional settings to use for this model's request.
         usage_limits: Optional limits on model request count or token usage.
         usage: Optional usage to start with, useful for resuming a conversation or agents used in tools.
+        metadata: Optional metadata to attach to this run. Accepts a dictionary or a callable taking
+            [`RunContext`][pydantic_ai.tools.RunContext]; merged with the agent's configured metadata.
         infer_name: Whether to try to infer the agent name from the call frame if it's not set.
         toolsets: Optional additional toolsets for this run.
         builtin_tools: Optional additional builtin tools to use for this run.
@@ -982,20 +1032,19 @@ async def dispatch_request(
             model_settings=model_settings,
             usage_limits=usage_limits,
             usage=usage,
+            metadata=metadata,
             infer_name=infer_name,
             toolsets=toolsets,
             builtin_tools=builtin_tools,
             on_complete=on_complete,
         ),
     )
-
 ```
 
 ### SSE_CONTENT_TYPE
 
 ```python
 SSE_CONTENT_TYPE = 'text/event-stream'
-
 ```
 
 Content type header value for Server-Sent Events (SSE).
@@ -1006,7 +1055,6 @@ Content type header value for Server-Sent Events (SSE).
 NativeEvent: TypeAlias = (
     AgentStreamEvent | AgentRunResultEvent[Any]
 )
-
 ```
 
 Type alias for the native event type, which is either an `AgentStreamEvent` or an `AgentRunResultEvent`.
@@ -1019,7 +1067,6 @@ OnCompleteFunc: TypeAlias = (
     | Callable[[AgentRunResult[Any]], Awaitable[None]]
     | Callable[[AgentRunResult[Any]], AsyncIterator[EventT]]
 )
-
 ```
 
 Callback function type that receives the `AgentRunResult` of the completed run. Can be sync, async, or an async generator of protocol-specific events.
@@ -1566,14 +1613,12 @@ class UIEventStream(ABC, Generic[RunInputT, EventT, AgentDepsT, OutputDataT]):
         """
         return
         yield  # Make this an async generator
-
 ```
 
 #### accept
 
 ```python
 accept: str | None = None
-
 ```
 
 The `Accept` header value of the request, used to determine how to encode the protocol-specific events for the streaming response.
@@ -1584,7 +1629,6 @@ The `Accept` header value of the request, used to determine how to encode the pr
 message_id: str = field(
     default_factory=lambda: str(uuid4())
 )
-
 ```
 
 The message ID to use for the next event.
@@ -1593,7 +1637,6 @@ The message ID to use for the next event.
 
 ```python
 new_message_id() -> str
-
 ```
 
 Generate and store a new message ID.
@@ -1605,14 +1648,12 @@ def new_message_id(self) -> str:
     """Generate and store a new message ID."""
     self.message_id = str(uuid4())
     return self.message_id
-
 ```
 
 #### response_headers
 
 ```python
 response_headers: Mapping[str, str] | None
-
 ```
 
 Response headers to return to the frontend.
@@ -1621,7 +1662,6 @@ Response headers to return to the frontend.
 
 ```python
 content_type: str
-
 ```
 
 Get the content type for the event stream, compatible with the `Accept` header value.
@@ -1632,7 +1672,6 @@ By default, this returns the Server-Sent Events content type (`text/event-stream
 
 ```python
 encode_event(event: EventT) -> str
-
 ```
 
 Encode a protocol-specific event as a string.
@@ -1644,7 +1683,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 def encode_event(self, event: EventT) -> str:
     """Encode a protocol-specific event as a string."""
     raise NotImplementedError
-
 ```
 
 #### encode_stream
@@ -1653,7 +1691,6 @@ def encode_event(self, event: EventT) -> str:
 encode_stream(
     stream: AsyncIterator[EventT],
 ) -> AsyncIterator[str]
-
 ```
 
 Encode a stream of protocol-specific events as strings according to the `Accept` header value.
@@ -1665,7 +1702,6 @@ async def encode_stream(self, stream: AsyncIterator[EventT]) -> AsyncIterator[st
     """Encode a stream of protocol-specific events as strings according to the `Accept` header value."""
     async for event in stream:
         yield self.encode_event(event)
-
 ```
 
 #### streaming_response
@@ -1674,7 +1710,6 @@ async def encode_stream(self, stream: AsyncIterator[EventT]) -> AsyncIterator[st
 streaming_response(
     stream: AsyncIterator[EventT],
 ) -> StreamingResponse
-
 ```
 
 Generate a streaming response from a stream of protocol-specific events.
@@ -1697,7 +1732,6 @@ def streaming_response(self, stream: AsyncIterator[EventT]) -> StreamingResponse
         headers=self.response_headers,
         media_type=self.content_type,
     )
-
 ```
 
 #### transform_stream
@@ -1707,7 +1741,6 @@ transform_stream(
     stream: AsyncIterator[NativeEvent],
     on_complete: OnCompleteFunc[EventT] | None = None,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Transform a stream of Pydantic AI events into protocol-specific events.
@@ -1725,7 +1758,10 @@ This method dispatches to specific hooks and `handle_*` methods that subclasses 
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `stream` | `AsyncIterator[NativeEvent]` | The stream of Pydantic AI events to transform. | *required* | | `on_complete` | `OnCompleteFunc[EventT] | None` | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. | `None` |
+| Name          | Type                         | Description                                    | Default                                                                                                                                                                                       |
+| ------------- | ---------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stream`      | `AsyncIterator[NativeEvent]` | The stream of Pydantic AI events to transform. | *required*                                                                                                                                                                                    |
+| `on_complete` | \`OnCompleteFunc[EventT]     | None\`                                         | Optional callback function called when the agent run completes successfully. The callback receives the completed AgentRunResult and can optionally yield additional protocol-specific events. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -1814,14 +1850,12 @@ async def transform_stream(  # noqa: C901
 
         async for e in self.after_stream():
             yield e
-
 ```
 
 #### handle_event
 
 ```python
 handle_event(event: NativeEvent) -> AsyncIterator[EventT]
-
 ```
 
 Transform a Pydantic AI event into one or more protocol-specific events.
@@ -1881,7 +1915,6 @@ async def handle_event(self, event: NativeEvent) -> AsyncIterator[EventT]:
                 yield e
         case _:
             pass
-
 ```
 
 #### handle_part_start
@@ -1890,7 +1923,6 @@ async def handle_event(self, event: NativeEvent) -> AsyncIterator[EventT]:
 handle_part_start(
     event: PartStartEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `PartStartEvent`.
@@ -1908,7 +1940,9 @@ Subclasses are encouraged to override the individual `handle_*` methods rather t
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `PartStartEvent` | The part start event. | *required* |
+| Name    | Type             | Description           | Default    |
+| ------- | ---------------- | --------------------- | ---------- |
+| `event` | `PartStartEvent` | The part start event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -1952,7 +1986,6 @@ async def handle_part_start(self, event: PartStartEvent) -> AsyncIterator[EventT
         case FilePart():  # pragma: no branch
             async for e in self.handle_file(part):
                 yield e
-
 ```
 
 #### handle_part_delta
@@ -1961,7 +1994,6 @@ async def handle_part_start(self, event: PartStartEvent) -> AsyncIterator[EventT
 handle_part_delta(
     event: PartDeltaEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a PartDeltaEvent.
@@ -1976,7 +2008,9 @@ Subclasses are encouraged to override the individual `handle_*_delta` methods ra
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `PartDeltaEvent` | The PartDeltaEvent. | *required* |
+| Name    | Type             | Description         | Default    |
+| ------- | ---------------- | ------------------- | ---------- |
+| `event` | `PartDeltaEvent` | The PartDeltaEvent. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2007,7 +2041,6 @@ async def handle_part_delta(self, event: PartDeltaEvent) -> AsyncIterator[EventT
         case ToolCallPartDelta():  # pragma: no branch
             async for e in self.handle_tool_call_delta(delta):
                 yield e
-
 ```
 
 #### handle_part_end
@@ -2016,7 +2049,6 @@ async def handle_part_delta(self, event: PartDeltaEvent) -> AsyncIterator[EventT
 handle_part_end(
     event: PartEndEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `PartEndEvent`.
@@ -2032,7 +2064,9 @@ Subclasses are encouraged to override the individual `handle_*_end` methods rath
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `PartEndEvent` | The part end event. | *required* |
+| Name    | Type           | Description         | Default    |
+| ------- | -------------- | ------------------- | ---------- |
+| `event` | `PartEndEvent` | The part end event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2071,14 +2105,12 @@ async def handle_part_end(self, event: PartEndEvent) -> AsyncIterator[EventT]:
         case BuiltinToolReturnPart() | FilePart():  # pragma: no cover
             # These don't have deltas, so they don't need to be ended.
             pass
-
 ```
 
 #### before_stream
 
 ```python
 before_stream() -> AsyncIterator[EventT]
-
 ```
 
 Yield events before agent streaming starts.
@@ -2096,14 +2128,12 @@ async def before_stream(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### after_stream
 
 ```python
 after_stream() -> AsyncIterator[EventT]
-
 ```
 
 Yield events after agent streaming completes.
@@ -2121,21 +2151,21 @@ async def after_stream(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### on_error
 
 ```python
 on_error(error: Exception) -> AsyncIterator[EventT]
-
 ```
 
 Handle errors that occur during streaming.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `error` | `Exception` | The error that occurred during streaming. | *required* |
+| Name    | Type        | Description                               | Default    |
+| ------- | ----------- | ----------------------------------------- | ---------- |
+| `error` | `Exception` | The error that occurred during streaming. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2148,14 +2178,12 @@ async def on_error(self, error: Exception) -> AsyncIterator[EventT]:
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### before_request
 
 ```python
 before_request() -> AsyncIterator[EventT]
-
 ```
 
 Yield events before a model request is processed.
@@ -2172,14 +2200,12 @@ async def before_request(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: lax no cover
     yield  # Make this an async generator
-
 ```
 
 #### after_request
 
 ```python
 after_request() -> AsyncIterator[EventT]
-
 ```
 
 Yield events after a model request is processed.
@@ -2196,14 +2222,12 @@ async def after_request(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: lax no cover
     yield  # Make this an async generator
-
 ```
 
 #### before_response
 
 ```python
 before_response() -> AsyncIterator[EventT]
-
 ```
 
 Yield events before a model response is processed.
@@ -2220,14 +2244,12 @@ async def before_response(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### after_response
 
 ```python
 after_response() -> AsyncIterator[EventT]
-
 ```
 
 Yield events after a model response is processed.
@@ -2244,7 +2266,6 @@ async def after_response(self) -> AsyncIterator[EventT]:
     """
     return  # pragma: lax no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_text_start
@@ -2253,14 +2274,16 @@ async def after_response(self) -> AsyncIterator[EventT]:
 handle_text_start(
     part: TextPart, follows_text: bool = False
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the start of a `TextPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `TextPart` | The text part. | *required* | | `follows_text` | `bool` | Whether the part is directly preceded by another text part. In this case, you may want to yield a "text-delta" event instead of a "text-start" event. | `False` |
+| Name           | Type       | Description                                                                                                                                           | Default    |
+| -------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `part`         | `TextPart` | The text part.                                                                                                                                        | *required* |
+| `follows_text` | `bool`     | Whether the part is directly preceded by another text part. In this case, you may want to yield a "text-delta" event instead of a "text-start" event. | `False`    |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2274,7 +2297,6 @@ async def handle_text_start(self, part: TextPart, follows_text: bool = False) ->
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_text_delta
@@ -2283,14 +2305,15 @@ async def handle_text_start(self, part: TextPart, follows_text: bool = False) ->
 handle_text_delta(
     delta: TextPartDelta,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `TextPartDelta`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `delta` | `TextPartDelta` | The text part delta. | *required* |
+| Name    | Type            | Description          | Default    |
+| ------- | --------------- | -------------------- | ---------- |
+| `delta` | `TextPartDelta` | The text part delta. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2303,7 +2326,6 @@ async def handle_text_delta(self, delta: TextPartDelta) -> AsyncIterator[EventT]
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_text_end
@@ -2312,14 +2334,16 @@ async def handle_text_delta(self, delta: TextPartDelta) -> AsyncIterator[EventT]
 handle_text_end(
     part: TextPart, followed_by_text: bool = False
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the end of a `TextPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `TextPart` | The text part. | *required* | | `followed_by_text` | `bool` | Whether the part is directly followed by another text part. In this case, you may not want to yield a "text-end" event yet. | `False` |
+| Name               | Type       | Description                                                                                                                 | Default    |
+| ------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `part`             | `TextPart` | The text part.                                                                                                              | *required* |
+| `followed_by_text` | `bool`     | Whether the part is directly followed by another text part. In this case, you may not want to yield a "text-end" event yet. | `False`    |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2333,7 +2357,6 @@ async def handle_text_end(self, part: TextPart, followed_by_text: bool = False) 
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_thinking_start
@@ -2342,14 +2365,16 @@ async def handle_text_end(self, part: TextPart, followed_by_text: bool = False) 
 handle_thinking_start(
     part: ThinkingPart, follows_thinking: bool = False
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the start of a `ThinkingPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ThinkingPart` | The thinking part. | *required* | | `follows_thinking` | `bool` | Whether the part is directly preceded by another thinking part. In this case, you may want to yield a "thinking-delta" event instead of a "thinking-start" event. | `False` |
+| Name               | Type           | Description                                                                                                                                                       | Default    |
+| ------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `part`             | `ThinkingPart` | The thinking part.                                                                                                                                                | *required* |
+| `follows_thinking` | `bool`         | Whether the part is directly preceded by another thinking part. In this case, you may want to yield a "thinking-delta" event instead of a "thinking-start" event. | `False`    |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2363,7 +2388,6 @@ async def handle_thinking_start(self, part: ThinkingPart, follows_thinking: bool
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_thinking_delta
@@ -2372,14 +2396,15 @@ async def handle_thinking_start(self, part: ThinkingPart, follows_thinking: bool
 handle_thinking_delta(
     delta: ThinkingPartDelta,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `ThinkingPartDelta`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `delta` | `ThinkingPartDelta` | The thinking part delta. | *required* |
+| Name    | Type                | Description              | Default    |
+| ------- | ------------------- | ------------------------ | ---------- |
+| `delta` | `ThinkingPartDelta` | The thinking part delta. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2392,7 +2417,6 @@ async def handle_thinking_delta(self, delta: ThinkingPartDelta) -> AsyncIterator
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_thinking_end
@@ -2401,14 +2425,16 @@ async def handle_thinking_delta(self, delta: ThinkingPartDelta) -> AsyncIterator
 handle_thinking_end(
     part: ThinkingPart, followed_by_thinking: bool = False
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the end of a `ThinkingPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ThinkingPart` | The thinking part. | *required* | | `followed_by_thinking` | `bool` | Whether the part is directly followed by another thinking part. In this case, you may not want to yield a "thinking-end" event yet. | `False` |
+| Name                   | Type           | Description                                                                                                                         | Default    |
+| ---------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `part`                 | `ThinkingPart` | The thinking part.                                                                                                                  | *required* |
+| `followed_by_thinking` | `bool`         | Whether the part is directly followed by another thinking part. In this case, you may not want to yield a "thinking-end" event yet. | `False`    |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2424,7 +2450,6 @@ async def handle_thinking_end(
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_tool_call_start
@@ -2433,14 +2458,15 @@ async def handle_thinking_end(
 handle_tool_call_start(
     part: ToolCallPart,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the start of a `ToolCallPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ToolCallPart` | The tool call part. | *required* |
+| Name   | Type           | Description         | Default    |
+| ------ | -------------- | ------------------- | ---------- |
+| `part` | `ToolCallPart` | The tool call part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2453,7 +2479,6 @@ async def handle_tool_call_start(self, part: ToolCallPart) -> AsyncIterator[Even
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_tool_call_delta
@@ -2462,14 +2487,15 @@ async def handle_tool_call_start(self, part: ToolCallPart) -> AsyncIterator[Even
 handle_tool_call_delta(
     delta: ToolCallPartDelta,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `ToolCallPartDelta`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `delta` | `ToolCallPartDelta` | The tool call part delta. | *required* |
+| Name    | Type                | Description               | Default    |
+| ------- | ------------------- | ------------------------- | ---------- |
+| `delta` | `ToolCallPartDelta` | The tool call part delta. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2482,7 +2508,6 @@ async def handle_tool_call_delta(self, delta: ToolCallPartDelta) -> AsyncIterato
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_tool_call_end
@@ -2491,14 +2516,15 @@ async def handle_tool_call_delta(self, delta: ToolCallPartDelta) -> AsyncIterato
 handle_tool_call_end(
     part: ToolCallPart,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the end of a `ToolCallPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `ToolCallPart` | The tool call part. | *required* |
+| Name   | Type           | Description         | Default    |
+| ------ | -------------- | ------------------- | ---------- |
+| `part` | `ToolCallPart` | The tool call part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2511,7 +2537,6 @@ async def handle_tool_call_end(self, part: ToolCallPart) -> AsyncIterator[EventT
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_builtin_tool_call_start
@@ -2520,14 +2545,15 @@ async def handle_tool_call_end(self, part: ToolCallPart) -> AsyncIterator[EventT
 handle_builtin_tool_call_start(
     part: BuiltinToolCallPart,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `BuiltinToolCallPart` at start.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `BuiltinToolCallPart` | The builtin tool call part. | *required* |
+| Name   | Type                  | Description                 | Default    |
+| ------ | --------------------- | --------------------------- | ---------- |
+| `part` | `BuiltinToolCallPart` | The builtin tool call part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2540,7 +2566,6 @@ async def handle_builtin_tool_call_start(self, part: BuiltinToolCallPart) -> Asy
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_builtin_tool_call_end
@@ -2549,14 +2574,15 @@ async def handle_builtin_tool_call_start(self, part: BuiltinToolCallPart) -> Asy
 handle_builtin_tool_call_end(
     part: BuiltinToolCallPart,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle the end of a `BuiltinToolCallPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `BuiltinToolCallPart` | The builtin tool call part. | *required* |
+| Name   | Type                  | Description                 | Default    |
+| ------ | --------------------- | --------------------------- | ---------- |
+| `part` | `BuiltinToolCallPart` | The builtin tool call part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2569,7 +2595,6 @@ async def handle_builtin_tool_call_end(self, part: BuiltinToolCallPart) -> Async
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_builtin_tool_return
@@ -2578,14 +2603,15 @@ async def handle_builtin_tool_call_end(self, part: BuiltinToolCallPart) -> Async
 handle_builtin_tool_return(
     part: BuiltinToolReturnPart,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `BuiltinToolReturnPart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `BuiltinToolReturnPart` | The builtin tool return part. | *required* |
+| Name   | Type                    | Description                   | Default    |
+| ------ | ----------------------- | ----------------------------- | ---------- |
+| `part` | `BuiltinToolReturnPart` | The builtin tool return part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2598,21 +2624,21 @@ async def handle_builtin_tool_return(self, part: BuiltinToolReturnPart) -> Async
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_file
 
 ```python
 handle_file(part: FilePart) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `FilePart`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `part` | `FilePart` | The file part. | *required* |
+| Name   | Type       | Description    | Default    |
+| ------ | ---------- | -------------- | ---------- |
+| `part` | `FilePart` | The file part. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2625,7 +2651,6 @@ async def handle_file(self, part: FilePart) -> AsyncIterator[EventT]:
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_final_result
@@ -2634,14 +2659,15 @@ async def handle_file(self, part: FilePart) -> AsyncIterator[EventT]:
 handle_final_result(
     event: FinalResultEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `FinalResultEvent`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `FinalResultEvent` | The final result event. | *required* |
+| Name    | Type               | Description             | Default    |
+| ------- | ------------------ | ----------------------- | ---------- |
+| `event` | `FinalResultEvent` | The final result event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2654,7 +2680,6 @@ async def handle_final_result(self, event: FinalResultEvent) -> AsyncIterator[Ev
     """
     return
     yield  # Make this an async generator
-
 ```
 
 #### handle_function_tool_call
@@ -2663,14 +2688,15 @@ async def handle_final_result(self, event: FinalResultEvent) -> AsyncIterator[Ev
 handle_function_tool_call(
     event: FunctionToolCallEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `FunctionToolCallEvent`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `FunctionToolCallEvent` | The function tool call event. | *required* |
+| Name    | Type                    | Description                   | Default    |
+| ------- | ----------------------- | ----------------------------- | ---------- |
+| `event` | `FunctionToolCallEvent` | The function tool call event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2683,7 +2709,6 @@ async def handle_function_tool_call(self, event: FunctionToolCallEvent) -> Async
     """
     return
     yield  # Make this an async generator
-
 ```
 
 #### handle_function_tool_result
@@ -2692,14 +2717,15 @@ async def handle_function_tool_call(self, event: FunctionToolCallEvent) -> Async
 handle_function_tool_result(
     event: FunctionToolResultEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle a `FunctionToolResultEvent`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `FunctionToolResultEvent` | The function tool result event. | *required* |
+| Name    | Type                      | Description                     | Default    |
+| ------- | ------------------------- | ------------------------------- | ---------- |
+| `event` | `FunctionToolResultEvent` | The function tool result event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2712,7 +2738,6 @@ async def handle_function_tool_result(self, event: FunctionToolResultEvent) -> A
     """
     return  # pragma: no cover
     yield  # Make this an async generator
-
 ```
 
 #### handle_run_result
@@ -2721,14 +2746,15 @@ async def handle_function_tool_result(self, event: FunctionToolResultEvent) -> A
 handle_run_result(
     event: AgentRunResultEvent,
 ) -> AsyncIterator[EventT]
-
 ```
 
 Handle an `AgentRunResultEvent`.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `event` | `AgentRunResultEvent` | The agent run result event. | *required* |
+| Name    | Type                  | Description                 | Default    |
+| ------- | --------------------- | --------------------------- | ---------- |
+| `event` | `AgentRunResultEvent` | The agent run result event. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/_event_stream.py`
 
@@ -2741,7 +2767,6 @@ async def handle_run_result(self, event: AgentRunResultEvent) -> AsyncIterator[E
     """
     return
     yield  # Make this an async generator
-
 ```
 
 ### MessagesBuilder
@@ -2772,14 +2797,12 @@ class MessagesBuilder:
                 last_message.parts = [*last_message.parts, part]
             else:
                 self.messages.append(ModelResponse(parts=[part]))
-
 ```
 
 #### add
 
 ```python
 add(part: ModelRequestPart | ModelResponsePart) -> None
-
 ```
 
 Add a new part, creating a new request or response message if necessary.
@@ -2802,5 +2825,4 @@ def add(self, part: ModelRequestPart | ModelResponsePart) -> None:
             last_message.parts = [*last_message.parts, part]
         else:
             self.messages.append(ModelResponse(parts=[part]))
-
 ```

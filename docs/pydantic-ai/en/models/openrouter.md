@@ -6,12 +6,10 @@ To use `OpenRouterModel`, you need to either install `pydantic-ai`, or install `
 
 ```bash
 pip install "pydantic-ai-slim[openrouter]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[openrouter]"
-
 ```
 
 ## Configuration
@@ -25,7 +23,6 @@ from pydantic_ai import Agent
 
 agent = Agent('openrouter:anthropic/claude-3.5-sonnet')
 ...
-
 ```
 
 Or initialise the model and provider directly:
@@ -41,7 +38,6 @@ model = OpenRouterModel(
 )
 agent = Agent(model)
 ...
-
 ```
 
 ## App Attribution
@@ -59,7 +55,6 @@ provider=OpenRouterProvider(
     app_title='Your App',
 ),
 ...
-
 ```
 
 ## Model Settings
@@ -81,5 +76,4 @@ settings = OpenRouterModelSettings(
 model = OpenRouterModel('openai/gpt-5')
 agent = Agent(model, model_settings=settings)
 ...
-
 ```

@@ -8,23 +8,21 @@ The DuckDuckGo search tool allows you to search the web for information. It is b
 
 ### Installation
 
-To use duckduckgo_search_tool, you need to install [`pydantic-ai-slim`](../install/#slim-install) with the `duckduckgo` optional group:
+To use duckduckgo_search_tool, you need to install [`pydantic-ai-slim`](https://ai.pydantic.dev/install/#slim-install) with the `duckduckgo` optional group:
 
 ```bash
 pip install "pydantic-ai-slim[duckduckgo]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[duckduckgo]"
-
 ```
 
 ### Usage
 
 Here's an example of how you can use the DuckDuckGo search tool with an agent:
 
-[Learn about Gateway](../gateway) duckduckgo_search.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) duckduckgo_search.py
 
 ```python
 from pydantic_ai import Agent
@@ -85,7 +83,6 @@ the 2025 year‑end box‑office tallies are in or to consult a regularly update
 
 Would you like help finding a current source or additional details on where to look for the complete updated list?
 """
-
 ```
 
 duckduckgo_search.py
@@ -149,7 +146,6 @@ the 2025 year‑end box‑office tallies are in or to consult a regularly update
 
 Would you like help finding a current source or additional details on where to look for the complete updated list?
 """
-
 ```
 
 ## Tavily Search Tool
@@ -164,23 +160,21 @@ The Tavily search tool allows you to search the web for information. It is built
 
 ### Installation
 
-To use tavily_search_tool, you need to install [`pydantic-ai-slim`](../install/#slim-install) with the `tavily` optional group:
+To use tavily_search_tool, you need to install [`pydantic-ai-slim`](https://ai.pydantic.dev/install/#slim-install) with the `tavily` optional group:
 
 ```bash
 pip install "pydantic-ai-slim[tavily]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[tavily]"
-
 ```
 
 ### Usage
 
 Here's an example of how you can use the Tavily search tool with an agent:
 
-[Learn about Gateway](../gateway) tavily_search.py
+[Learn about Gateway](https://ai.pydantic.dev/gateway) tavily_search.py
 
 ```python
 import os
@@ -216,7 +210,6 @@ Here are some of the top recent news articles related to GenAI:
 
 Feel free to click on the links to dive deeper into each story!
 """
-
 ```
 
 tavily_search.py
@@ -255,5 +248,4 @@ Here are some of the top recent news articles related to GenAI:
 
 Feel free to click on the links to dive deeper into each story!
 """
-
 ```

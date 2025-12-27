@@ -89,7 +89,6 @@ class UsageBase:
     def has_values(self) -> bool:
         """Whether any values are set and non-zero."""
         return any(dataclasses.asdict(self).values())
-
 ```
 
 #### input_tokens
@@ -103,7 +102,6 @@ input_tokens: Annotated[
         )
     ),
 ] = 0
-
 ```
 
 Number of input/prompt tokens.
@@ -112,7 +110,6 @@ Number of input/prompt tokens.
 
 ```python
 cache_write_tokens: int = 0
-
 ```
 
 Number of tokens written to the cache.
@@ -121,7 +118,6 @@ Number of tokens written to the cache.
 
 ```python
 cache_read_tokens: int = 0
-
 ```
 
 Number of tokens read from the cache.
@@ -137,7 +133,6 @@ output_tokens: Annotated[
         )
     ),
 ] = 0
-
 ```
 
 Number of output/completion tokens.
@@ -146,7 +141,6 @@ Number of output/completion tokens.
 
 ```python
 input_audio_tokens: int = 0
-
 ```
 
 Number of audio input tokens.
@@ -155,7 +149,6 @@ Number of audio input tokens.
 
 ```python
 cache_audio_read_tokens: int = 0
-
 ```
 
 Number of audio tokens read from the cache.
@@ -164,7 +157,6 @@ Number of audio tokens read from the cache.
 
 ```python
 output_audio_tokens: int = 0
-
 ```
 
 Number of audio output tokens.
@@ -175,7 +167,6 @@ Number of audio output tokens.
 details: Annotated[
     dict[str, int], BeforeValidator(lambda d: d or {})
 ] = field(default_factory=dict)
-
 ```
 
 Any extra details returned by the model.
@@ -184,7 +175,6 @@ Any extra details returned by the model.
 
 ```python
 total_tokens: int
-
 ```
 
 Sum of `input_tokens + output_tokens`.
@@ -193,7 +183,6 @@ Sum of `input_tokens + output_tokens`.
 
 ```python
 opentelemetry_attributes() -> dict[str, int]
-
 ```
 
 Get the token usage values as OpenTelemetry attributes.
@@ -227,14 +216,12 @@ def opentelemetry_attributes(self) -> dict[str, int]:
             if value:
                 result[prefix + key] = value
     return result
-
 ```
 
 #### has_values
 
 ```python
 has_values() -> bool
-
 ```
 
 Whether any values are set and non-zero.
@@ -245,7 +232,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/usage.py`
 def has_values(self) -> bool:
     """Whether any values are set and non-zero."""
     return any(dataclasses.asdict(self).values())
-
 ```
 
 ### RequestUsage
@@ -322,21 +308,21 @@ class RequestUsage(UsageBase):
             except Exception:
                 pass
         return cls(details=details)
-
 ```
 
 #### incr
 
 ```python
 incr(incr_usage: RequestUsage) -> None
-
 ```
 
 Increment the usage in place.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `incr_usage` | `RequestUsage` | The usage to increment by. | *required* |
+| Name         | Type           | Description                | Default    |
+| ------------ | -------------- | -------------------------- | ---------- |
+| `incr_usage` | `RequestUsage` | The usage to increment by. | *required* |
 
 Source code in `pydantic_ai_slim/pydantic_ai/usage.py`
 
@@ -348,14 +334,12 @@ def incr(self, incr_usage: RequestUsage) -> None:
         incr_usage: The usage to increment by.
     """
     return _incr_usage_tokens(self, incr_usage)
-
 ```
 
 #### __add__
 
 ```python
 __add__(other: RequestUsage) -> RequestUsage
-
 ```
 
 Add two RequestUsages together.
@@ -377,7 +361,6 @@ def __add__(self, other: RequestUsage) -> RequestUsage:
     new_usage = copy(self)
     new_usage.incr(other)
     return new_usage
-
 ```
 
 #### extract
@@ -392,14 +375,20 @@ extract(
     api_flavor: str = "default",
     details: dict[str, Any] | None = None
 ) -> RequestUsage
-
 ```
 
 Extract usage information from the response data using genai-prices.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `data` | `Any` | The response data from the model API. | *required* | | `provider` | `str` | The actual provider ID | *required* | | `provider_url` | `str` | The provider base_url | *required* | | `provider_fallback` | `str` | The fallback provider ID to use if the actual provider is not found in genai-prices. For example, an OpenAI model should set this to "openai" in case it has an obscure provider ID. | *required* | | `api_flavor` | `str` | The API flavor to use when extracting usage information, e.g. 'chat' or 'responses' for OpenAI. | `'default'` | | `details` | `dict[str, Any] | None` | Becomes the details field on the returned RequestUsage for convenience. | `None` |
+| Name                | Type             | Description                                                                                                                                                                          | Default                                                                 |
+| ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `data`              | `Any`            | The response data from the model API.                                                                                                                                                | *required*                                                              |
+| `provider`          | `str`            | The actual provider ID                                                                                                                                                               | *required*                                                              |
+| `provider_url`      | `str`            | The provider base_url                                                                                                                                                                | *required*                                                              |
+| `provider_fallback` | `str`            | The fallback provider ID to use if the actual provider is not found in genai-prices. For example, an OpenAI model should set this to "openai" in case it has an obscure provider ID. | *required*                                                              |
+| `api_flavor`        | `str`            | The API flavor to use when extracting usage information, e.g. 'chat' or 'responses' for OpenAI.                                                                                      | `'default'`                                                             |
+| `details`           | \`dict[str, Any] | None\`                                                                                                                                                                               | Becomes the details field on the returned RequestUsage for convenience. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/usage.py`
 
@@ -436,7 +425,6 @@ def extract(
         except Exception:
             pass
     return cls(details=details)
-
 ```
 
 ### RunUsage
@@ -503,14 +491,12 @@ class RunUsage(UsageBase):
         new_usage = copy(self)
         new_usage.incr(other)
         return new_usage
-
 ```
 
 #### requests
 
 ```python
 requests: int = 0
-
 ```
 
 Number of requests made to the LLM API.
@@ -519,7 +505,6 @@ Number of requests made to the LLM API.
 
 ```python
 tool_calls: int = 0
-
 ```
 
 Number of successful tool calls executed during the run.
@@ -528,7 +513,6 @@ Number of successful tool calls executed during the run.
 
 ```python
 input_tokens: int = 0
-
 ```
 
 Total number of input/prompt tokens.
@@ -537,7 +521,6 @@ Total number of input/prompt tokens.
 
 ```python
 cache_write_tokens: int = 0
-
 ```
 
 Total number of tokens written to the cache.
@@ -546,7 +529,6 @@ Total number of tokens written to the cache.
 
 ```python
 cache_read_tokens: int = 0
-
 ```
 
 Total number of tokens read from the cache.
@@ -555,7 +537,6 @@ Total number of tokens read from the cache.
 
 ```python
 input_audio_tokens: int = 0
-
 ```
 
 Total number of audio input tokens.
@@ -564,7 +545,6 @@ Total number of audio input tokens.
 
 ```python
 cache_audio_read_tokens: int = 0
-
 ```
 
 Total number of audio tokens read from the cache.
@@ -573,7 +553,6 @@ Total number of audio tokens read from the cache.
 
 ```python
 output_tokens: int = 0
-
 ```
 
 Total number of output/completion tokens.
@@ -582,7 +561,6 @@ Total number of output/completion tokens.
 
 ```python
 details: dict[str, int] = field(default_factory=dict)
-
 ```
 
 Any extra details returned by the model.
@@ -591,14 +569,15 @@ Any extra details returned by the model.
 
 ```python
 incr(incr_usage: RunUsage | RequestUsage) -> None
-
 ```
 
 Increment the usage in place.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `incr_usage` | `RunUsage | RequestUsage` | The usage to increment by. | *required* |
+| Name         | Type       | Description    | Default                    |
+| ------------ | ---------- | -------------- | -------------------------- |
+| `incr_usage` | \`RunUsage | RequestUsage\` | The usage to increment by. |
 
 Source code in `pydantic_ai_slim/pydantic_ai/usage.py`
 
@@ -613,14 +592,12 @@ def incr(self, incr_usage: RunUsage | RequestUsage) -> None:
         self.requests += incr_usage.requests
         self.tool_calls += incr_usage.tool_calls
     return _incr_usage_tokens(self, incr_usage)
-
 ```
 
 #### __add__
 
 ```python
 __add__(other: RunUsage | RequestUsage) -> RunUsage
-
 ```
 
 Add two RunUsages together.
@@ -638,7 +615,6 @@ def __add__(self, other: RunUsage | RequestUsage) -> RunUsage:
     new_usage = copy(self)
     new_usage.incr(other)
     return new_usage
-
 ```
 
 ### Usage
@@ -658,7 +634,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/usage.py`
 @deprecated('`Usage` is deprecated, use `RunUsage` instead')
 class Usage(RunUsage):
     """Deprecated alias for `RunUsage`."""
-
 ```
 
 ### UsageLimits
@@ -822,14 +797,12 @@ class UsageLimits:
             )
 
     __repr__ = _utils.dataclasses_no_defaults_repr
-
 ```
 
 #### request_limit
 
 ```python
 request_limit: int | None = request_limit
-
 ```
 
 The maximum number of requests allowed to the model.
@@ -838,7 +811,6 @@ The maximum number of requests allowed to the model.
 
 ```python
 tool_calls_limit: int | None = tool_calls_limit
-
 ```
 
 The maximum number of successful tool calls allowed to be executed.
@@ -849,7 +821,6 @@ The maximum number of successful tool calls allowed to be executed.
 input_tokens_limit: int | None = (
     input_tokens_limit or request_tokens_limit
 )
-
 ```
 
 The maximum number of input/prompt tokens allowed.
@@ -860,7 +831,6 @@ The maximum number of input/prompt tokens allowed.
 output_tokens_limit: int | None = (
     output_tokens_limit or response_tokens_limit
 )
-
 ```
 
 The maximum number of output/response tokens allowed.
@@ -869,7 +839,6 @@ The maximum number of output/response tokens allowed.
 
 ```python
 total_tokens_limit: int | None = total_tokens_limit
-
 ```
 
 The maximum number of tokens allowed in requests and responses combined.
@@ -880,7 +849,6 @@ The maximum number of tokens allowed in requests and responses combined.
 count_tokens_before_request: bool = (
     count_tokens_before_request
 )
-
 ```
 
 If True, perform a token counting pass before sending the request to the model, to enforce `request_tokens_limit` ahead of time. This may incur additional overhead (from calling the model's `count_tokens` API before making the actual request) and is disabled by default.
@@ -889,7 +857,6 @@ If True, perform a token counting pass before sending the request to the model, 
 
 ```python
 has_token_limits() -> bool
-
 ```
 
 Returns `True` if this instance places any limits on token counts.
@@ -912,14 +879,12 @@ def has_token_limits(self) -> bool:
     return any(
         limit is not None for limit in (self.input_tokens_limit, self.output_tokens_limit, self.total_tokens_limit)
     )
-
 ```
 
 #### check_before_request
 
 ```python
 check_before_request(usage: RunUsage) -> None
-
 ```
 
 Raises a `UsageLimitExceeded` exception if the next request would exceed any of the limits.
@@ -944,14 +909,12 @@ def check_before_request(self, usage: RunUsage) -> None:
         raise UsageLimitExceeded(  # pragma: lax no cover
             f'The next request would exceed the total_tokens_limit of {self.total_tokens_limit} ({total_tokens=})'
         )
-
 ```
 
 #### check_tokens
 
 ```python
 check_tokens(usage: RunUsage) -> None
-
 ```
 
 Raises a `UsageLimitExceeded` exception if the usage exceeds any of the token limits.
@@ -974,14 +937,12 @@ def check_tokens(self, usage: RunUsage) -> None:
     total_tokens = usage.total_tokens
     if self.total_tokens_limit is not None and total_tokens > self.total_tokens_limit:
         raise UsageLimitExceeded(f'Exceeded the total_tokens_limit of {self.total_tokens_limit} ({total_tokens=})')
-
 ```
 
 #### check_before_tool_call
 
 ```python
 check_before_tool_call(projected_usage: RunUsage) -> None
-
 ```
 
 Raises a `UsageLimitExceeded` exception if the next tool call(s) would exceed the tool call limit.
@@ -997,5 +958,4 @@ def check_before_tool_call(self, projected_usage: RunUsage) -> None:
         raise UsageLimitExceeded(
             f'The next tool call(s) would exceed the tool_calls_limit of {tool_calls_limit} ({tool_calls=}).'
         )
-
 ```

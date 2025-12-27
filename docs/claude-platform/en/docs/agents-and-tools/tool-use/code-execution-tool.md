@@ -10,6 +10,8 @@ The code execution tool allows Claude to run Bash commands and manipulate files,
 The code execution tool is currently in public beta.
 
 To use this feature, add the `"code-execution-2025-08-25"` [beta header](/docs/en/api/beta-headers) to your API requests.
+
+Please reach out through our [feedback form](https://forms.gle/LTAU6Xn2puCJMi1n6) to share your feedback on this feature.
 </Note>
 
 ## Model compatibility
@@ -946,7 +948,7 @@ You can include the code execution tool in the [Messages Batches API](/docs/en/b
 Code execution tool usage is tracked separately from token usage. Execution time has a minimum of 5 minutes.
 If files are included in the request, execution time is billed even if the tool is not used due to files being preloaded onto the container.
 
-Each organization receives 50 free hours of usage with the code execution tool per day. Additional usage beyond the first 50 hours is billed at $0.05 per hour, per container.
+Each organization receives 1,550 free hours of usage with the code execution tool per month. Additional usage beyond the first 1,550 hours is billed at $0.05 per hour, per container.
 
 ## Upgrade to latest tool version
 

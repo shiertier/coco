@@ -37,6 +37,8 @@ class ModelProfile:
         """
     )
     """The instructions template to use for prompted structured output. The '{schema}' placeholder will be replaced with the JSON schema for the output."""
+    native_output_requires_schema_in_instructions: bool = False
+    """Whether to add prompted output template in native structured output mode"""
     json_schema_transformer: type[JsonSchemaTransformer] | None = None
     """The transformer to use to make JSON schemas for tools and structured output compatible with the model."""
 
@@ -79,14 +81,12 @@ class ModelProfile:
             if f.name in field_names and getattr(profile, f.name) != f.default
         }
         return replace(self, **non_default_attrs)
-
 ```
 
 ### supports_tools
 
 ```python
 supports_tools: bool = True
-
 ```
 
 Whether the model supports tools.
@@ -95,7 +95,6 @@ Whether the model supports tools.
 
 ```python
 supports_json_schema_output: bool = False
-
 ```
 
 Whether the model supports JSON schema output.
@@ -106,7 +105,6 @@ This is also referred to as 'native' support for structured output. Relates to t
 
 ```python
 supports_json_object_output: bool = False
-
 ```
 
 Whether the model supports a dedicated mode to enforce JSON output, without necessarily sending a schema.
@@ -117,7 +115,6 @@ E.g. [OpenAI's JSON mode](https://platform.openai.com/docs/guides/structured-out
 
 ```python
 supports_image_output: bool = False
-
 ```
 
 Whether the model supports image output.
@@ -128,7 +125,6 @@ Whether the model supports image output.
 default_structured_output_mode: StructuredOutputMode = (
     "tool"
 )
-
 ```
 
 The default structured output mode to use for the model.
@@ -139,10 +135,17 @@ The default structured output mode to use for the model.
 prompted_output_template: str = dedent(
     "\n        Always respond with a JSON object that's compatible with this schema:\n\n        {schema}\n\n        Don't include any text or Markdown fencing before or after.\n        "
 )
-
 ```
 
 The instructions template to use for prompted structured output. The '{schema}' placeholder will be replaced with the JSON schema for the output.
+
+### native_output_requires_schema_in_instructions
+
+```python
+native_output_requires_schema_in_instructions: bool = False
+```
+
+Whether to add prompted output template in native structured output mode
 
 ### json_schema_transformer
 
@@ -150,7 +153,6 @@ The instructions template to use for prompted structured output. The '{schema}' 
 json_schema_transformer: (
     type[JsonSchemaTransformer] | None
 ) = None
-
 ```
 
 The transformer to use to make JSON schemas for tools and structured output compatible with the model.
@@ -159,7 +161,6 @@ The transformer to use to make JSON schemas for tools and structured output comp
 
 ```python
 thinking_tags: tuple[str, str] = ('<think>', '</think>')
-
 ```
 
 The tags used to indicate thinking parts in the model's output. Defaults to ('', '').
@@ -168,21 +169,18 @@ The tags used to indicate thinking parts in the model's output. Defaults to ('',
 
 ```python
 ignore_streamed_leading_whitespace: bool = False
-
 ```
 
 Whether to ignore leading whitespace when streaming a response.
 
 ```text
 This is a workaround for models that emit `<think>
-
 ```
 
 `or an empty text part ahead of tool calls (e.g. Ollama + Qwen3), which we don't want to end up treating as a final result when using`run_stream`with`str`a valid`output_type\`.
 
 ```text
 This is currently only used by `OpenAIChatModel`, `HuggingFaceModel`, and `GroqModel`.
-
 ```
 
 ### supported_builtin_tools
@@ -191,7 +189,6 @@ This is currently only used by `OpenAIChatModel`, `HuggingFaceModel`, and `GroqM
 supported_builtin_tools: frozenset[
     type[AbstractBuiltinTool]
 ] = field(default_factory=lambda: SUPPORTED_BUILTIN_TOOLS)
-
 ```
 
 The set of builtin tool types that this model/profile supports.
@@ -202,7 +199,6 @@ Defaults to ALL builtin tools. Profile functions should explicitly restrict this
 
 ```python
 from_profile(profile: ModelProfile | None) -> Self
-
 ```
 
 Build a ModelProfile subclass instance from a ModelProfile instance.
@@ -216,14 +212,12 @@ def from_profile(cls, profile: ModelProfile | None) -> Self:
     if isinstance(profile, cls):
         return profile
     return cls().update(profile)
-
 ```
 
 ### update
 
 ```python
 update(profile: ModelProfile | None) -> Self
-
 ```
 
 Update this ModelProfile (subclass) instance with the non-default values from another ModelProfile instance.
@@ -242,7 +236,6 @@ def update(self, profile: ModelProfile | None) -> Self:
         if f.name in field_names and getattr(profile, f.name) != f.default
     }
     return replace(self, **non_default_attrs)
-
 ```
 
 ### OpenAIModelProfile
@@ -335,14 +328,12 @@ class OpenAIModelProfile(ModelProfile):
                 'If `openai_chat_send_back_thinking_parts` is "field", '
                 '`openai_chat_thinking_field` must be set to a non-None value.'
             )
-
 ```
 
 #### openai_chat_thinking_field
 
 ```python
 openai_chat_thinking_field: str | None = None
-
 ```
 
 Non-standard field name used by some providers for model thinking content in Chat Completions API responses.
@@ -359,7 +350,6 @@ If `openai_chat_send_back_thinking_parts` is set to `'field'`, this field must b
 openai_chat_send_back_thinking_parts: Literal[
     "tags", "field", False
 ] = "tags"
-
 ```
 
 Whether the model includes thinking content in requests.
@@ -372,7 +362,6 @@ Defaults to `'thinking_tags'` for backward compatibility reasons.
 
 ```python
 openai_supports_strict_tool_definition: bool = True
-
 ```
 
 This can be set by a provider or user if the OpenAI-"compatible" API doesn't support strict tool definitions.
@@ -381,7 +370,6 @@ This can be set by a provider or user if the OpenAI-"compatible" API doesn't sup
 
 ```python
 openai_supports_sampling_settings: bool = True
-
 ```
 
 Turn off to don't send sampling settings like `temperature` and `top_p` to models that don't support them, like OpenAI's o-series reasoning models.
@@ -390,7 +378,6 @@ Turn off to don't send sampling settings like `temperature` and `top_p` to model
 
 ```python
 openai_unsupported_model_settings: Sequence[str] = ()
-
 ```
 
 A list of model settings that are not supported by this model.
@@ -399,7 +386,6 @@ A list of model settings that are not supported by this model.
 
 ```python
 openai_supports_tool_choice_required: bool = True
-
 ```
 
 Whether the provider accepts the value `tool_choice='required'` in the request payload.
@@ -410,7 +396,6 @@ Whether the provider accepts the value `tool_choice='required'` in the request p
 openai_system_prompt_role: OpenAISystemPromptRole | None = (
     None
 )
-
 ```
 
 The role to use for the system prompt message. If not provided, defaults to `'system'`.
@@ -419,7 +404,6 @@ The role to use for the system prompt message. If not provided, defaults to `'sy
 
 ```python
 openai_chat_supports_web_search: bool = False
-
 ```
 
 Whether the model supports web search in Chat Completions API.
@@ -430,7 +414,6 @@ Whether the model supports web search in Chat Completions API.
 openai_chat_audio_input_encoding: Literal[
     "base64", "uri"
 ] = "base64"
-
 ```
 
 The encoding to use for audio input in Chat Completions requests.
@@ -442,7 +425,6 @@ The encoding to use for audio input in Chat Completions requests.
 
 ```python
 openai_supports_encrypted_reasoning_content: bool = False
-
 ```
 
 Whether the model supports including encrypted reasoning content in the response.
@@ -453,7 +435,6 @@ Whether the model supports including encrypted reasoning content in the response
 openai_responses_requires_function_call_status_none: (
     bool
 ) = False
-
 ```
 
 Whether the Responses API requires the `status` field on function tool calls to be `None`.
@@ -464,7 +445,6 @@ This is required by vLLM Responses API versions before https://github.com/vllm-p
 
 ```python
 openai_model_profile(model_name: str) -> ModelProfile
-
 ```
 
 Get the model profile for an OpenAI model.
@@ -512,7 +492,6 @@ def openai_model_profile(model_name: str) -> ModelProfile:
         openai_chat_supports_web_search=supports_web_search,
         openai_supports_encrypted_reasoning_content=is_reasoning_model,
     )
-
 ```
 
 ### OpenAIJsonSchemaTransformer
@@ -632,7 +611,6 @@ class OpenAIJsonSchemaTransformer(JsonSchemaTransformer):
                         if k not in required:
                             self.is_strict_compatible = False
         return schema
-
 ```
 
 ### anthropic_model_profile
@@ -641,7 +619,6 @@ class OpenAIJsonSchemaTransformer(JsonSchemaTransformer):
 anthropic_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for an Anthropic model.
@@ -666,7 +643,6 @@ def anthropic_model_profile(model_name: str) -> ModelProfile | None:
         thinking_tags=('<thinking>', '</thinking>'),
         supports_json_schema_output=supports_json_schema_output,
     )
-
 ```
 
 ### GoogleModelProfile
@@ -690,7 +666,6 @@ class GoogleModelProfile(ModelProfile):
     google_supports_native_output_with_builtin_tools: bool = False
     """Whether the model supports native output with builtin tools.
     See https://ai.google.dev/gemini-api/docs/structured-output?example=recipe#structured_outputs_with_tools"""
-
 ```
 
 #### google_supports_native_output_with_builtin_tools
@@ -699,7 +674,6 @@ class GoogleModelProfile(ModelProfile):
 google_supports_native_output_with_builtin_tools: bool = (
     False
 )
-
 ```
 
 Whether the model supports native output with builtin tools. See https://ai.google.dev/gemini-api/docs/structured-output?example=recipe#structured_outputs_with_tools
@@ -710,7 +684,6 @@ Whether the model supports native output with builtin tools. See https://ai.goog
 google_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Google model.
@@ -730,7 +703,6 @@ def google_model_profile(model_name: str) -> ModelProfile | None:
         supports_tools=not is_image_model,
         google_supports_native_output_with_builtin_tools=is_3_or_newer,
     )
-
 ```
 
 ### GoogleJsonSchemaTransformer
@@ -786,14 +758,12 @@ class GoogleJsonSchemaTransformer(JsonSchemaTransformer):
         schema.pop('exclusiveMaximum', None)
 
         return schema
-
 ```
 
 ### meta_model_profile
 
 ```python
 meta_model_profile(model_name: str) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Meta model.
@@ -804,7 +774,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/profiles/meta.py`
 def meta_model_profile(model_name: str) -> ModelProfile | None:
     """Get the model profile for a Meta model."""
     return ModelProfile(json_schema_transformer=InlineDefsJsonSchemaTransformer)
-
 ```
 
 ### amazon_model_profile
@@ -813,7 +782,6 @@ def meta_model_profile(model_name: str) -> ModelProfile | None:
 amazon_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for an Amazon model.
@@ -824,7 +792,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/profiles/amazon.py`
 def amazon_model_profile(model_name: str) -> ModelProfile | None:
     """Get the model profile for an Amazon model."""
     return ModelProfile(json_schema_transformer=InlineDefsJsonSchemaTransformer)
-
 ```
 
 ### deepseek_model_profile
@@ -833,7 +800,6 @@ def amazon_model_profile(model_name: str) -> ModelProfile | None:
 deepseek_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for a DeepSeek model.
@@ -844,14 +810,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/profiles/deepseek.py`
 def deepseek_model_profile(model_name: str) -> ModelProfile | None:
     """Get the model profile for a DeepSeek model."""
     return ModelProfile(ignore_streamed_leading_whitespace='r1' in model_name)
-
 ```
 
 ### grok_model_profile
 
 ```python
 grok_model_profile(model_name: str) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Grok model.
@@ -862,7 +826,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/profiles/grok.py`
 def grok_model_profile(model_name: str) -> ModelProfile | None:
     """Get the model profile for a Grok model."""
     return None
-
 ```
 
 ### mistral_model_profile
@@ -871,7 +834,6 @@ def grok_model_profile(model_name: str) -> ModelProfile | None:
 mistral_model_profile(
     model_name: str,
 ) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Mistral model.
@@ -882,14 +844,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/profiles/mistral.py`
 def mistral_model_profile(model_name: str) -> ModelProfile | None:
     """Get the model profile for a Mistral model."""
     return None
-
 ```
 
 ### qwen_model_profile
 
 ```python
 qwen_model_profile(model_name: str) -> ModelProfile | None
-
 ```
 
 Get the model profile for a Qwen model.
@@ -910,5 +870,4 @@ def qwen_model_profile(model_name: str) -> ModelProfile | None:
         json_schema_transformer=InlineDefsJsonSchemaTransformer,
         ignore_streamed_leading_whitespace=True,
     )
-
 ```

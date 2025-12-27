@@ -18,14 +18,12 @@ class GraphSetupError(TypeError):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
-
 ```
 
 #### message
 
 ```python
 message: str = message
-
 ```
 
 Description of the mistake.
@@ -48,14 +46,12 @@ class GraphBuildingError(ValueError):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
-
 ```
 
 #### message
 
 ```python
 message: str = message
-
 ```
 
 The error message.
@@ -78,14 +74,12 @@ class GraphValidationError(ValueError):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
-
 ```
 
 #### message
 
 ```python
 message: str = message
-
 ```
 
 The error message.
@@ -108,14 +102,12 @@ class GraphRuntimeError(RuntimeError):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
-
 ```
 
 #### message
 
 ```python
 message: str = message
-
 ```
 
 The error message.
@@ -141,14 +133,12 @@ class GraphNodeStatusError(GraphRuntimeError):
         """Check if the status is valid."""
         if status not in {'created', 'pending'}:
             raise cls(status)
-
 ```
 
 #### check
 
 ```python
 check(status: SnapshotStatus) -> None
-
 ```
 
 Check if the status is valid.
@@ -161,5 +151,4 @@ def check(cls, status: 'SnapshotStatus') -> None:
     """Check if the status is valid."""
     if status not in {'created', 'pending'}:
         raise cls(status)
-
 ```

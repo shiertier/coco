@@ -356,14 +356,12 @@ class VercelAIAdapter(UIAdapter[RequestData, UIMessage, BaseChunk, AgentDepsT, O
                 assert_never(msg)
 
         return result
-
 ```
 
 #### build_run_input
 
 ```python
 build_run_input(body: bytes) -> RequestData
-
 ```
 
 Build a Vercel AI run input object from the request body.
@@ -375,7 +373,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/vercel_ai/_adapter.py`
 def build_run_input(cls, body: bytes) -> RequestData:
     """Build a Vercel AI run input object from the request body."""
     return request_data_ta.validate_json(body)
-
 ```
 
 #### build_event_stream
@@ -386,7 +383,6 @@ build_event_stream() -> (
         RequestData, BaseChunk, AgentDepsT, OutputDataT
     ]
 )
-
 ```
 
 Build a Vercel AI event stream transformer.
@@ -397,14 +393,12 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/vercel_ai/_adapter.py`
 def build_event_stream(self) -> UIEventStream[RequestData, BaseChunk, AgentDepsT, OutputDataT]:
     """Build a Vercel AI event stream transformer."""
     return VercelAIEventStream(self.run_input, accept=self.accept)
-
 ```
 
 #### messages
 
 ```python
 messages: list[ModelMessage]
-
 ```
 
 Pydantic AI messages from the Vercel AI run input.
@@ -415,7 +409,6 @@ Pydantic AI messages from the Vercel AI run input.
 load_messages(
     messages: Sequence[UIMessage],
 ) -> list[ModelMessage]
-
 ```
 
 Transform Vercel AI messages into Pydantic AI messages.
@@ -565,7 +558,6 @@ def load_messages(cls, messages: Sequence[UIMessage]) -> list[ModelMessage]:  # 
             assert_never(msg.role)
 
     return builder.messages
-
 ```
 
 #### dump_messages
@@ -574,18 +566,21 @@ def load_messages(cls, messages: Sequence[UIMessage]) -> list[ModelMessage]:  # 
 dump_messages(
     messages: Sequence[ModelMessage],
 ) -> list[UIMessage]
-
 ```
 
 Transform Pydantic AI messages into Vercel AI messages.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `messages` | `Sequence[ModelMessage]` | A sequence of ModelMessage objects to convert | *required* |
+| Name       | Type                     | Description                                   | Default    |
+| ---------- | ------------------------ | --------------------------------------------- | ---------- |
+| `messages` | `Sequence[ModelMessage]` | A sequence of ModelMessage objects to convert | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `list[UIMessage]` | A list of UIMessage objects in Vercel AI format |
+| Type              | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| `list[UIMessage]` | A list of UIMessage objects in Vercel AI format |
 
 Source code in `pydantic_ai_slim/pydantic_ai/ui/vercel_ai/_adapter.py`
 
@@ -634,7 +629,6 @@ def dump_messages(
             assert_never(msg)
 
     return result
-
 ```
 
 ### VercelAIEventStream
@@ -789,7 +783,6 @@ class VercelAIEventStream(UIEventStream[RequestData, BaseChunk, AgentDepsT, Outp
         output = part.model_response_object()
         # Unwrap the return value from the output dictionary if it exists
         return output.get('return_value', output)
-
 ```
 
 Vercel AI request types (UI messages).
@@ -800,7 +793,6 @@ Converted to Python from: https://github.com/vercel/ai/blob/ai%405.0.59/packages
 
 ```python
 ProviderMetadata = dict[str, dict[str, JSONValue]]
-
 ```
 
 Provider metadata.
@@ -816,7 +808,6 @@ Source code in `pydantic_ai_slim/pydantic_ai/ui/vercel_ai/request_types.py`
 ```python
 class BaseUIPart(CamelBaseModel, ABC):
     """Abstract base class for all UI parts."""
-
 ```
 
 ### TextUIPart
@@ -841,14 +832,12 @@ class TextUIPart(BaseUIPart):
 
     provider_metadata: ProviderMetadata | None = None
     """The provider metadata."""
-
 ```
 
 #### text
 
 ```python
 text: str
-
 ```
 
 The text content.
@@ -857,7 +846,6 @@ The text content.
 
 ```python
 state: Literal['streaming', 'done'] | None = None
-
 ```
 
 The state of the text part.
@@ -866,7 +854,6 @@ The state of the text part.
 
 ```python
 provider_metadata: ProviderMetadata | None = None
-
 ```
 
 The provider metadata.
@@ -893,14 +880,12 @@ class ReasoningUIPart(BaseUIPart):
 
     provider_metadata: ProviderMetadata | None = None
     """The provider metadata."""
-
 ```
 
 #### text
 
 ```python
 text: str
-
 ```
 
 The reasoning text.
@@ -909,7 +894,6 @@ The reasoning text.
 
 ```python
 state: Literal['streaming', 'done'] | None = None
-
 ```
 
 The state of the reasoning part.
@@ -918,7 +902,6 @@ The state of the reasoning part.
 
 ```python
 provider_metadata: ProviderMetadata | None = None
-
 ```
 
 The provider metadata.
@@ -940,7 +923,6 @@ class SourceUrlUIPart(BaseUIPart):
     url: str
     title: str | None = None
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### SourceDocumentUIPart
@@ -961,7 +943,6 @@ class SourceDocumentUIPart(BaseUIPart):
     title: str
     filename: str | None = None
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### FileUIPart
@@ -995,14 +976,12 @@ class FileUIPart(BaseUIPart):
 
     provider_metadata: ProviderMetadata | None = None
     """The provider metadata."""
-
 ```
 
 #### media_type
 
 ```python
 media_type: str
-
 ```
 
 IANA media type of the file. @see https://www.iana.org/assignments/media-types/media-types.xhtml
@@ -1011,7 +990,6 @@ IANA media type of the file. @see https://www.iana.org/assignments/media-types/m
 
 ```python
 filename: str | None = None
-
 ```
 
 Optional filename of the file.
@@ -1020,7 +998,6 @@ Optional filename of the file.
 
 ```python
 url: str
-
 ```
 
 The URL of the file. It can either be a URL to a hosted file or a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).
@@ -1029,7 +1006,6 @@ The URL of the file. It can either be a URL to a hosted file or a [Data URL](htt
 
 ```python
 provider_metadata: ProviderMetadata | None = None
-
 ```
 
 The provider metadata.
@@ -1047,7 +1023,6 @@ class StepStartUIPart(BaseUIPart):
     """A step boundary part of a message."""
 
     type: Literal['step-start'] = 'step-start'
-
 ```
 
 ### DataUIPart
@@ -1065,7 +1040,6 @@ class DataUIPart(BaseUIPart):
     type: Annotated[str, Field(pattern=r'^data-')]
     id: str | None = None
     data: Any
-
 ```
 
 ### ToolInputStreamingPart
@@ -1085,7 +1059,6 @@ class ToolInputStreamingPart(BaseUIPart):
     state: Literal['input-streaming'] = 'input-streaming'
     input: Any | None = None
     provider_executed: bool | None = None
-
 ```
 
 ### ToolInputAvailablePart
@@ -1106,7 +1079,6 @@ class ToolInputAvailablePart(BaseUIPart):
     input: Any | None = None
     provider_executed: bool | None = None
     call_provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ToolOutputAvailablePart
@@ -1129,7 +1101,6 @@ class ToolOutputAvailablePart(BaseUIPart):
     provider_executed: bool | None = None
     call_provider_metadata: ProviderMetadata | None = None
     preliminary: bool | None = None
-
 ```
 
 ### ToolOutputErrorPart
@@ -1152,7 +1123,6 @@ class ToolOutputErrorPart(BaseUIPart):
     error_text: str
     provider_executed: bool | None = None
     call_provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ToolUIPart
@@ -1164,7 +1134,6 @@ ToolUIPart = (
     | ToolOutputAvailablePart
     | ToolOutputErrorPart
 )
-
 ```
 
 Union of all tool part types.
@@ -1186,7 +1155,6 @@ class DynamicToolInputStreamingPart(BaseUIPart):
     tool_call_id: str
     state: Literal['input-streaming'] = 'input-streaming'
     input: Any | None = None
-
 ```
 
 ### DynamicToolInputAvailablePart
@@ -1207,7 +1175,6 @@ class DynamicToolInputAvailablePart(BaseUIPart):
     state: Literal['input-available'] = 'input-available'
     input: Any
     call_provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### DynamicToolOutputAvailablePart
@@ -1230,7 +1197,6 @@ class DynamicToolOutputAvailablePart(BaseUIPart):
     output: Any
     call_provider_metadata: ProviderMetadata | None = None
     preliminary: bool | None = None
-
 ```
 
 ### DynamicToolOutputErrorPart
@@ -1252,7 +1218,6 @@ class DynamicToolOutputErrorPart(BaseUIPart):
     input: Any
     error_text: str
     call_provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### DynamicToolUIPart
@@ -1264,7 +1229,6 @@ DynamicToolUIPart = (
     | DynamicToolOutputAvailablePart
     | DynamicToolOutputErrorPart
 )
-
 ```
 
 Union of all dynamic tool part types.
@@ -1283,7 +1247,6 @@ UIMessagePart = (
     | DataUIPart
     | StepStartUIPart
 )
-
 ```
 
 Union of all message part types.
@@ -1317,14 +1280,12 @@ class UIMessage(CamelBaseModel):
     User messages can have text parts and file parts.
     Assistant messages can have text, reasoning, tool invocation, and file parts.
     """
-
 ```
 
 #### id
 
 ```python
 id: str
-
 ```
 
 A unique identifier for the message.
@@ -1333,7 +1294,6 @@ A unique identifier for the message.
 
 ```python
 role: Literal['system', 'user', 'assistant']
-
 ```
 
 The role of the message.
@@ -1342,7 +1302,6 @@ The role of the message.
 
 ```python
 metadata: Any | None = None
-
 ```
 
 The metadata of the message.
@@ -1351,7 +1310,6 @@ The metadata of the message.
 
 ```python
 parts: list[UIMessagePart]
-
 ```
 
 The parts of the message. Use this for rendering the message in the UI. System messages should be avoided (set the system prompt on the server instead). They can have text parts. User messages can have text parts and file parts. Assistant messages can have text, reasoning, tool invocation, and file parts.
@@ -1371,7 +1329,6 @@ class SubmitMessage(CamelBaseModel, extra='allow'):
     trigger: Literal['submit-message'] = 'submit-message'
     id: str
     messages: list[UIMessage]
-
 ```
 
 ### RegenerateMessage
@@ -1390,7 +1347,6 @@ class RegenerateMessage(CamelBaseModel, extra='allow'):
     id: str
     messages: list[UIMessage]
     message_id: str
-
 ```
 
 ### RequestData
@@ -1400,7 +1356,6 @@ RequestData = Annotated[
     SubmitMessage | RegenerateMessage,
     Discriminator("trigger"),
 ]
-
 ```
 
 Union of all request data types.
@@ -1413,7 +1368,6 @@ Converted to Python from: https://github.com/vercel/ai/blob/ai%405.0.59/packages
 
 ```python
 ProviderMetadata = dict[str, dict[str, JSONValue]]
-
 ```
 
 Provider metadata.
@@ -1433,7 +1387,6 @@ FinishReason = (
     ]
     | None
 )
-
 ```
 
 Reason why the model finished generating.
@@ -1452,7 +1405,6 @@ class BaseChunk(CamelBaseModel, ABC):
 
     def encode(self) -> str:
         return self.model_dump_json(by_alias=True, exclude_none=True)
-
 ```
 
 ### TextStartChunk
@@ -1470,7 +1422,6 @@ class TextStartChunk(BaseChunk):
     type: Literal['text-start'] = 'text-start'
     id: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### TextDeltaChunk
@@ -1489,7 +1440,6 @@ class TextDeltaChunk(BaseChunk):
     delta: str
     id: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### TextEndChunk
@@ -1507,7 +1457,6 @@ class TextEndChunk(BaseChunk):
     type: Literal['text-end'] = 'text-end'
     id: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ReasoningStartChunk
@@ -1525,7 +1474,6 @@ class ReasoningStartChunk(BaseChunk):
     type: Literal['reasoning-start'] = 'reasoning-start'
     id: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ReasoningDeltaChunk
@@ -1544,7 +1492,6 @@ class ReasoningDeltaChunk(BaseChunk):
     id: str
     delta: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ReasoningEndChunk
@@ -1562,7 +1509,6 @@ class ReasoningEndChunk(BaseChunk):
     type: Literal['reasoning-end'] = 'reasoning-end'
     id: str
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### ErrorChunk
@@ -1579,7 +1525,6 @@ class ErrorChunk(BaseChunk):
 
     type: Literal['error'] = 'error'
     error_text: str
-
 ```
 
 ### ToolInputStartChunk
@@ -1599,7 +1544,6 @@ class ToolInputStartChunk(BaseChunk):
     tool_name: str
     provider_executed: bool | None = None
     dynamic: bool | None = None
-
 ```
 
 ### ToolInputDeltaChunk
@@ -1617,7 +1561,6 @@ class ToolInputDeltaChunk(BaseChunk):
     type: Literal['tool-input-delta'] = 'tool-input-delta'
     tool_call_id: str
     input_text_delta: str
-
 ```
 
 ### ToolOutputAvailableChunk
@@ -1638,7 +1581,6 @@ class ToolOutputAvailableChunk(BaseChunk):
     provider_executed: bool | None = None
     dynamic: bool | None = None
     preliminary: bool | None = None
-
 ```
 
 ### ToolInputAvailableChunk
@@ -1660,7 +1602,6 @@ class ToolInputAvailableChunk(BaseChunk):
     provider_executed: bool | None = None
     provider_metadata: ProviderMetadata | None = None
     dynamic: bool | None = None
-
 ```
 
 ### ToolInputErrorChunk
@@ -1683,7 +1624,6 @@ class ToolInputErrorChunk(BaseChunk):
     provider_metadata: ProviderMetadata | None = None
     dynamic: bool | None = None
     error_text: str
-
 ```
 
 ### ToolOutputErrorChunk
@@ -1703,7 +1643,6 @@ class ToolOutputErrorChunk(BaseChunk):
     error_text: str
     provider_executed: bool | None = None
     dynamic: bool | None = None
-
 ```
 
 ### ToolApprovalRequestChunk
@@ -1721,7 +1660,6 @@ class ToolApprovalRequestChunk(BaseChunk):
     type: Literal['tool-approval-request'] = 'tool-approval-request'
     approval_id: str
     tool_call_id: str
-
 ```
 
 ### ToolOutputDeniedChunk
@@ -1738,7 +1676,6 @@ class ToolOutputDeniedChunk(BaseChunk):
 
     type: Literal['tool-output-denied'] = 'tool-output-denied'
     tool_call_id: str
-
 ```
 
 ### SourceUrlChunk
@@ -1758,7 +1695,6 @@ class SourceUrlChunk(BaseChunk):
     url: str
     title: str | None = None
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### SourceDocumentChunk
@@ -1779,7 +1715,6 @@ class SourceDocumentChunk(BaseChunk):
     title: str
     filename: str | None = None
     provider_metadata: ProviderMetadata | None = None
-
 ```
 
 ### FileChunk
@@ -1797,7 +1732,6 @@ class FileChunk(BaseChunk):
     type: Literal['file'] = 'file'
     url: str
     media_type: str
-
 ```
 
 ### DataChunk
@@ -1816,7 +1750,6 @@ class DataChunk(BaseChunk):
     id: str | None = None
     data: Any
     transient: bool | None = None
-
 ```
 
 ### StartStepChunk
@@ -1832,7 +1765,6 @@ class StartStepChunk(BaseChunk):
     """Start step chunk."""
 
     type: Literal['start-step'] = 'start-step'
-
 ```
 
 ### FinishStepChunk
@@ -1848,7 +1780,6 @@ class FinishStepChunk(BaseChunk):
     """Finish step chunk."""
 
     type: Literal['finish-step'] = 'finish-step'
-
 ```
 
 ### StartChunk
@@ -1866,7 +1797,6 @@ class StartChunk(BaseChunk):
     type: Literal['start'] = 'start'
     message_id: str | None = None
     message_metadata: Any | None = None
-
 ```
 
 ### FinishChunk
@@ -1884,7 +1814,6 @@ class FinishChunk(BaseChunk):
     type: Literal['finish'] = 'finish'
     finish_reason: FinishReason = None
     message_metadata: Any | None = None
-
 ```
 
 ### AbortChunk
@@ -1900,7 +1829,6 @@ class AbortChunk(BaseChunk):
     """Abort chunk."""
 
     type: Literal['abort'] = 'abort'
-
 ```
 
 ### MessageMetadataChunk
@@ -1917,7 +1845,6 @@ class MessageMetadataChunk(BaseChunk):
 
     type: Literal['message-metadata'] = 'message-metadata'
     message_metadata: Any
-
 ```
 
 ### DoneChunk
@@ -1936,5 +1863,4 @@ class DoneChunk(BaseChunk):
 
     def encode(self) -> str:
         return '[DONE]'
-
 ```

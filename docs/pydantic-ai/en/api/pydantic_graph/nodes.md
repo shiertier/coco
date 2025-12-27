@@ -4,7 +4,6 @@
 
 ```python
 StateT = TypeVar('StateT', default=None)
-
 ```
 
 Type variable for the state in a graph.
@@ -26,14 +25,12 @@ class GraphRunContext(Generic[StateT, DepsT]):
     """The state of the graph."""
     deps: DepsT
     """Dependencies for the graph."""
-
 ```
 
 #### state
 
 ```python
 state: StateT
-
 ```
 
 The state of the graph.
@@ -42,7 +39,6 @@ The state of the graph.
 
 ```python
 deps: DepsT
-
 ```
 
 Dependencies for the graph.
@@ -159,14 +155,12 @@ class BaseNode(ABC, Generic[StateT, DepsT, NodeRunEndT]):
     def deep_copy(self) -> Self:
         """Returns a deep copy of the node."""
         return copy.deepcopy(self)
-
 ```
 
 #### docstring_notes
 
 ```python
 docstring_notes: bool = False
-
 ```
 
 Set to `True` to generate mermaid diagram notes from the class's docstring.
@@ -179,7 +173,6 @@ While this can add valuable information to the diagram, it can make diagrams har
 run(
     ctx: GraphRunContext[StateT, DepsT],
 ) -> BaseNode[StateT, DepsT, Any] | End[NodeRunEndT]
-
 ```
 
 Run the node.
@@ -188,15 +181,19 @@ This is an abstract method that must be implemented by subclasses.
 
 Return types used at runtime
 
-The return type of this method are read by `pydantic_graph` at runtime and used to define which nodes can be called next in the graph. This is displayed in [mermaid diagrams](../mermaid/) and enforced when running the graph.
+The return type of this method are read by `pydantic_graph` at runtime and used to define which nodes can be called next in the graph. This is displayed in [mermaid diagrams](https://ai.pydantic.dev/api/pydantic_graph/mermaid/index.md) and enforced when running the graph.
 
 Parameters:
 
-| Name | Type | Description | Default | | --- | --- | --- | --- | | `ctx` | `GraphRunContext[StateT, DepsT]` | The graph context. | *required* |
+| Name  | Type                             | Description        | Default    |
+| ----- | -------------------------------- | ------------------ | ---------- |
+| `ctx` | `GraphRunContext[StateT, DepsT]` | The graph context. | *required* |
 
 Returns:
 
-| Type | Description | | --- | --- | | `BaseNode[StateT, DepsT, Any] | End[NodeRunEndT]` | The next node to run or End to signal the end of the graph. |
+| Type                           | Description        |
+| ------------------------------ | ------------------ |
+| \`BaseNode[StateT, DepsT, Any] | End[NodeRunEndT]\` |
 
 Source code in `pydantic_graph/pydantic_graph/nodes.py`
 
@@ -219,14 +216,12 @@ async def run(self, ctx: GraphRunContext[StateT, DepsT]) -> BaseNode[StateT, Dep
         The next node to run or [`End`][pydantic_graph.nodes.End] to signal the end of the graph.
     """
     ...
-
 ```
 
 #### get_node_id
 
 ```python
 get_node_id() -> str
-
 ```
 
 Get the ID of the node.
@@ -239,14 +234,12 @@ Source code in `pydantic_graph/pydantic_graph/nodes.py`
 def get_node_id(cls) -> str:
     """Get the ID of the node."""
     return cls.__name__
-
 ```
 
 #### get_note
 
 ```python
 get_note() -> str | None
-
 ```
 
 Get a note about the node to render on mermaid charts.
@@ -275,7 +268,6 @@ def get_note(cls) -> str | None:
 
         docstring = inspect.cleandoc(docstring)
     return docstring
-
 ```
 
 #### get_node_def
@@ -284,7 +276,6 @@ def get_note(cls) -> str | None:
 get_node_def(
     local_ns: dict[str, Any] | None,
 ) -> NodeDef[StateT, DepsT, NodeRunEndT]
-
 ```
 
 Get the node definition.
@@ -325,14 +316,12 @@ def get_node_def(cls, local_ns: dict[str, Any] | None) -> NodeDef[StateT, DepsT,
         end_edge=end_edge,
         returns_base_node=returns_base_node,
     )
-
 ```
 
 #### deep_copy
 
 ```python
 deep_copy() -> Self
-
 ```
 
 Returns a deep copy of the node.
@@ -343,7 +332,6 @@ Source code in `pydantic_graph/pydantic_graph/nodes.py`
 def deep_copy(self) -> Self:
     """Returns a deep copy of the node."""
     return copy.deepcopy(self)
-
 ```
 
 ### End
@@ -380,14 +368,12 @@ class End(Generic[RunEndT]):
 
     def set_snapshot_id(self, set_id: str) -> None:
         self.__dict__['__snapshot_id'] = set_id
-
 ```
 
 #### data
 
 ```python
 data: RunEndT
-
 ```
 
 Data to return from the graph.
@@ -396,7 +382,6 @@ Data to return from the graph.
 
 ```python
 deep_copy_data() -> End[RunEndT]
-
 ```
 
 Returns a deep copy of the end of the run.
@@ -412,7 +397,6 @@ def deep_copy_data(self) -> End[RunEndT]:
         end = End(copy.deepcopy(self.data))
         end.set_snapshot_id(self.get_snapshot_id())
         return end
-
 ```
 
 ### Edge
@@ -428,14 +412,12 @@ class Edge:
 
     label: str | None
     """Label for the edge."""
-
 ```
 
 #### label
 
 ```python
 label: str | None
-
 ```
 
 Label for the edge.
@@ -444,7 +426,6 @@ Label for the edge.
 
 ```python
 DepsT = TypeVar('DepsT', default=None, contravariant=True)
-
 ```
 
 Type variable for the dependencies of a graph and node.
@@ -453,7 +434,6 @@ Type variable for the dependencies of a graph and node.
 
 ```python
 RunEndT = TypeVar('RunEndT', covariant=True, default=None)
-
 ```
 
 Covariant type variable for the return type of a graph run.
@@ -464,7 +444,6 @@ Covariant type variable for the return type of a graph run.
 NodeRunEndT = TypeVar(
     "NodeRunEndT", covariant=True, default=Never
 )
-
 ```
 
 Covariant type variable for the return type of a node run.

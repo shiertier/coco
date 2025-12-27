@@ -8,12 +8,10 @@ To use `HuggingFaceModel`, you need to either install `pydantic-ai`, or install 
 
 ```bash
 pip install "pydantic-ai-slim[huggingface]"
-
 ```
 
 ```bash
 uv add "pydantic-ai-slim[huggingface]"
-
 ```
 
 ## Configuration
@@ -28,7 +26,6 @@ Once you have a Hugging Face access token, you can set it as an environment vari
 
 ```bash
 export HF_TOKEN='hf_token'
-
 ```
 
 ## Usage
@@ -40,7 +37,6 @@ from pydantic_ai import Agent
 
 agent = Agent('huggingface:Qwen/Qwen3-235B-A22B')
 ...
-
 ```
 
 Or initialise the model directly with just the model name:
@@ -52,7 +48,6 @@ from pydantic_ai.models.huggingface import HuggingFaceModel
 model = HuggingFaceModel('Qwen/Qwen3-235B-A22B')
 agent = Agent(model)
 ...
-
 ```
 
 By default, the HuggingFaceModel uses the HuggingFaceProvider that will select automatically the first of the inference providers (Cerebras, Together AI, Cohere..etc) available for the model, sorted by your preferred order in https://hf.co/settings/inference-providers.
@@ -69,7 +64,6 @@ from pydantic_ai.providers.huggingface import HuggingFaceProvider
 model = HuggingFaceModel('Qwen/Qwen3-235B-A22B', provider=HuggingFaceProvider(api_key='hf_token', provider_name='nebius'))
 agent = Agent(model)
 ...
-
 ```
 
 ## Custom Hugging Face client
@@ -95,5 +89,4 @@ model = HuggingFaceModel(
 )
 agent = Agent(model)
 ...
-
 ```
