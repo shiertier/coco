@@ -1,10 +1,10 @@
 //! PostgreSQL metadata store for server mode.
 
 use chrono::{NaiveDate, Utc};
+use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{
-    normalize_config_id, validate_indexing_config, ChunkingStrategy, CocoError, CocoResult,
-    EmbeddingConfig, IndexingConfig, ValidationContext, VectorBackendConfig, VectorIndexParams,
-    VectorMetric,
+    ChunkingStrategy, CocoError, CocoResult, EmbeddingConfig, IndexingConfig, ValidationContext,
+    VectorBackendConfig, VectorIndexParams, VectorMetric,
 };
 use sea_orm::{
     sea_query::{Expr, OnConflict},

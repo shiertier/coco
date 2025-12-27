@@ -1,7 +1,7 @@
+use coco_core::{normalize_config_id, validate_retrieval_config, validate_search_intent};
 use coco_protocol::{
-    normalize_config_id, validate_retrieval_config, validate_search_intent, CocoError, CocoResult,
-    EmbeddingModel, FilterField, FilterOp, IndexingConfig, RetrievalConfig, SearchIntent,
-    SearchIntentInput, ValidationContext,
+    CocoError, CocoResult, EmbeddingModel, FilterField, FilterOp, IndexingConfig, RetrievalConfig,
+    SearchIntent, SearchIntentInput, ValidationContext,
 };
 
 use crate::embedder::LocalEmbedder;

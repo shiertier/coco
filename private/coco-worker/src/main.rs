@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
+use coco_core::{normalize_config_id, validate_indexing_plan};
 use coco_protocol::{
-    normalize_config_id, validate_indexing_plan, Chunk, CocoError, CocoResult, IndexingPlan,
-    StorageBackend, TextSpan, VectorMetric,
+    Chunk, CocoError, CocoResult, IndexingPlan, StorageBackend, TextSpan, VectorMetric,
 };
 use coco_server::queue::RedisQueue;
 use coco_server::storage::meta::{

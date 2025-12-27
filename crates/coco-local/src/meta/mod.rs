@@ -4,10 +4,10 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
+use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{
-    normalize_config_id, validate_indexing_config, ChunkingStrategy, CocoError, CocoResult,
-    EmbeddingConfig, IndexingConfig, ValidationContext, VectorBackendConfig, VectorIndexParams,
-    VectorMetric,
+    ChunkingStrategy, CocoError, CocoResult, EmbeddingConfig, IndexingConfig, ValidationContext,
+    VectorBackendConfig, VectorIndexParams, VectorMetric,
 };
 use sea_orm::prelude::Expr;
 use sea_orm::{

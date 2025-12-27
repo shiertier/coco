@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
+use coco_core::normalize_config_id;
 use coco_protocol::{
-    normalize_config_id, CocoError, CocoResult, Filter, FilterOp, SearchHit, SearchHitMeta,
-    VectorBackendConfig, VectorIndexParams, VectorMetric, VectorRecord,
+    CocoError, CocoResult, Filter, FilterOp, SearchHit, SearchHitMeta, VectorBackendConfig,
+    VectorIndexParams, VectorMetric, VectorRecord,
 };
 use qdrant_client::qdrant::{
     Condition, CreateAliasBuilder, CreateCollectionBuilder, Distance, Filter as QdrantFilter,

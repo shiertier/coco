@@ -4,9 +4,10 @@ use axum::http::HeaderMap;
 use axum::response::Response;
 use axum::{extract::State, Json};
 
+use coco_core::{build_search_intent, normalize_config_id, validate_search_intent};
 use coco_protocol::{
-    validate_search_intent, CocoError, FilterField, IndexingPlan, ResponseMeta, ResponseStatus,
-    SearchIntent, SearchIntentInput, ValidationContext, VectorStore,
+    CocoError, FilterField, IndexingPlan, ResponseMeta, ResponseStatus, SearchIntentInput,
+    ValidationContext, VectorStore,
 };
 
 use super::super::constants::{SERVER_FILTER_FIELDS, SERVER_FILTER_OPS};
@@ -67,7 +68,7 @@ pub(crate) async fn query_documents(
     let active_config_id = project.active_config_id.clone();
     let requested_config_id = match payload.indexing_config_id.as_deref() {
         Some(config_id) => {
-            let normalized = coco_protocol::normalize_config_id(config_id)?;
+            let normalized = normalize_config_id(config_id)?;
             if normalized != config_id {
                 return Err(CocoError::user("indexing_config_id must be normalized").into());
             }
@@ -104,7 +105,7 @@ pub(crate) async fn query_documents(
     validate_indexing_config_backend(&selected_config, state.vector_backend_kind)?;
 
     fill_query_embedding(&mut intent, state.embedder.as_deref()).await?;
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let context = ValidationContext {
         embedding_dimensions: Some(embedding_dimensions),
         expected_vector_backend: None,
@@ -180,7 +181,7 @@ pub(crate) async fn index_documents(
     let project = project_for_request(&state, &org_id, &user_id, &project_id).await?;
     let config_id = match payload.indexing_config_id.as_deref() {
         Some(config_id) => {
-            let normalized = coco_protocol::normalize_config_id(config_id)?;
+            let normalized = normalize_config_id(config_id)?;
             if normalized != config_id {
                 return Err(CocoError::user("indexing_config_id must be normalized").into());
             }
@@ -231,7 +232,7 @@ pub(crate) async fn query_memos(
         }
         apply_retrieval_config(&mut intent, retrieval, state.vector_backend_kind)?;
     }
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let context = ValidationContext {
         embedding_dimensions: None,
         expected_vector_backend: None,
@@ -284,7 +285,7 @@ pub(crate) async fn ingest_batch(
     let project = project_for_request(&state, &org_id, &user_id, &project_id).await?;
     let config_id = match payload.indexing_config_id.as_deref() {
         Some(config_id) => {
-            let normalized = coco_protocol::normalize_config_id(config_id)?;
+            let normalized = normalize_config_id(config_id)?;
             if normalized != config_id {
                 return Err(CocoError::user("indexing_config_id must be normalized").into());
             }

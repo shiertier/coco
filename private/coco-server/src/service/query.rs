@@ -1,6 +1,7 @@
+use coco_core::validate_retrieval_config;
 use coco_protocol::{
-    validate_retrieval_config, CocoError, CocoResult, EmbeddingModel, RetrievalConfig,
-    SearchIntentInput, ValidationContext, VectorBackendKind,
+    CocoError, CocoResult, EmbeddingModel, RetrievalConfig, SearchIntentInput, ValidationContext,
+    VectorBackendKind,
 };
 
 use super::state::AppState;
@@ -40,7 +41,7 @@ pub(crate) fn extract_indexing_config_id(
     let Some(config_id) = intent.indexing_config_id.as_deref() else {
         return Ok(None);
     };
-    let normalized = coco_protocol::normalize_config_id(config_id)?;
+    let normalized = coco_core::normalize_config_id(config_id)?;
     if normalized != config_id {
         return Err(CocoError::user(
             "indexing_config_id must be normalized",

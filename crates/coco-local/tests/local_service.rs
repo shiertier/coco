@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
+use coco_core::build_search_intent;
 use coco_local::embedder::LocalEmbedder;
 use coco_local::ingest::{file_type_for_path, title_for_path, IngestRequest, Ingestor};
 use coco_local::storage::lance::LanceStore;
@@ -13,7 +14,7 @@ use coco_local::storage::meta::{
     LocalMetaStore, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
 };
 use coco_protocol::{
-    EmbeddingModel, RetrievalMode, SearchHit, SearchIntent, SearchIntentInput, StorageBackend,
+    EmbeddingModel, RetrievalMode, SearchHit, SearchIntentInput, StorageBackend,
 };
 use serde::Deserialize;
 
@@ -130,7 +131,7 @@ async fn file_change_ingest_and_query() -> coco_protocol::CocoResult<()> {
         filters: Vec::new(),
         reranker: None,
     };
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let results = backend.search_similar(intent).await?;
     assert!(results
         .iter()

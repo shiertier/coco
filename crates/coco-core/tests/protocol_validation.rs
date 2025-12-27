@@ -1,8 +1,9 @@
+use coco_core::{build_search_intent, normalize_config_id, validate_indexing_config, validate_search_intent};
 use coco_protocol::{
-    validate_indexing_config, validate_search_intent, ChunkId, ChunkingStrategy, CocoError,
-    CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse, Filter, FilterField, FilterOp,
-    FilterValue, HnswParams, IndexingConfig, RetrievalMode, SearchIntent, SearchIntentInput,
-    TextSpan, ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+    ChunkId, ChunkingStrategy, CocoError, CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse,
+    Filter, FilterField, FilterOp, FilterValue, HnswParams, IndexingConfig, RetrievalMode,
+    SearchIntentInput, TextSpan, ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric,
+    VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -90,56 +91,56 @@ fn vector_record_serializes_config_id() {
 fn validate_search_intent_rejects_missing_query_embedding_for_vector() {
     let mut intent = sample_intent(RetrievalMode::Vector);
     intent.query_embedding = None;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_empty_query_embedding() {
     let mut intent = sample_intent(RetrievalMode::Vector);
     intent.query_embedding = Some(Vec::new());
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_text_for_fts() {
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.query_text = None;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_text_for_hybrid() {
     let mut intent = sample_intent(RetrievalMode::Hybrid);
     intent.query_text = None;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_embedding_for_hybrid() {
     let mut intent = sample_intent(RetrievalMode::Hybrid);
     intent.query_embedding = None;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_zero_top_k() {
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.top_k = 0;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_out_of_range_alpha() {
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.hybrid_alpha = 1.5;
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_blank_query_text() {
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.query_text = Some("   ".to_string());
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
@@ -149,14 +150,14 @@ fn validate_search_intent_rejects_reranker_zero_or_oversized() {
         model_name: "rerank".to_string(),
         rerank_top_n: 0,
     });
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 
     let mut intent = sample_intent(RetrievalMode::Fts);
     intent.reranker = Some(coco_protocol::RerankerConfig {
         model_name: "rerank".to_string(),
         rerank_top_n: 999,
     });
-    assert!(SearchIntent::try_from(intent).is_err());
+    assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
@@ -169,7 +170,7 @@ fn validate_search_intent_enforces_filter_allowlist() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    let intent = build_search_intent(intent).expect("validated intent");
     let context = ValidationContext {
         allowed_filter_fields: Some(vec![FilterField::new("doc_id").expect("filter field")]),
         ..ValidationContext::default()
@@ -187,7 +188,7 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    let intent = build_search_intent(intent).expect("validated intent");
     assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 
     let intent = SearchIntentInput {
@@ -198,7 +199,7 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    let intent = build_search_intent(intent).expect("validated intent");
     assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 
     let intent = SearchIntentInput {
@@ -209,7 +210,7 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    let intent = build_search_intent(intent).expect("validated intent");
     assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 }
 
@@ -249,10 +250,7 @@ fn vector_index_params_rejects_multiple_kinds() {
 
 #[test]
 fn vector_index_params_rejects_empty_params() {
-    let params = VectorIndexParams {
-        hnsw: None,
-        ivf_pq: None,
-    };
+    let params = VectorIndexParams { hnsw: None, ivf_pq: None };
     let config = IndexingConfig {
         index_params: Some(params),
         ..sample_indexing_config("default")
@@ -280,8 +278,8 @@ fn indexing_config_requires_vector_metric() {
 
 #[test]
 fn config_id_validation_rejects_leading_separator() {
-    assert!(coco_protocol::normalize_config_id("-bad").is_err());
-    assert!(coco_protocol::normalize_config_id("_bad").is_err());
+    assert!(normalize_config_id("-bad").is_err());
+    assert!(normalize_config_id("_bad").is_err());
 }
 
 #[test]
@@ -294,8 +292,8 @@ fn config_id_validation_rejects_trim_changes() {
 fn config_id_length_enforced() {
     let ok = "a".repeat(63);
     let too_long = "a".repeat(64);
-    assert!(coco_protocol::normalize_config_id(&ok).is_ok());
-    assert!(coco_protocol::normalize_config_id(&too_long).is_err());
+    assert!(normalize_config_id(&ok).is_ok());
+    assert!(normalize_config_id(&too_long).is_err());
 }
 
 #[test]

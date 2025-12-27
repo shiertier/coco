@@ -1,7 +1,8 @@
 use axum::extract::{Query, State};
 use axum::Json;
 
-use coco_protocol::{normalize_config_id, validate_indexing_config, CocoError, ValidationContext};
+use coco_core::{normalize_config_id, validate_indexing_config};
+use coco_protocol::{CocoError, ValidationContext};
 
 use super::super::constants::{WORKER_STATUS_ID, WORKER_STALE_SECS};
 use super::super::indexing::{default_indexing_config, ensure_vector_backend, indexing_config_from_record};

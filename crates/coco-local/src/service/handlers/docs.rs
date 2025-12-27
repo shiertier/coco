@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path as AxumPath, State};
 use axum::Json;
 
+use coco_core::build_search_intent;
 use coco_protocol::{CocoError, StorageBackend};
 
 use super::super::live::{maybe_apply_live_grep, refresh_results_from_fs, RefreshSummary};
@@ -93,7 +94,7 @@ pub(crate) async fn query_documents(
     let version_id = state.meta.ensure_active_version_id(project_id).await?;
     intent.indexing_config_id = Some(selected_config_id.clone());
     fill_query_embedding(&mut intent, state.embedder.as_deref())?;
-    let intent = coco_protocol::SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     validate_local_search_intent(&intent, &config)?;
 
     let backend = state

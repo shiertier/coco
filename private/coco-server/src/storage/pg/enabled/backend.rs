@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
-use coco_protocol::{normalize_config_id, CocoError, CocoResult, VectorIndexParams, VectorMetric};
+use coco_core::normalize_config_id;
+use coco_protocol::{CocoError, CocoResult, VectorIndexParams, VectorMetric};
 use sea_orm::{
     ConnectOptions, ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement,
 };

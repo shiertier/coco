@@ -1,6 +1,6 @@
+use coco_core::normalize_config_id;
 use coco_protocol::{
-    normalize_config_id, Chunk, CocoError, CocoResult, StorageBackend, VectorMetadata, VectorRecord,
-    VectorStore,
+    Chunk, CocoError, CocoResult, StorageBackend, VectorMetadata, VectorRecord, VectorStore,
 };
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 

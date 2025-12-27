@@ -7,9 +7,10 @@ use coco_local::storage::lance::LanceBackend;
 use coco_local::storage::meta::{
     LocalMetaStore, NewChunk, NewDocument, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
 };
+use coco_core::build_search_intent;
 use coco_protocol::{
-    Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntent,
-    SearchIntentInput, StorageBackend, TextSpan, VectorMetric,
+    Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntentInput,
+    StorageBackend, TextSpan, VectorMetric,
 };
 use support::temp_root;
 
@@ -100,7 +101,7 @@ async fn register_import_query_roundtrip() -> coco_protocol::CocoResult<()> {
         filters: Vec::new(),
         reranker: None,
     };
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let results = vector.search_similar(intent).await?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].chunk.id, chunk.id);

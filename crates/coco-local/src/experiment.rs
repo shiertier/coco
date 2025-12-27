@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
+use coco_core::{normalize_config_id, validate_indexing_config, validate_retrieval_config};
 use coco_protocol::{
-    normalize_config_id, validate_indexing_config, validate_retrieval_config, CocoError,
-    CocoResult, IndexingConfig, RetrievalConfig, RetrievalMode, ValidationContext,
+    CocoError, CocoResult, IndexingConfig, RetrievalConfig, RetrievalMode, ValidationContext,
 };
 use serde::{Deserialize, Serialize};
 

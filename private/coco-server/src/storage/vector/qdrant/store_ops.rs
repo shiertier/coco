@@ -1,6 +1,6 @@
+use coco_core::normalize_config_id;
 use coco_protocol::{
-    normalize_config_id, CocoError, CocoResult, SearchHit, SearchIntent, StorageBackend,
-    VectorRecord, VectorStore,
+    CocoError, CocoResult, SearchHit, SearchIntent, StorageBackend, VectorRecord, VectorStore,
 };
 use qdrant_client::qdrant::{
     Condition, DeletePointsBuilder, GetPointsBuilder, PointStruct, UpsertPointsBuilder,

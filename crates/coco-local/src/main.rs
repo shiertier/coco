@@ -23,11 +23,11 @@ use coco_local::metrics::LocalMetrics;
 use coco_local::service::LocalServiceConfig;
 use coco_local::storage::meta::DEFAULT_CONFIG_ID;
 use coco_local::{grammar, paths, update};
+use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{
-    normalize_config_id, validate_indexing_config, ChunkingStrategy, CocoError, CocoErrorKind,
-    CocoResult, EmbeddingConfig, ErrorResponse, FileType, IndexingConfig, ResponseEnvelope,
-    RetrievalConfig, RetrievalMode, SearchHit, SearchIntentInput, ValidationContext,
-    VectorIndexParams, VectorMetric,
+    ChunkingStrategy, CocoError, CocoErrorKind, CocoResult, EmbeddingConfig, ErrorResponse,
+    FileType, IndexingConfig, ResponseEnvelope, RetrievalConfig, RetrievalMode, SearchHit,
+    SearchIntentInput, ValidationContext, VectorIndexParams, VectorMetric,
 };
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;

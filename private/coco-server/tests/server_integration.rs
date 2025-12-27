@@ -1,6 +1,7 @@
 use chrono::Utc;
+use coco_core::build_search_intent;
 use coco_protocol::{
-    Chunk, ChunkId, ChunkingStrategy, DocumentId, EmbeddingConfig, RetrievalMode, SearchIntent,
+    Chunk, ChunkId, ChunkingStrategy, DocumentId, EmbeddingConfig, RetrievalMode,
     SearchIntentInput, StorageBackend, TextSpan, VectorMetric,
 };
 use coco_server::storage::meta::{
@@ -143,7 +144,7 @@ async fn ingest_and_query_roundtrip() -> coco_protocol::CocoResult<()> {
         filters: Vec::new(),
         reranker: None,
     };
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let results = backend.search_similar(intent).await?;
     assert!(results.iter().any(|item| item.chunk.id == chunk.id));
     Ok(())
@@ -311,7 +312,7 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         filters: Vec::new(),
         reranker: None,
     };
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let results_a = backend_a.search_similar(intent).await?;
     assert!(results_a.iter().any(|item| item.chunk.id == chunk_a.id));
     assert!(!results_a.iter().any(|item| item.chunk.id == chunk_b.id));
@@ -326,7 +327,7 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         filters: Vec::new(),
         reranker: None,
     };
-    let intent = SearchIntent::try_from(intent)?;
+    let intent = build_search_intent(intent)?;
     let results_b = backend_b.search_similar(intent).await?;
     assert!(results_b.iter().any(|item| item.chunk.id == chunk_b.id));
     assert!(!results_b.iter().any(|item| item.chunk.id == chunk_a.id));

@@ -12,10 +12,11 @@ mod enabled {
     };
     use arrow_array::types::Float32Type;
     use arrow_schema::{DataType, Field, Schema, SchemaRef};
+    use coco_core::normalize_config_id;
     use coco_protocol::{
-        normalize_config_id, Chunk, ChunkId, CocoError, CocoResult, Filter, FilterOp,
-        RetrievalMode, SearchHit, SearchHitMeta, SearchIntent, StorageBackend, VectorIndexParams,
-        VectorMetadata, VectorMetric, VectorRecord, VectorStore,
+        Chunk, ChunkId, CocoError, CocoResult, Filter, FilterOp, RetrievalMode, SearchHit,
+        SearchHitMeta, SearchIntent, StorageBackend, VectorIndexParams, VectorMetadata,
+        VectorMetric, VectorRecord, VectorStore,
     };
     use futures::TryStreamExt;
     use lance_index::scalar::FullTextSearchQuery;

@@ -2,6 +2,7 @@
 
 use std::num::NonZeroU32;
 
+use coco_core::build_search_intent_from_parts;
 use coco_protocol::{
     CocoError, CocoResult, RetrievalMode, SearchHit, SearchIntent, SearchQuery,
     VectorBackendConfig, VectorBackendKind, VectorIndexParams, VectorMetric, VectorStore,
@@ -156,7 +157,7 @@ impl VectorStore for ServerVectorBackend {
                             })?
                             .to_string();
 
-                        let vector_intent = SearchIntent::new(
+                        let vector_intent = build_search_intent_from_parts(
                             SearchQuery::Vector { embedding },
                             config_id.clone(),
                             candidate_top_k,
@@ -167,7 +168,7 @@ impl VectorStore for ServerVectorBackend {
                         let vector_results = vector.search_vectors(vector_intent).await?;
                         let vector_results = filter_vector_results(&fts, vector_results).await?;
 
-                        let fts_intent = SearchIntent::new(
+                        let fts_intent = build_search_intent_from_parts(
                             SearchQuery::Fts { text: query_text },
                             config_id,
                             candidate_top_k,
