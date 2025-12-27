@@ -37,13 +37,13 @@ scripts/e2e-server.sh
 ## 性能脚本
 
 ```bash
-scripts/perf-local-import.py
-scripts/perf-local-query.py
-scripts/perf-local-memory.py
-scripts/perf-qdrant-query.py
+scripts/perf/perf-local-import.py
+scripts/perf/perf-local-query.py
+scripts/perf/perf-local-memory.py
+scripts/perf/perf-qdrant-query.py
 ```
 
-`scripts/perf-qdrant-query.py` defaults to existing services at `COCO_PERF_SERVER_URL` and `COCO_PERF_QDRANT_URL`. Set `COCO_PERF_USE_DOCKER=1` to spin up Docker services.
+`scripts/perf/perf-qdrant-query.py` defaults to existing services at `COCO_PERF_SERVER_URL` and `COCO_PERF_QDRANT_URL`. Set `COCO_PERF_USE_DOCKER=1` to spin up Docker services.
 
 ## 覆盖率
 

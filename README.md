@@ -51,7 +51,7 @@ curl -s \
 一键构建（自动使用 vendored `protoc`）：
 
 ```bash
-./scripts/build-local.sh
+./scripts/release/build-local.sh
 ```
 
 产物：`target/release/coco-local`。
