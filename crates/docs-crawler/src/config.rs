@@ -90,11 +90,14 @@ fn scrapy_docs_root() -> Option<PathBuf> {
 }
 
 fn strip_scrapy_docs_prefix(path: &Path) -> Option<PathBuf> {
-    let mut components = path.components().peekable();
-    while matches!(components.peek(), Some(Component::CurDir)) {
-        components.next();
-    }
-    match components.next() {
+    let mut components = path.components();
+    let first = loop {
+        match components.next() {
+            Some(Component::CurDir) => continue,
+            other => break other,
+        }
+    };
+    match first {
         Some(Component::Normal(name)) if name == OsStr::new("scrapy_docs") => {
             let rest: PathBuf = components.collect();
             Some(rest)
