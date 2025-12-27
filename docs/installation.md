@@ -8,6 +8,12 @@ CoCo 以 Rust workspace 形式发布，包含本地与服务端的独立二进�
 cargo build -p coco-local --release --features local-storage
 ```
 
+如果希望无需手动设置 `PROTOC`，可以使用一键构建脚本：
+
+```bash
+./scripts/build-local.sh
+```
+
 二进制为 `target/release/coco-local`。可运行：
 
 ```bash

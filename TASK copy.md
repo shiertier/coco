@@ -1,6 +1,6 @@
-# Context Core (CoCo) - 技术规范 v3.0 (Physical Separation)
+# Context Core (CoCo) - 技术规范 v0.0.1 (Physical Separation)
 
-**版本:** v3.0
+**版本:** v0.0.1
 **状态:** APPROVED (Physical Separation)
 **架构范式:** Workspace Split + Static Dispatch (No-DI)
 **定位:** Edge-Native Dev Tool (Local) vs Cloud-Native Indexing Service (Server)
@@ -254,7 +254,7 @@ function isPidRunning(pid: number): boolean {
 - **版本握手:**
 
   - Daemon 启动后必须与 Engine 进行版本校验（严格锁定主版本）。
-  - 版本不匹配（如 Daemon v3.0 vs Engine v2.9）必须报错并拒绝服务。
+  - 版本不匹配（如 Daemon v0.0.1 vs Engine v2.9）必须报错并拒绝服务。
 
 - **零拷贝与无状态 (Daemon):**
   - Node.js 仅做流式转发与鉴权，不解析向量数据。
@@ -617,7 +617,7 @@ query_strategies:
 
 - **Server First (Docker):**
 
-  - `coco-daemon:v3.0` 与 `coco-engine:v3.0` 作为一等公民。
+  - `coco-daemon:v0.0.1` 与 `coco-engine:v0.0.1` 作为一等公民。
   - 推荐 docker-compose/Helm 管理。
   - **Extension Requirement:** 若使用 PostgreSQL，部署前必须确认数据库用户拥有 `CREATE EXTENSION` 权限。
   - **Flexibility:** 虽然推荐 PG 单栈，但架构允许配置独立的 Vector DB 地址（如 Qdrant 集群）。
@@ -778,7 +778,7 @@ JSON 响应结构如下：
 
 ## 7. 总结 (Conclusion)
 
-CoCo v3.0 通过 **Physical Separation** 与 **Pipeline Integration** 完成了架构收敛：
+CoCo v0.0.1 通过 **Physical Separation** 与 **Pipeline Integration** 完成了架构收敛：
 
 1. **控制面/计算面分离**，保障可维护性与性能。
 2. **Docker First**，满足服务端可运维性与部署确定性。

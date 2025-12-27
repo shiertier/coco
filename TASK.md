@@ -1,6 +1,6 @@
-# Context Core (CoCo) - 技术规范 v3.0 (Physical Separation)
+# Context Core (CoCo) - 技术规范 v0.0.1 (Physical Separation)
 
-**版本:** v3.0
+**版本:** v0.0.1
 **状态:** APPROVED (Physical Separation)
 **架构范式:** Workspace Split + Static Dispatch (No-DI)
 **定位:** Edge-Native Dev Tool (Local) vs Cloud-Native Indexing Service (Server)
@@ -592,7 +592,7 @@ query_strategies:
 
 - **Server First (Docker):**
 
-  - `coco-api:v3.0` 与 `coco-worker:v3.0` 作为一等公民。
+  - `coco-api:v0.0.1` 与 `coco-worker:v0.0.1` 作为一等公民。
   - 镜像别名：`coco-api` 与 `coco-server` 等价（同一二进制）。
   - 推荐 docker-compose/Helm 管理。
   - Helm Chart 入口：`deploy/helm/coco`。
@@ -795,7 +795,7 @@ JSON 响应结构如下（以检索结果为例）：
 
 ## 7. 总结 (Conclusion)
 
-CoCo v3.0 通过 **Physical Separation** 与 **Pipeline Integration** 完成了架构收敛：
+CoCo v0.0.1 通过 **Physical Separation** 与 **Pipeline Integration** 完成了架构收敛：
 
 1. **控制面/计算面分离**，保障可维护性与性能。
 2. **Docker First**，满足服务端可运维性与部署确定性。

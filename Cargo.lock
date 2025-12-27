@@ -1377,7 +1377,7 @@ dependencies = [
 
 [[package]]
 name = "coco-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "coco-protocol",
  "criterion",
@@ -1392,7 +1392,7 @@ dependencies = [
 
 [[package]]
 name = "coco-local"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -1426,7 +1426,7 @@ dependencies = [
 
 [[package]]
 name = "coco-protocol"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1436,7 +1436,7 @@ dependencies = [
 
 [[package]]
 name = "coco-server"
-version = "0.2.0"
+version = "0.0.1"
 dependencies = [
  "axum 0.7.9",
  "axum-server",
@@ -1468,7 +1468,7 @@ dependencies = [
 
 [[package]]
 name = "coco-worker"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "chrono",
  "coco-core",
@@ -2427,7 +2427,7 @@ checksum = "780955b8b195a21ab8e4ac6b60dd1dbdcec1dc6c51c0617964b08c81785e12c9"
 
 [[package]]
 name = "docs-crawler"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "chrono",
  "clap",

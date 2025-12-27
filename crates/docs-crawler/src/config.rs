@@ -1,9 +1,11 @@
 use crate::models::{CrawlerConfig, DefaultsConfig, EntryPointConfig, SourceConfig};
 use serde::Deserialize;
+use std::env;
 use std::error::Error;
+use std::ffi::OsStr;
 use std::fmt::{self, Display};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Debug)]
 pub struct ConfigError(String);
@@ -56,6 +58,62 @@ struct EntryPointRaw {
     raw_base_url: Option<String>,
     language_variants: Option<Vec<String>>,
     git_cache_dir: Option<String>,
+}
+
+fn expand_tilde(path: &str) -> PathBuf {
+    if path == "~" || path.starts_with("~/") {
+        if let Ok(home) = env::var("HOME").or_else(|_| env::var("USERPROFILE")) {
+            let suffix = path.strip_prefix("~/").unwrap_or("");
+            return PathBuf::from(home).join(suffix);
+        }
+    }
+    PathBuf::from(path)
+}
+
+fn scrapy_docs_root() -> Option<PathBuf> {
+    if let Ok(value) = env::var("COCO_SCRAPY_DOCS_DIR") {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Some(expand_tilde(trimmed));
+        }
+    }
+    let username = env::var("USER")
+        .or_else(|_| env::var("USERNAME"))
+        .ok();
+    if username.as_deref() == Some("scrapy") {
+        let home = env::var("HOME")
+            .or_else(|_| env::var("USERPROFILE"))
+            .ok()?;
+        return Some(PathBuf::from(home).join(".cache").join("coco").join("scrapy_docs"));
+    }
+    None
+}
+
+fn strip_scrapy_docs_prefix(path: &Path) -> Option<PathBuf> {
+    let mut components = path.components().peekable();
+    while matches!(components.peek(), Some(Component::CurDir)) {
+        components.next();
+    }
+    match components.next() {
+        Some(Component::Normal(name)) if name == OsStr::new("scrapy_docs") => {
+            let rest: PathBuf = components.collect();
+            Some(rest)
+        }
+        _ => None,
+    }
+}
+
+fn resolve_output_dir(output_dir: PathBuf) -> PathBuf {
+    if output_dir.is_absolute() {
+        return output_dir;
+    }
+    let Some(root) = scrapy_docs_root() else {
+        return output_dir;
+    };
+    if let Some(stripped) = strip_scrapy_docs_prefix(&output_dir) {
+        return root.join(stripped);
+    }
+    root.join(output_dir)
 }
 
 fn trim_required(field: &str, value: String) -> Result<String, ConfigError> {
@@ -144,6 +202,7 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
     for (idx, src) in parsed.sources.into_iter().enumerate() {
         let source_id = trim_required(&format!("sources[{idx}].id"), src.id)?;
         let output_dir = trim_required(&format!("sources[{idx}].output_dir"), src.output_dir)?;
+        let output_dir = resolve_output_dir(PathBuf::from(output_dir));
         let default_language = trim_required(
             &format!("sources[{idx}].default_language"),
             src.default_language.unwrap_or_else(|| "en".to_string()),
@@ -221,7 +280,7 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
 
         sources.push(SourceConfig {
             id: source_id,
-            output_dir: PathBuf::from(output_dir),
+            output_dir,
             default_language,
             entrypoints,
             allowed_extensions,

@@ -1,4 +1,4 @@
-# Context Core (CoCo) v3.0
+# Context Core (CoCo) v0.0.1
 
 CoCo is a semantic retrieval engine for code and knowledge bases. The repository
 follows Physical Separation and No-DI (static dispatch) across local and server
@@ -13,7 +13,8 @@ products.
 - `private/` (closed source)
   - `coco-server`: API service (Postgres + pgvector)
   - `coco-worker`: ingest worker
-- `docs/coco/`: product documentation
+- `docs/`: product documentation
+- `scrapy_docs/`: scraped reference docs (docs-crawler output)
 
 ## Quick start (local mode)
 
@@ -59,8 +60,10 @@ Docker Compose.
 
 ## Documentation
 
-See `docs/coco/README.md`.
+See `docs/README.md`.
 
 ## Notes
 
 `src/docs_crawler/` is a future reference tool and not part of the CoCo build.
+docs-crawler writes to `scrapy_docs/` by default; set `COCO_SCRAPY_DOCS_DIR` to override
+(user `scrapy` defaults to `~/.cache/coco/scrapy_docs`).

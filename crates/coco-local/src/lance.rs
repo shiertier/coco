@@ -20,7 +20,8 @@ mod enabled {
     use futures::TryStreamExt;
     use lance_index::scalar::FullTextSearchQuery;
     use lancedb::connection::CreateTableMode;
-    use lancedb::index::{Index, IvfPqIndexBuilder};
+    use lancedb::index::Index;
+    use lancedb::index::vector::IvfPqIndexBuilder;
     use lancedb::query::{ExecutableQuery, QueryBase, Select};
     use lancedb::table::NewColumnTransform;
     use lancedb::{connect, DistanceType, Table};
@@ -107,7 +108,7 @@ mod enabled {
     }
 
     /// LanceDB vector storage backend.
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     pub struct LanceBackend {
         table: Table,
         dimensions: usize,
@@ -117,7 +118,7 @@ mod enabled {
     }
 
     /// Shared LanceDB manager for per-config tables.
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     pub struct LanceStore {
         root: PathBuf,
         dimensions: usize,
@@ -510,7 +511,10 @@ mod enabled {
                     .map_err(map_storage_err)?;
                 let batches: Vec<RecordBatch> =
                     stream.try_collect().await.map_err(map_storage_err)?;
-                let mut results = collect_chunks(&batches)?;
+                let mut results = Vec::new();
+                for batch in &batches {
+                    results.extend(collect_chunks(batch)?);
+                }
                 Ok(results.pop().map(|chunk| Chunk {
                     embedding: None,
                     ..chunk

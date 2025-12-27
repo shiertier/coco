@@ -10,7 +10,7 @@
     {
       "id": "pydantic-ai",
       "description": "Pydantic AI documentation (via llms.txt)",
-      "output_dir": "docs/pydantic-ai",
+      "output_dir": "scrapy_docs/pydantic-ai",
       "default_language": "en",
       "entrypoints": [
         {
@@ -22,7 +22,7 @@
     {
       "id": "shadcn-ui",
       "description": "shadcn/ui documentation (via llms.txt)",
-      "output_dir": "docs/shadcn-ui",
+      "output_dir": "scrapy_docs/shadcn-ui",
       "default_language": "en",
       "allowed_extensions": ["*"],
       "entrypoints": [
@@ -35,7 +35,7 @@
     {
       "id": "google-adk",
       "description": "Google Agent Development Kit documentation (via llms.txt)",
-      "output_dir": "docs/google-adk",
+      "output_dir": "scrapy_docs/google-adk",
       "default_language": "en",
       "entrypoints": [
         {
@@ -47,7 +47,7 @@
     {
       "id": "claude-platform",
       "description": "Claude developer platform docs (via llms.txt + language variants)",
-      "output_dir": "docs/claude-platform",
+      "output_dir": "scrapy_docs/claude-platform",
       "default_language": "en",
       "max_workers": 64,
       "entrypoints": [
@@ -74,7 +74,7 @@
     {
       "id": "openai-agents-js",
       "description": "OpenAI Agents JS documentation (via GitHub tree)",
-      "output_dir": "docs/openai-agents-js",
+      "output_dir": "scrapy_docs/openai-agents-js",
       "default_language": "en",
       "max_workers": 1,
       "entrypoints": [
@@ -91,7 +91,7 @@
     {
       "id": "react-spectrum",
       "description": "React Spectrum documentation (via llms.txt)",
-      "output_dir": "docs/react-spectrum",
+      "output_dir": "scrapy_docs/react-spectrum",
       "default_language": "en",
       "entrypoints": [
         {
@@ -103,7 +103,7 @@
     {
       "id": "react-aria",
       "description": "React Aria / React Aria Components documentation (via llms.txt)",
-      "output_dir": "docs/react-aria",
+      "output_dir": "scrapy_docs/react-aria",
       "default_language": "en",
       "entrypoints": [
         {
@@ -115,7 +115,7 @@
     {
       "id": "heroui",
       "description": "HeroUI documentation (via GitHub tree)",
-      "output_dir": "docs/heroui",
+      "output_dir": "scrapy_docs/heroui",
       "default_language": "en",
       "max_workers": 1,
       "entrypoints": [
@@ -131,7 +131,7 @@
     {
       "id": "animate-ui",
       "description": "Animate UI documentation (via GitHub tree)",
-      "output_dir": "docs/animate-ui",
+      "output_dir": "scrapy_docs/animate-ui",
       "default_language": "en",
       "max_workers": 1,
       "entrypoints": [
@@ -147,7 +147,7 @@
     {
       "id": "ref-tools",
       "description": "Ref Tools documentation (via llms.txt)",
-      "output_dir": "docs/ref-tools",
+      "output_dir": "scrapy_docs/ref-tools",
       "default_language": "en",
       "allowed_extensions": ["*"],
       "entrypoints": [

@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-本仓库托管 **Context Core (CoCo) v3.0** 源码。项目严格遵循 **Physical Separation**（物理隔离）架构与 **No-DI**（静态分发）设计模式。
+本仓库托管 **Context Core (CoCo) v0.0.1** 源码。项目严格遵循 **Physical Separation**（物理隔离）架构与 **No-DI**（静态分发）设计模式。
 
 ## Project Structure & Module Organization
 

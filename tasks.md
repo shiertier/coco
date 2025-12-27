@@ -1,6 +1,6 @@
-# CoCo v3.0 开发任务书 (Development Plan)
+# CoCo v0.0.1 开发任务书 (Development Plan)
 
-> **基准文档:** `TASK.md` (v3.0 Physical Separation)
+> **基准文档:** `TASK.md` (v0.0.1 Physical Separation)
 > **核心原则:** Skeleton to Flesh (由骨架到血肉), Physical Separation (物理隔离), No-DI (静态分发)
 
 ---
@@ -113,7 +113,7 @@ graph TB
 - [x] **0.1.4** 配置共享依赖版本
   - [x] 在 `[workspace.dependencies]` 定义通用依赖版本
 - [x] **0.1.5** `private/` 未来可拆分为独立仓库或 Submodule（可选）
-  - [x] 明确拆分时机与约束（不阻塞 v3.0；本次不拆分）
+  - [x] 明确拆分时机与约束（不阻塞 v0.0.1；本次不拆分）
   - [x] 若拆分为 Submodule，补齐 `.gitmodules` 与初始化说明（本次不适用）
 
 ---
@@ -836,7 +836,7 @@ erDiagram
   - [x] 选定主协议 (gRPC/HTTP) 并统一使用
   - [x] 明确向量维度与 metric 兼容性
   - [x] 明确为网络型服务 (禁止嵌入式)
-  - [x] 明确 v3.0 仅支持 `pgvector`/`qdrant`，不纳入 Milvus/Weaviate
+  - [x] 明确 v0.0.1 仅支持 `pgvector`/`qdrant`，不纳入 Milvus/Weaviate
 - [x] **5.3.2** 实现 `QdrantStore` 结构
   - [x] 实现 `VectorStore` Trait
   - [x] 映射 upsert/search/delete API
@@ -1811,7 +1811,7 @@ flowchart LR
 
 ```mermaid
 gantt
-    title CoCo v3.0 开发里程碑
+    title CoCo v0.0.1 开发里程碑
     dateFormat  YYYY-MM-DD
     section Phase 0-1
     骨架与协议    :p0, 2025-01-01, 2w
