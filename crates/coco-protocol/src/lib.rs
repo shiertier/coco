@@ -352,6 +352,14 @@ impl SearchQuery {
         }
     }
 
+    pub fn as_parts(&self) -> (Option<&str>, Option<&[f32]>) {
+        match self {
+            SearchQuery::Vector { embedding } => (None, Some(embedding.as_slice())),
+            SearchQuery::Fts { text } => (Some(text.as_str()), None),
+            SearchQuery::Hybrid { text, embedding } => (Some(text.as_str()), Some(embedding.as_slice())),
+        }
+    }
+
     fn into_parts(self) -> (Option<String>, Option<Vec<f32>>) {
         match self {
             SearchQuery::Vector { embedding } => (None, Some(embedding)),
@@ -1070,7 +1078,7 @@ fn validate_plan_steps(label: &str, steps: &[String], required: &[&str]) -> Coco
     if steps.is_empty() {
         return Err(validation_error(&format!("{label} steps must not be empty")));
     }
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::with_capacity(steps.len());
     for step in steps {
         if step.trim().is_empty() {
             return Err(validation_error(&format!(
