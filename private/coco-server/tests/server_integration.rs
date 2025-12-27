@@ -1,7 +1,7 @@
 use chrono::Utc;
 use coco_protocol::{
-    Chunk, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntent, SearchIntentInput,
-    StorageBackend, TextSpan, VectorMetric,
+    Chunk, ChunkId, ChunkingStrategy, DocumentId, EmbeddingConfig, RetrievalMode, SearchIntent,
+    SearchIntentInput, StorageBackend, TextSpan, VectorMetric,
 };
 use coco_server::storage::meta::{
     NewDocument, NewIndexingConfig, NewOrganization, NewProject, ServerMetaStore,
@@ -123,7 +123,7 @@ async fn ingest_and_query_roundtrip() -> coco_protocol::CocoResult<()> {
     let backend = backend.with_version(Some(version.id));
 
     let chunk = Chunk {
-        id: "chunk-1".into(),
+        id: ChunkId::new("chunk-1"),
         doc_id: doc_id.clone().into(),
         content: "hello".to_string(),
         embedding: Some(make_embedding(1.0)),
@@ -131,7 +131,7 @@ async fn ingest_and_query_roundtrip() -> coco_protocol::CocoResult<()> {
         quality_score: None,
         verified: Some(false),
     };
-    backend.upsert_chunks(vec![chunk.clone()]).await?;
+    backend.upsert_chunks(std::slice::from_ref(&chunk)).await?;
 
     let intent = SearchIntentInput {
         query_text: None,
@@ -281,8 +281,8 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
     let backend_b = backend_b.with_version(Some(version_b.id));
 
     let chunk_a = Chunk {
-        id: "chunk-a".into(),
-        doc_id: "doc-a".into(),
+        id: ChunkId::new("chunk-a"),
+        doc_id: DocumentId::new("doc-a"),
         content: "alpha".to_string(),
         embedding: Some(make_embedding(1.0)),
         span: TextSpan { start: 0, end: 5 },
@@ -290,16 +290,16 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         verified: Some(false),
     };
     let chunk_b = Chunk {
-        id: "chunk-b".into(),
-        doc_id: "doc-b".into(),
+        id: ChunkId::new("chunk-b"),
+        doc_id: DocumentId::new("doc-b"),
         content: "beta".to_string(),
         embedding: Some(make_embedding(2.0)),
         span: TextSpan { start: 0, end: 4 },
         quality_score: None,
         verified: Some(false),
     };
-    backend_a.upsert_chunks(vec![chunk_a.clone()]).await?;
-    backend_b.upsert_chunks(vec![chunk_b.clone()]).await?;
+    backend_a.upsert_chunks(std::slice::from_ref(&chunk_a)).await?;
+    backend_b.upsert_chunks(std::slice::from_ref(&chunk_b)).await?;
 
     let intent = SearchIntentInput {
         query_text: None,

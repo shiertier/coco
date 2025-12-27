@@ -144,7 +144,7 @@ fn build_live_grep_hit(
         },
         chunk: coco_protocol::Chunk {
             id: chunk_id.into(),
-            doc_id: doc_id.into(),
+            doc_id: coco_protocol::DocumentId::new(doc_id),
             content,
             embedding: None,
             span,

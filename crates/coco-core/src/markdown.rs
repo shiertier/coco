@@ -10,6 +10,8 @@ use tree_sitter::Node;
 #[derive(Debug, Default)]
 pub struct MarkdownParser;
 
+const MARKDOWN_SUPPORTED_TYPES: &[FileType] = &[FileType::Markdown];
+
 impl MarkdownParser {
     /// Creates a new Markdown parser.
     pub fn new() -> Self {
@@ -43,8 +45,8 @@ impl DocumentParser for MarkdownParser {
         })
     }
 
-    fn supported_types(&self) -> Vec<FileType> {
-        vec![FileType::Markdown]
+    fn supported_types(&self) -> &'static [FileType] {
+        MARKDOWN_SUPPORTED_TYPES
     }
 }
 

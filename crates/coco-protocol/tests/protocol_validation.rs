@@ -1,8 +1,8 @@
 use coco_protocol::{
-    validate_indexing_config, validate_search_intent, ChunkingStrategy, CocoError, CocoErrorKind,
-    EmbeddingConfig, ErrorResponse, Filter, FilterOp, FilterValue, HnswParams, IndexingConfig,
-    RetrievalMode, SearchIntent, SearchIntentInput, TextSpan, ValidationContext,
-    VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+    validate_indexing_config, validate_search_intent, ChunkId, ChunkingStrategy, CocoError,
+    CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse, Filter, FilterOp, FilterValue,
+    HnswParams, IndexingConfig, RetrievalMode, SearchIntent, SearchIntentInput, TextSpan,
+    ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -71,11 +71,11 @@ fn search_intent_serializes_indexing_config_id() {
 #[test]
 fn vector_record_serializes_config_id() {
     let record = VectorRecord {
-        chunk_id: "chunk-1".into(),
+        chunk_id: ChunkId::new("chunk-1"),
         embedding: vec![0.1, 0.2],
         metadata: VectorMetadata {
             config_id: Some("default".to_string()),
-            doc_id: "doc-1".into(),
+            doc_id: DocumentId::new("doc-1"),
             content: "hello".to_string(),
             span: TextSpan { start: 0, end: 5 },
         },

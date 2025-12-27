@@ -17,7 +17,7 @@ use super::helpers::{chunk_from_row, parse_vector_text};
 impl StorageBackend for PgBackend {
     fn upsert_chunks(
         &self,
-        chunks: Vec<Chunk>,
+        chunks: &[Chunk],
     ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
         let db = self.db.clone();
         let tenant = self.tenant.clone();
@@ -179,7 +179,7 @@ impl StorageBackend for PgBackend {
 impl VectorStore for PgBackend {
     fn upsert_vectors(
         &self,
-        records: Vec<VectorRecord>,
+        records: &[VectorRecord],
     ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
         let backend = self.clone();
         async move {
@@ -204,16 +204,16 @@ impl VectorStore for PgBackend {
                     resolved_config = Some(config_id.to_string());
                 }
                 chunks.push(Chunk {
-                    id: record.chunk_id,
-                    doc_id: record.metadata.doc_id,
-                    content: record.metadata.content,
-                    embedding: Some(record.embedding),
+                    id: record.chunk_id.clone(),
+                    doc_id: record.metadata.doc_id.clone(),
+                    content: record.metadata.content.clone(),
+                    embedding: Some(record.embedding.clone()),
                     span: record.metadata.span,
                     quality_score: None,
                     verified: None,
                 });
             }
-            backend.upsert_chunks(chunks).await
+            backend.upsert_chunks(&chunks).await
         }
     }
 

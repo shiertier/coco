@@ -109,7 +109,7 @@ impl ServerVectorBackend {
 impl VectorStore for ServerVectorBackend {
     fn upsert_vectors(
         &self,
-        records: Vec<coco_protocol::VectorRecord>,
+        records: &[coco_protocol::VectorRecord],
     ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
         let backend = self.clone();
         async move {

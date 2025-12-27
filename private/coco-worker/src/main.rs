@@ -1059,7 +1059,7 @@ async fn upsert_chunks_batched(
     while !chunks.is_empty() {
         let take = batch_size.min(chunks.len());
         let batch: Vec<Chunk> = chunks.drain(..take).collect();
-        backend.upsert_chunks(batch).await?;
+        backend.upsert_chunks(&batch).await?;
     }
     Ok(())
 }

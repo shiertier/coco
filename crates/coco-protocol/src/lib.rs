@@ -51,12 +51,6 @@ impl From<String> for ProjectId {
     }
 }
 
-impl From<&str> for ProjectId {
-    fn from(value: &str) -> Self {
-        Self(value.to_string())
-    }
-}
-
 impl From<ProjectId> for String {
     fn from(value: ProjectId) -> Self {
         value.0
@@ -105,12 +99,6 @@ impl From<String> for DocumentId {
     }
 }
 
-impl From<&str> for DocumentId {
-    fn from(value: &str) -> Self {
-        Self(value.to_string())
-    }
-}
-
 impl From<DocumentId> for String {
     fn from(value: DocumentId) -> Self {
         value.0
@@ -156,12 +144,6 @@ impl AsRef<str> for ChunkId {
 impl From<String> for ChunkId {
     fn from(value: String) -> Self {
         Self(value)
-    }
-}
-
-impl From<&str> for ChunkId {
-    fn from(value: &str) -> Self {
-        Self(value.to_string())
     }
 }
 
@@ -585,10 +567,7 @@ impl Default for IndexingPlan {
     fn default() -> Self {
         Self {
             version: INDEXING_PLAN_VERSION,
-            steps: INDEXING_PLAN_DEFAULT_STEPS
-                .iter()
-                .map(|step| (*step).to_string())
-                .collect(),
+            steps: Vec::from(INDEXING_PLAN_DEFAULT_STEPS.map(str::to_string)),
         }
     }
 }
@@ -606,10 +585,7 @@ impl Default for QueryPlan {
     fn default() -> Self {
         Self {
             version: QUERY_PLAN_VERSION,
-            steps: QUERY_PLAN_DEFAULT_STEPS
-                .iter()
-                .map(|step| (*step).to_string())
-                .collect(),
+            steps: Vec::from(QUERY_PLAN_DEFAULT_STEPS.map(str::to_string)),
         }
     }
 }
@@ -832,19 +808,6 @@ pub enum CocoErrorKind {
     Compute,
 }
 
-/// Captured source error for diagnostic chaining.
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("{message}")]
-pub struct CocoErrorSource {
-    message: String,
-}
-
-impl CocoErrorSource {
-    fn from_message(message: String) -> Self {
-        Self { message }
-    }
-}
-
 /// Canonical error type for CoCo.
 #[derive(Debug, thiserror::Error, Clone)]
 pub enum CocoError {
@@ -853,9 +816,6 @@ pub enum CocoError {
     System {
         /// Human-readable error message.
         message: String,
-        /// Optional source error for diagnostics.
-        #[source]
-        source: Option<CocoErrorSource>,
     },
     /// User input or validation errors.
     #[error("user error: {message}")]
@@ -868,37 +828,26 @@ pub enum CocoError {
     Network {
         /// Human-readable error message.
         message: String,
-        /// Optional source error for diagnostics.
-        #[source]
-        source: Option<CocoErrorSource>,
     },
     /// Storage layer failures.
     #[error("storage error: {message}")]
     Storage {
         /// Human-readable error message.
         message: String,
-        /// Optional source error for diagnostics.
-        #[source]
-        source: Option<CocoErrorSource>,
     },
     /// Compute or model execution failures.
     #[error("compute error: {message}")]
     Compute {
         /// Human-readable error message.
         message: String,
-        /// Optional source error for diagnostics.
-        #[source]
-        source: Option<CocoErrorSource>,
     },
 }
 
 impl CocoError {
     /// Creates a system error from a displayable source.
     pub fn system<E: std::fmt::Display>(error: E) -> Self {
-        let message = error.to_string();
         CocoError::System {
-            message: message.clone(),
-            source: Some(CocoErrorSource::from_message(message)),
+            message: error.to_string(),
         }
     }
 
@@ -911,28 +860,22 @@ impl CocoError {
 
     /// Creates a network error from a displayable source.
     pub fn network<E: std::fmt::Display>(error: E) -> Self {
-        let message = error.to_string();
         CocoError::Network {
-            message: message.clone(),
-            source: Some(CocoErrorSource::from_message(message)),
+            message: error.to_string(),
         }
     }
 
     /// Creates a storage error from a displayable source.
     pub fn storage<E: std::fmt::Display>(error: E) -> Self {
-        let message = error.to_string();
         CocoError::Storage {
-            message: message.clone(),
-            source: Some(CocoErrorSource::from_message(message)),
+            message: error.to_string(),
         }
     }
 
     /// Creates a compute error from a displayable source.
     pub fn compute<E: std::fmt::Display>(error: E) -> Self {
-        let message = error.to_string();
         CocoError::Compute {
-            message: message.clone(),
-            source: Some(CocoErrorSource::from_message(message)),
+            message: error.to_string(),
         }
     }
 
@@ -1280,7 +1223,7 @@ pub struct ParsedDocument {
 /// Storage backend contract for vector and keyword retrieval.
 pub trait StorageBackend {
     /// Upserts a batch of chunks into storage.
-    fn upsert_chunks(&self, chunks: Vec<Chunk>) -> impl Future<Output = CocoResult<()>> + Send;
+    fn upsert_chunks(&self, chunks: &[Chunk]) -> impl Future<Output = CocoResult<()>> + Send;
     /// Searches for similar chunks given an intent.
     fn search_similar(
         &self,
@@ -1300,7 +1243,7 @@ pub trait VectorStore {
     /// Upserts vector records into storage.
     fn upsert_vectors(
         &self,
-        records: Vec<VectorRecord>,
+        records: &[VectorRecord],
     ) -> impl Future<Output = CocoResult<()>> + Send;
     /// Searches for similar vectors given an intent.
     fn search_vectors(
@@ -1334,7 +1277,7 @@ pub trait DocumentParser {
     /// Parses content into a structured representation.
     fn parse(&self, content: &str, file_type: FileType) -> CocoResult<ParsedDocument>;
     /// Returns the supported file types.
-    fn supported_types(&self) -> Vec<FileType>;
+    fn supported_types(&self) -> &'static [FileType];
 }
 
 /// Chunker contract for splitting parsed documents.
@@ -1429,8 +1372,8 @@ mod tests {
                 verified: None,
             },
             chunk: Chunk {
-                id: "chunk-1".into(),
-                doc_id: "doc-1".into(),
+                id: ChunkId::new("chunk-1"),
+                doc_id: DocumentId::new("doc-1"),
                 content: "hello".to_string(),
                 embedding: None,
                 span: TextSpan { start: 0, end: 5 },

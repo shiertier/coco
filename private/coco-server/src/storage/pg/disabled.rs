@@ -159,7 +159,7 @@ impl PgBackendConfig {
 }
 
 impl StorageBackend for PgBackend {
-    async fn upsert_chunks(&self, _chunks: Vec<Chunk>) -> CocoResult<()> {
+    async fn upsert_chunks(&self, _chunks: &[Chunk]) -> CocoResult<()> {
         Err(CocoError::storage(
             "server-storage feature disabled for PgBackend",
         ))
@@ -193,7 +193,7 @@ impl StorageBackend for PgBackend {
 impl VectorStore for PgBackend {
     fn upsert_vectors(
         &self,
-        _records: Vec<VectorRecord>,
+        _records: &[VectorRecord],
     ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
         async move {
             Err(CocoError::storage(

@@ -17,7 +17,7 @@ use super::util::{
 impl VectorStore for QdrantStore {
     fn upsert_vectors(
         &self,
-        records: Vec<VectorRecord>,
+        records: &[VectorRecord],
     ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
         let store = self.clone();
         async move {
@@ -27,7 +27,7 @@ impl VectorStore for QdrantStore {
             let mut config_id = None;
             let mut points = Vec::with_capacity(records.len());
             let mut vector_len = None;
-            for record in &records {
+            for record in records {
                 let record_config = record
                     .metadata
                     .config_id
@@ -70,8 +70,12 @@ impl VectorStore for QdrantStore {
             }
             for record in records {
                 let point_id = store.point_id_for(&config_id, &record.chunk_id);
-                let payload = store.payload_for(&config_id, &record);
-                points.push(PointStruct::new(point_id, record.embedding, payload));
+                let payload = store.payload_for(&config_id, record);
+                points.push(PointStruct::new(
+                    point_id,
+                    record.embedding.clone(),
+                    payload,
+                ));
             }
             store
                 .client()

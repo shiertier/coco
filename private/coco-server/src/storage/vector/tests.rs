@@ -1,5 +1,5 @@
 use super::rrf::merge_rrf;
-use coco_protocol::{Chunk, SearchHit, SearchHitMeta, TextSpan};
+use coco_protocol::{Chunk, ChunkId, DocumentId, SearchHit, SearchHitMeta, TextSpan};
 
 fn make_hit(id: &str) -> SearchHit {
     SearchHit {
@@ -9,8 +9,8 @@ fn make_hit(id: &str) -> SearchHit {
             verified: None,
         },
         chunk: Chunk {
-            id: id.into(),
-            doc_id: "doc".into(),
+            id: ChunkId::new(id),
+            doc_id: DocumentId::new("doc"),
             content: "content".to_string(),
             embedding: None,
             span: TextSpan { start: 0, end: 1 },

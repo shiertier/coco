@@ -8,8 +8,8 @@ use coco_local::storage::meta::{
     LocalMetaStore, NewChunk, NewDocument, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
 };
 use coco_protocol::{
-    Chunk, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntent, SearchIntentInput,
-    StorageBackend, TextSpan, VectorMetric,
+    Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntent,
+    SearchIntentInput, StorageBackend, TextSpan, VectorMetric,
 };
 use support::temp_root;
 
@@ -80,7 +80,7 @@ async fn register_import_query_roundtrip() -> coco_protocol::CocoResult<()> {
     .await?;
 
     let chunk = Chunk {
-        id: "chunk-test".into(),
+        id: ChunkId::new("chunk-test"),
         doc_id: doc_id.clone().into(),
         content: "hello".to_string(),
         embedding: Some(vec![1.0, 0.0, 0.0]),
@@ -88,7 +88,7 @@ async fn register_import_query_roundtrip() -> coco_protocol::CocoResult<()> {
         quality_score: None,
         verified: None,
     };
-    vector.upsert_chunks(vec![chunk.clone()]).await?;
+    vector.upsert_chunks(std::slice::from_ref(&chunk)).await?;
 
     let intent = SearchIntentInput {
         query_text: None,

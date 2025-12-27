@@ -11,6 +11,13 @@ use crate::text::{token_spans, token_windows};
 #[derive(Debug, Default)]
 pub struct CodeParser;
 
+const CODE_SUPPORTED_TYPES: &[FileType] = &[
+    FileType::Rust,
+    FileType::Python,
+    FileType::TypeScript,
+    FileType::Go,
+];
+
 impl CodeParser {
     /// Creates a new code parser.
     pub fn new() -> Self {
@@ -30,13 +37,8 @@ impl DocumentParser for CodeParser {
         })
     }
 
-    fn supported_types(&self) -> Vec<FileType> {
-        vec![
-            FileType::Rust,
-            FileType::Python,
-            FileType::TypeScript,
-            FileType::Go,
-        ]
+    fn supported_types(&self) -> &'static [FileType] {
+        CODE_SUPPORTED_TYPES
     }
 }
 

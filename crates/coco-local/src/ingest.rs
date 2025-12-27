@@ -9,8 +9,8 @@ use coco_core::{
     markdown::MarkdownSplitter,
 };
 use coco_protocol::{
-    Chunk, Chunker, ChunkingStrategy, CocoError, CocoResult, DocumentParser, EmbeddingModel,
-    FileType, StorageBackend, TextSpan,
+    Chunk, Chunker, ChunkingStrategy, CocoError, CocoResult, DocumentId, DocumentParser,
+    EmbeddingModel, FileType, StorageBackend, TextSpan,
 };
 
 use crate::embedder::LocalEmbedder;
@@ -157,7 +157,7 @@ impl Ingestor {
                 indexing_config.index_params.as_ref(),
             )
             .await?;
-        backend.upsert_chunks(chunks.clone()).await?;
+        backend.upsert_chunks(&chunks).await?;
 
         let line_starts = line_starts(&request.content);
         let mut chunk_records = Vec::with_capacity(chunks.len());
@@ -340,7 +340,7 @@ fn build_chunks(
         );
         chunks.push(Chunk {
             id: chunk_id.into(),
-            doc_id: doc_id.into(),
+            doc_id: DocumentId::new(doc_id),
             content: chunk_texts[index].clone(),
             embedding: Some(embeddings[index].clone()),
             span: *span,

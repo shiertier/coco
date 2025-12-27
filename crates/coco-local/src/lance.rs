@@ -430,7 +430,10 @@ mod enabled {
     }
 
     impl StorageBackend for LanceBackend {
-        fn upsert_chunks(&self, chunks: Vec<Chunk>) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        fn upsert_chunks(
+            &self,
+            chunks: &[Chunk],
+        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
             let table = self.table.clone();
             let dimensions = self.dimensions;
             let config_id = self.config_id.clone();
@@ -526,26 +529,26 @@ mod enabled {
     impl VectorStore for LanceBackend {
         fn upsert_vectors(
             &self,
-            records: Vec<VectorRecord>,
+            records: &[VectorRecord],
         ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
             let backend = self.clone();
             async move {
-                for record in &records {
+                for record in records {
                     check_record_config_id(&record.metadata.config_id, &backend.config_id)?;
                 }
                 let chunks: Vec<Chunk> = records
-                    .into_iter()
+                    .iter()
                     .map(|record| Chunk {
-                        id: record.chunk_id,
-                        doc_id: record.metadata.doc_id,
-                        content: record.metadata.content,
-                        embedding: Some(record.embedding),
+                        id: record.chunk_id.clone(),
+                        doc_id: record.metadata.doc_id.clone(),
+                        content: record.metadata.content.clone(),
+                        embedding: Some(record.embedding.clone()),
                         span: record.metadata.span,
                         quality_score: None,
                         verified: None,
                     })
                     .collect();
-                backend.upsert_chunks(chunks).await
+                backend.upsert_chunks(&chunks).await
             }
         }
 
@@ -1310,7 +1313,7 @@ mod disabled {
     impl StorageBackend for LanceBackend {
         fn upsert_chunks(
             &self,
-            _chunks: Vec<coco_protocol::Chunk>,
+            _chunks: &[coco_protocol::Chunk],
         ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
@@ -1350,7 +1353,7 @@ mod disabled {
     impl VectorStore for LanceBackend {
         fn upsert_vectors(
             &self,
-            _records: Vec<VectorRecord>,
+            _records: &[VectorRecord],
         ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
