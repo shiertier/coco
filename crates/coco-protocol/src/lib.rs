@@ -9,6 +9,43 @@ use std::ops::Deref;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+// Shared impls for ID newtypes.
+macro_rules! impl_id_type {
+    ($name:ident) => {
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl Deref for $name {
+            type Target = str;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl AsRef<str> for $name {
+            fn as_ref(&self) -> &str {
+                &self.0
+            }
+        }
+
+        impl From<String> for $name {
+            fn from(value: String) -> Self {
+                Self(value)
+            }
+        }
+
+        impl From<$name> for String {
+            fn from(value: $name) -> Self {
+                value.0
+            }
+        }
+    };
+}
+
 /// Stable identifier for a project.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 #[serde(transparent)]
@@ -25,37 +62,7 @@ impl ProjectId {
     }
 }
 
-impl fmt::Display for ProjectId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Deref for ProjectId {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl AsRef<str> for ProjectId {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<String> for ProjectId {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
-impl From<ProjectId> for String {
-    fn from(value: ProjectId) -> Self {
-        value.0
-    }
-}
+impl_id_type!(ProjectId);
 
 /// Stable identifier for a document.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -73,37 +80,7 @@ impl DocumentId {
     }
 }
 
-impl fmt::Display for DocumentId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Deref for DocumentId {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl AsRef<str> for DocumentId {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<String> for DocumentId {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
-impl From<DocumentId> for String {
-    fn from(value: DocumentId) -> Self {
-        value.0
-    }
-}
+impl_id_type!(DocumentId);
 
 /// Stable identifier for a chunk.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -121,37 +98,7 @@ impl ChunkId {
     }
 }
 
-impl fmt::Display for ChunkId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Deref for ChunkId {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl AsRef<str> for ChunkId {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<String> for ChunkId {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
-impl From<ChunkId> for String {
-    fn from(value: ChunkId) -> Self {
-        value.0
-    }
-}
+impl_id_type!(ChunkId);
 
 /// Maximum allowed length for config identifiers.
 pub const MAX_CONFIG_ID_LEN: usize = 63;
@@ -1148,49 +1095,22 @@ fn validate_index_params(
 }
 
 fn validate_hnsw(params: &HnswParams) -> CocoResult<()> {
-    if let Some(m) = params.m {
-        if m == 0 {
-            return Err(validation_error("hnsw.m must be greater than zero"));
-        }
-    }
-    if let Some(ef_construction) = params.ef_construction {
-        if ef_construction == 0 {
-            return Err(validation_error(
-                "hnsw.ef_construction must be greater than zero",
-            ));
-        }
-    }
+    validate_positive_u32(params.m, "hnsw.m")?;
+    validate_positive_u32(params.ef_construction, "hnsw.ef_construction")?;
     Ok(())
 }
 
 fn validate_ivf_pq(params: &IvfPqParams) -> CocoResult<()> {
-    if let Some(value) = params.num_partitions {
-        if value == 0 {
-            return Err(validation_error(
-                "ivf_pq.num_partitions must be greater than zero",
-            ));
-        }
-    }
-    if let Some(value) = params.num_sub_vectors {
-        if value == 0 {
-            return Err(validation_error(
-                "ivf_pq.num_sub_vectors must be greater than zero",
-            ));
-        }
-    }
-    if let Some(value) = params.sample_rate {
-        if value == 0 {
-            return Err(validation_error(
-                "ivf_pq.sample_rate must be greater than zero",
-            ));
-        }
-    }
-    if let Some(value) = params.max_iterations {
-        if value == 0 {
-            return Err(validation_error(
-                "ivf_pq.max_iterations must be greater than zero",
-            ));
-        }
+    validate_positive_u32(params.num_partitions, "ivf_pq.num_partitions")?;
+    validate_positive_u32(params.num_sub_vectors, "ivf_pq.num_sub_vectors")?;
+    validate_positive_u32(params.sample_rate, "ivf_pq.sample_rate")?;
+    validate_positive_u32(params.max_iterations, "ivf_pq.max_iterations")?;
+    Ok(())
+}
+
+fn validate_positive_u32(value: Option<u32>, label: &str) -> CocoResult<()> {
+    if let Some(0) = value {
+        return Err(validation_error(&format!("{label} must be greater than zero")));
     }
     Ok(())
 }
