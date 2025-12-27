@@ -1,15 +1,15 @@
-# Contributing
+# 贡献指南
 
-This project follows Physical Separation and No-DI. Keep changes small and data-structure driven.
+本项目遵循物理隔离与 No-DI。改动保持小而以数据结构驱动。
 
-## Requirements
+## 要求
 
-- Rust 1.85+ (workspace edition is 2024)
-- `clippy` must pass with `-D warnings`
-- No `unsafe` unless fully justified and reviewed
-- No `#![allow(...)]` lint suppression without a strong reason
+- Rust 1.85+（workspace edition 为 2024）
+- `clippy` 必须通过并带 `-D warnings`
+- 除非充分论证并评审，否则禁止 `unsafe`
+- 不允许无充分理由的 `#![allow(...)]` 以压制 lint
 
-## Common commands
+## 常用命令
 
 ```bash
 cargo check --workspace
@@ -18,23 +18,23 @@ cargo test --workspace
 cargo test -p coco-core
 ```
 
-## Integration tests (server/worker)
+## 集成测试（server/worker）
 
-Integration tests require Postgres with pgvector. Set `COCO_TEST_DB_URL`:
+集成测试需要带 pgvector 的 Postgres。设置 `COCO_TEST_DB_URL`：
 
 ```bash
 export COCO_TEST_DB_URL=postgres://user:pass@localhost:5432/coco
 scripts/run-ci-integration.sh
 ```
 
-## E2E scripts
+## E2E 脚本
 
 ```bash
 scripts/e2e-local.sh
 scripts/e2e-server.sh
 ```
 
-## Performance scripts
+## 性能脚本
 
 ```bash
 scripts/perf-local-import.sh
@@ -42,7 +42,7 @@ scripts/perf-local-query.sh
 scripts/perf-local-memory.sh
 ```
 
-## Coverage
+## 覆盖率
 
 ```bash
 scripts/check-coverage.sh

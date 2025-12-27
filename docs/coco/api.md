@@ -1,69 +1,68 @@
-# API Reference
+# API 参考
 
-The server API is documented via OpenAPI and exposed under `/v1`.
+服务端 API 通过 OpenAPI 描述，并在 `/v1` 下暴露。
 
 ## OpenAPI
 
-- Generated spec: `openapi.json`
-- Regenerate:
+- 生成的规范: `openapi.json`
+- 重新生成:
 
 ```bash
 scripts/generate-openapi.sh
 ```
 
-Server also exposes the spec at:
+服务端也在以下路径提供规范：
 
 ```
 GET /v1/sys/openapi
 ```
 
-## Authentication
+## 认证
 
-Server endpoints require bearer tokens:
+服务端接口需要 Bearer token：
 
-- Admin routes: `Authorization: Bearer $COCO_ADMIN_KEY`
-- API routes: `Authorization: Bearer $COCO_API_KEY` (admin key also accepted)
+- 管理员路由: `Authorization: Bearer $COCO_ADMIN_KEY`
+- API 路由: `Authorization: Bearer $COCO_API_KEY`（也接受管理员 key）
 
-Multi-tenant headers are required for API routes:
+API 路由还需要多租户请求头：
 
 - `x-coco-org-id`
 - `x-coco-user-id`
 - `x-coco-project-id`
 
-Local mode does not require auth headers.
+本地模式不需要认证请求头。
 
-## Conventions
+## 约定
 
-### Response envelope
+### 响应封装
 
-All responses return a `ResponseEnvelope` with a request-level `meta` and a payload `data`.
-`SearchHit` scoring metadata lives under `data.results[].meta`, not under `meta`.
+所有响应返回 `ResponseEnvelope`，包含请求级 `meta` 与载荷 `data`。
+`SearchHit` 的评分元数据位于 `data.results[].meta`，而不是 `meta`。
 
-`ResponseMeta.status` indicates request freshness:
+`ResponseMeta.status` 表示请求的新鲜度：
 
-- `fresh`: default for active config queries.
-- `stale`: only set on server queries when the caller explicitly requests a
-  non-active `indexing_config_id`.
+- `fresh`: 活动配置查询的默认值。
+- `stale`: 仅在服务端查询中，调用方显式请求非活动 `indexing_config_id` 时设置。
 
-Memo queries always return `fresh`.
+Memo 查询始终返回 `fresh`。
 
-### SearchHit vs ResponseMeta
+### SearchHit 与 ResponseMeta
 
-`ResponseMeta` is request-level status only. All scoring fields (`score`,
-`quality`, `verified`) belong to `SearchHitMeta`.
+`ResponseMeta` 只表示请求级状态。所有评分字段（`score`、
+`quality`、`verified`）都属于 `SearchHitMeta`。
 
-### Config ID rules
+### Config ID 规则
 
-`config_id` must be normalized before use:
+`config_id` 在使用前必须规范化：
 
-- 1..63 chars
-- lowercase letters, digits, `-`, `_`
-- must start with lowercase letter or digit
-- trimming must not change the value
+- 1..63 个字符
+- 小写字母、数字、`-`、`_`
+- 必须以小写字母或数字开头
+- 修剪空白不能改变值
 
-Invalid examples: `"Bad"`, `"has space"`, `"-start"`, `" default"`, length `> 63`.
+无效示例：`"Bad"`、`"has space"`、`"-start"`、`" default"`、长度 `> 63`。
 
-Error examples:
+错误示例：
 
 ```json
 { "kind": "user", "message": "config_id must be normalized" }
@@ -80,11 +79,11 @@ Error examples:
 }
 ```
 
-## Examples
+## 示例
 
-### Response envelope (server, fresh)
+### 响应封装（服务端，fresh）
 
-Example query response (server):
+示例查询响应（服务端）：
 
 ```json
 {
@@ -114,11 +113,11 @@ Example query response (server):
 }
 ```
 
-Local mode leaves `quality` and `verified` as `null` in both the hit metadata and chunk payload.
+本地模式在命中元数据与 chunk 载荷中都保持 `quality` 和 `verified` 为 `null`。
 
-### Response envelope (server, stale)
+### 响应封装（服务端，stale）
 
-When an explicit non-active `indexing_config_id` is used, the response is marked stale:
+当显式使用非活动 `indexing_config_id` 时，响应标记为 stale：
 
 ```json
 {
@@ -142,9 +141,9 @@ When an explicit non-active `indexing_config_id` is used, the response is marked
 }
 ```
 
-### Response envelope (memo query)
+### 响应封装（memo 查询）
 
-Memo queries return a `ResponseEnvelope` and always `fresh`:
+Memo 查询返回 `ResponseEnvelope` 且始终 `fresh`：
 
 ```json
 {
@@ -153,9 +152,9 @@ Memo queries return a `ResponseEnvelope` and always `fresh`:
 }
 ```
 
-### Response envelope (local, quality null)
+### 响应封装（本地，quality 为 null）
 
-Local mode keeps `quality`/`verified` fields as `null`:
+本地模式保持 `quality`/`verified` 字段为 `null`：
 
 ```json
 {
@@ -179,10 +178,10 @@ Local mode keeps `quality`/`verified` fields as `null`:
 }
 ```
 
-### Error responses
+### 错误响应
 
-Errors are **not** wrapped in a response envelope; they return `ErrorResponse`
-directly with `kind` + `message`:
+错误**不会**被响应封装包裹；它们直接返回 `ErrorResponse`
+（`kind` + `message`）：
 
 ```json
 {
@@ -191,229 +190,10 @@ directly with `kind` + `message`:
 }
 ```
 
-`ErrorResponse.message` is a stable, public-safe English string and does not
-include internal error details.
+`ErrorResponse.message` 是稳定、对外公开且安全的英文字符串，
+不包含内部错误细节。
 
-## Breaking changes
+## 破坏性变更
 
-- Query responses are now wrapped in `ResponseEnvelope` (`meta` + `data`). Update clients to
-  read `data.results` instead of top-level `results`.
-- Access log entries include `schema_version`; any change to its value is a breaking change
-  for log consumers.
-
-## Versioning policy
-
-- The public API stays under `/v1` until a breaking change requires a `/v2` migration.
-- SDK major versions track breaking API changes and `schema_version` bumps.
-
-## Register a project (server)
-
-Register responses include:
-
-- `project_id`: canonical project UUID (server + local, used in `x-coco-project-id`).
-- `active_config_id`: the active indexing config (defaults to `default`).
-- `active_version_id`: server-only ingest version (nullable).
-- Server responses also include `org_id` (used in `x-coco-org-id`).
-- Local mode also returns `path` and `created_at`.
-
-Server requests require `org_id` and `user_id`; `project_id` is optional.
-
-`source_ref` must be a logical identifier (not a filesystem path). Examples that are rejected:
-
-- `/Users/alice/repo`
-- `C:\repo\docs`
-
-```bash
-curl -s \
-  -H "authorization: Bearer ${COCO_ADMIN_KEY}" \
-  -H "content-type: application/json" \
-  -d '{"org_id":"acme","user_id":"user-1","project_id":"repo","name":"Repo","source_ref":"git:repo"}' \
-  http://127.0.0.1:3456/v1/sys/register
-```
-
-## Indexing configs (server + local)
-
-Indexing configs must be registered before import/query. Inline `indexing_config`
-payloads are rejected; use `/v1/sys/configs` + `indexing_config_id`.
-
-### Endpoints
-
-- `GET /v1/sys/configs` (server: admin auth; local: no auth)
-  - Optional `project_id` query param (local) or `project_id` + `org_id` (server)
-  - Response includes `active_config_id` when `project_id` is provided
-- `POST /v1/sys/configs` (server: admin auth; local: no auth)
-- `POST /v1/sys/configs/activate` (server: admin auth; local: no auth)
-
-### Config example
-
-```json
-{
-  "config": {
-    "config_id": "fast-v1",
-    "chunking": { "strategy": "fixed_token", "size": 256, "overlap": 32 },
-    "embedding": { "model": "default", "dimensions": 1536 },
-    "vector_metric": "cosine",
-    "index_params": { "hnsw_m": 16, "hnsw_ef_construction": 100 }
-  }
-}
-```
-
-### Activate example
-
-```json
-{ "project_id": "proj-123", "config_id": "fast-v1" }
-```
-
-## Filters (Local vs Server)
-
-Filter operators are restricted to `eq` and `contains` in both modes.
-
-| Mode  | Allowed fields                  | Allowed ops        |
-|-------|---------------------------------|--------------------|
-| Local | `doc_id`, `chunk_id`, `content` | `eq`, `contains`   |
-| Server| `doc_id`, `chunk_id`            | `eq`, `contains`   |
-
-Other operators (`neq`, `gt`, `lt`, `in`, ...) are rejected in public API input.
-
-## Memo query (server)
-
-`POST /v1/memo/query` requires:
-
-- `Authorization: Bearer $COCO_API_KEY`
-- non-empty `session_token`
-- no org/user/project headers (ignored if present)
-
-Not supported:
-
-- `indexing_config_id`
-- `retrieval_config.vector_backend`
-
-Memo responses are always `meta.status = fresh`.
-
-## Errors
-
-### Error kinds
-
-`CocoErrorKind` values:
-
-- `system`: IO/config/runtime issues
-- `user`: validation/input errors
-- `network`: upstream/network failures
-- `storage`: DB/vector backend failures
-- `compute`: model/execution failures
-
-### Error kind to HTTP status
-
-| kind     | status |
-|----------|--------|
-| user     | 400    |
-| network  | 502    |
-| storage  | 503    |
-| system   | 500    |
-| compute  | 500    |
-
-### Trace IDs
-
-`trace_id` is emitted **only** in access logs. It is not returned in response
-bodies or headers. `request_id` is not used.
-
-`trace_id` uses UUIDv7 (sortable UUID) format.
-
-## Access log schema
-
-Schema versioning is strict; a bump to `schema_version` indicates a breaking change.
-
-For `schema_version = 1`, fields are:
-
-- `schema_version` (number)
-- `ts` (RFC-3339 millis, UTC)
-- `trace_id` (UUIDv7)
-- `method` (HTTP method)
-- `path` (request path)
-- `status` (HTTP status code)
-- `latency_ms` (integer milliseconds)
-
-### Batch ingest (server)
-
-Embeddings must match the configured dimension (default 1536). The example uses a shortened
-vector for readability; replace it with a full-length embedding in real requests.
-
-```bash
-curl -s \
-  -H "authorization: Bearer ${COCO_API_KEY}" \
-  -H "x-coco-org-id: acme" \
-  -H "x-coco-user-id: user-1" \
-  -H "x-coco-project-id: repo" \
-  -H "content-type: application/json" \
-  -d '{
-    "activate": true,
-    "documents": [
-      {
-        "doc_id": "doc-1",
-        "source_ref": "git:repo#readme.md",
-        "title": "README",
-        "content_hash": "abc123",
-        "chunks": [
-          {
-            "chunk_id": "chunk-1",
-            "content": "Hello CoCo",
-            "embedding": [0.0, 0.0, 0.0],
-            "start": 0,
-            "end": 10
-          }
-        ]
-      }
-    ]
-  }' \
-  http://127.0.0.1:3456/v1/ingest/batch
-```
-
-### Query (server)
-
-```bash
-curl -s \
-  -H "authorization: Bearer ${COCO_API_KEY}" \
-  -H "x-coco-org-id: acme" \
-  -H "x-coco-user-id: user-1" \
-  -H "x-coco-project-id: repo" \
-  -H "content-type: application/json" \
-  -d '{
-    "indexing_config_id": "fast-v1",
-    "intent": {
-      "query_text": "readme",
-      "retrieval_mode": "vector",
-      "top_k": 5,
-      "hybrid_alpha": 0.5,
-      "filters": [],
-      "reranker": null
-    }
-  }' \
-  http://127.0.0.1:3456/v1/docs/query
-```
-
-### Query (local)
-
-```bash
-curl -s \
-  -H "content-type: application/json" \
-  -d '{
-    "intent": {
-      "query_text": "readme",
-      "retrieval_mode": "vector",
-      "top_k": 5,
-      "hybrid_alpha": 0.5,
-      "filters": [],
-      "reranker": null
-    }
-  }' \
-  http://127.0.0.1:3456/v1/docs/query
-```
-
-Local mode rejects explicit non-active configs:
-
-```json
-{
-  "kind": "user",
-  "message": "indexing_config_id does not match active config"
-}
-```
+- 查询响应现在被 `ResponseEnvelope`（`meta` + `data`）包裹。客户端需要
+  读取 `data.results` 而不是顶层 `results`。

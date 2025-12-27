@@ -1,12 +1,12 @@
-# Experiments
+# 实验
 
-Local mode ships an experiment runner to benchmark indexing and retrieval strategies
-against a labeled evaluation set.
+本地模式自带实验运行器，用于基准测试不同索引与检索策略，
+针对带标注的评估集进行对比。
 
-## Spec file (`experiment.yml`)
+## 规格文件（`experiment.yml`）
 
-The experiment spec is a YAML file. Required fields are `name`, `project_id`,
-`indexing_strategies`, `query_strategies`, and `evaluation_set`.
+实验规格是一个 YAML 文件。必填字段为 `name`、`project_id`、
+`indexing_strategies`、`query_strategies` 与 `evaluation_set`。
 
 ```yaml
 name: "baseline"
@@ -44,54 +44,54 @@ metrics:
   - kind: "latency_ms"
 ```
 
-Notes:
+注意事项：
 
-- `indexing_strategies[].config_id` and `query_strategies[].query_config_id` must be normalized.
-- Local mode rejects `indexing_strategies[].vector_backend` and
-  `query_strategies[].retrieval_config.vector_backend`.
-- `hybrid_alpha` is required for all retrieval modes; `top_k` must be > 0.
+- `indexing_strategies[].config_id` 与 `query_strategies[].query_config_id` 必须规范化。
+- 本地模式拒绝 `indexing_strategies[].vector_backend` 和
+  `query_strategies[].retrieval_config.vector_backend`。
+- `hybrid_alpha` 对所有检索模式都是必填；`top_k` 必须 > 0。
 
-## Run
+## 运行
 
 ```bash
 coco experiment run ./experiment.yml
 ```
 
-Optional flags:
+可选参数：
 
-- `--output ./results.json` (defaults to `experiment.results.json` next to the spec)
+- `--output ./results.json`（默认输出到与规格同目录的 `experiment.results.json`）
 - `--host 127.0.0.1`
 - `--port 3456`
 
-The runner will:
+运行器将：
 
-1. Register/update indexing configs from `indexing_strategies`.
-2. Reindex the project per config and activate it.
-3. Run each query strategy against `evaluation_set`.
-4. Emit `results.json`.
+1. 注册/更新来自 `indexing_strategies` 的索引配置。
+2. 按配置重建索引并激活。
+3. 对 `evaluation_set` 运行每个查询策略。
+4. 输出 `results.json`。
 
-## Compare
+## 对比
 
 ```bash
 coco experiment compare ./results-a.json ./results-b.json
 ```
 
-Filters:
+过滤项：
 
 - `--indexing-config-id <id>`
 - `--query-config-id <id>`
 - `--retrieval-mode vector|fts|hybrid`
 
-The compare command prints a table of mean metric values per strategy.
+对比命令输出每个策略的平均指标表。
 
-## Metrics
+## 指标
 
-- `recall_at_k`: fraction of expected documents appearing in the top-K results.
-- `mrr`: mean reciprocal rank of the first expected document.
-- `hit_rate`: fraction of queries with at least one expected document returned.
-- `latency_ms`: mean end-to-end query latency in milliseconds.
+- `recall_at_k`：期望文档出现在前 K 结果中的比例。
+- `mrr`：首个期望文档的平均倒数排名。
+- `hit_rate`：至少命中一个期望文档的查询比例。
+- `latency_ms`：端到端查询延迟的平均值（毫秒）。
 
-## Results file (`results.json`)
+## 结果文件（`results.json`）
 
 ```json
 {
@@ -119,6 +119,6 @@ The compare command prints a table of mean metric values per strategy.
 }
 ```
 
-`query_config_id` identifies the retrieval strategy, while `retrieval_mode`
-captures the concrete mode (`vector`, `fts`, or `hybrid`) from the
-`retrieval_config` used during the run.
+`query_config_id` 标识检索策略，而 `retrieval_mode`
+记录该次运行实际使用的模式（`vector`、`fts` 或 `hybrid`），来自
+运行时的 `retrieval_config`。

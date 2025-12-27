@@ -1,20 +1,20 @@
-# CoCo v3.0 Documentation
+# CoCo v3.0 文档
 
-This folder contains documentation for Context Core (CoCo) v3.0.
+本目录包含 Context Core (CoCo) v3.0 的文档。
 
-## Getting started
+## 入门
 
-- Quick Start: quick-start.md
-- Installation: installation.md
-- Configuration: configuration.md
+- 快速开始: `quick-start.md`
+- 安装: `installation.md`
+- 配置: `configuration.md`
 
-## Reference
+## 参考
 
-- API: api.md
-- Experiments: experiments.md
+- API: `api.md`
+- 实验: `experiments.md`
 
-## Developer docs
+## 开发者文档
 
-- Architecture: architecture.md
-- Contributing: contributing.md
-- Extensions: extensions.md
+- 架构: `architecture.md`
+- 贡献指南: `contributing.md`
+- 扩展: `extensions.md`
