@@ -165,7 +165,7 @@ impl MigrationTrait for AddLocalConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute(Statement::from_string(DatabaseBackend::Sqlite, backfill))
+            .execute_raw(Statement::from_string(DatabaseBackend::Sqlite, backfill))
             .await?;
 
         let backfill = format!(
@@ -177,7 +177,7 @@ impl MigrationTrait for AddLocalConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute(Statement::from_string(DatabaseBackend::Sqlite, backfill))
+            .execute_raw(Statement::from_string(DatabaseBackend::Sqlite, backfill))
             .await?;
 
         let backfill = format!(
@@ -189,7 +189,7 @@ impl MigrationTrait for AddLocalConfigIdColumns {
         );
         manager
             .get_connection()
-            .execute(Statement::from_string(DatabaseBackend::Sqlite, backfill))
+            .execute_raw(Statement::from_string(DatabaseBackend::Sqlite, backfill))
             .await?;
 
         Ok(())
@@ -385,7 +385,7 @@ impl MigrationTrait for AddLocalVersioning {
 async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let conn = manager.get_connection();
     let rows = conn
-        .query_all(Statement::from_string(
+        .query_all_raw(Statement::from_string(
             DatabaseBackend::Sqlite,
             "SELECT id, active_version_id FROM projects".to_string(),
         ))
@@ -403,7 +403,7 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
              WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)".to_string(),
             vec![Value::from(project_id.clone())],
         );
-        let count_row = conn.query_one(count_stmt).await?;
+        let count_row = conn.query_one_raw(count_stmt).await?;
         let item_count: i64 = count_row
             .and_then(|row| row.try_get("", "total").ok())
             .unwrap_or(0);
@@ -420,7 +420,7 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
                 Value::from(item_count),
             ],
         );
-        conn.execute(insert).await?;
+        conn.execute_raw(insert).await?;
 
         let update_project = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
@@ -428,14 +428,14 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
                 .to_string(),
             vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
         );
-        conn.execute(update_project).await?;
+        conn.execute_raw(update_project).await?;
 
         let update_documents = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "UPDATE documents SET version_id = ? WHERE project_id = ?".to_string(),
             vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
         );
-        conn.execute(update_documents).await?;
+        conn.execute_raw(update_documents).await?;
 
         let update_chunks = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
@@ -443,7 +443,7 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
              WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)".to_string(),
             vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
         );
-        conn.execute(update_chunks).await?;
+        conn.execute_raw(update_chunks).await?;
     }
     Ok(())
 }

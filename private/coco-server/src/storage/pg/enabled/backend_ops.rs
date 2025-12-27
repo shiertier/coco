@@ -47,8 +47,8 @@ impl StorageBackend for PgBackend {
                 let version_ph = push_value(&mut values, version_id.clone());
                 let config_ph = push_value(&mut values, config_id.clone());
                 let content_ph = push_value(&mut values, chunk.content.clone());
-                let start_line = to_i64(chunk.span.start)?;
-                let end_line = to_i64(chunk.span.end)?;
+                let start_line = to_i64(chunk.span.start())?;
+                let end_line = to_i64(chunk.span.end())?;
                 let start_ph = push_value(&mut values, start_line);
                 let end_ph = push_value(&mut values, end_line);
                 let quality_ph = push_value(&mut values, chunk.quality_score);
@@ -83,7 +83,7 @@ impl StorageBackend for PgBackend {
             );
 
             let stmt = Statement::from_sql_and_values(DatabaseBackend::Postgres, sql, values);
-            db.execute(stmt).await.map_err(map_storage_err)?;
+            db.execute_raw(stmt).await.map_err(map_storage_err)?;
             Ok(())
         }
     }
@@ -121,7 +121,7 @@ impl StorageBackend for PgBackend {
                  AND {COL_DOC_ID} = {doc_ph} AND {COL_VERSION_ID} = {version_ph} \
                  AND {COL_CONFIG_ID} = {config_ph}"
             );
-            db.execute(Statement::from_sql_and_values(
+            db.execute_raw(Statement::from_sql_and_values(
                 DatabaseBackend::Postgres,
                 sql,
                 values,
@@ -160,7 +160,7 @@ impl StorageBackend for PgBackend {
                  AND {COL_CONFIG_ID} = {config_ph}"
             );
             let row = db
-                .query_one(Statement::from_sql_and_values(
+                .query_one_raw(Statement::from_sql_and_values(
                     DatabaseBackend::Postgres,
                     sql,
                     values,
@@ -260,7 +260,7 @@ impl VectorStore for PgBackend {
                  AND {COL_CONFIG_ID} = {config_ph}"
             );
             let row = db
-                .query_one(Statement::from_sql_and_values(
+                .query_one_raw(Statement::from_sql_and_values(
                     DatabaseBackend::Postgres,
                     sql,
                     values,

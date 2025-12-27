@@ -142,7 +142,7 @@ async fn query_fails_when_active_config_id_missing() -> Result<(), Box<dyn std::
     state
         .meta
         .connection()
-        .execute(Statement::from_string(DatabaseBackend::Postgres, update))
+        .execute_raw(Statement::from_string(DatabaseBackend::Postgres, update))
         .await?;
 
     let mut headers = HeaderMap::new();

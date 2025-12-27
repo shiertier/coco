@@ -646,7 +646,7 @@ impl ServerMetaStore {
             sql.to_string(),
             vec![Value::from(org_id.to_string()), Value::from(user_id.to_string())],
         );
-        let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
+        let row = self.db.query_one_raw(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Ok(0);
         };
@@ -672,7 +672,7 @@ impl ServerMetaStore {
                 Value::from(day),
             ],
         );
-        let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
+        let row = self.db.query_one_raw(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Ok(0);
         };
@@ -709,7 +709,7 @@ impl ServerMetaStore {
                 Value::from(now),
             ],
         );
-        self.db.execute(stmt).await.map_err(map_storage_err)?;
+        self.db.execute_raw(stmt).await.map_err(map_storage_err)?;
         Ok(())
     }
 

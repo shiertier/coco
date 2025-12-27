@@ -194,16 +194,16 @@ fn split_large_span(
 
     let tokens = token_spans(slice);
     if tokens.len() <= chunk_size {
-        return Ok(vec![TextSpan { start, end }]);
+        return Ok(vec![TextSpan::new(start, end)?]);
     }
 
     let windows = token_windows(slice, chunk_size, overlap)?;
     let mut spans = Vec::with_capacity(windows.len());
     for window in windows {
-        spans.push(TextSpan {
-            start: start + window.start,
-            end: start + window.end,
-        });
+        spans.push(TextSpan::new(
+            start + window.start(),
+            start + window.end(),
+        )?);
     }
 
     Ok(spans)

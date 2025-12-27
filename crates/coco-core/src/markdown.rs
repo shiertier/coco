@@ -94,10 +94,7 @@ impl Chunker for MarkdownSplitter {
         heading_starts.dedup();
 
         if heading_starts.is_empty() {
-            return Ok(vec![TextSpan {
-                start: 0,
-                end: content.len(),
-            }]);
+            return Ok(vec![TextSpan::new(0, content.len())?]);
         }
 
         let mut spans = Vec::new();
@@ -137,7 +134,7 @@ fn push_span(
         return Ok(());
     }
 
-    spans.push(TextSpan { start, end });
+    spans.push(TextSpan::new(start, end)?);
     Ok(())
 }
 
@@ -246,8 +243,8 @@ mod tests {
         let spans = splitter.chunk(&doc, &strategy()).expect("split markdown");
         assert_eq!(spans.len(), 2);
 
-        let first = &doc.content[spans[0].start..spans[0].end];
-        let second = &doc.content[spans[1].start..spans[1].end];
+        let first = &doc.content[spans[0].start()..spans[0].end()];
+        let second = &doc.content[spans[1].start()..spans[1].end()];
         assert!(first.contains("# Title"));
         assert!(!first.contains("## Section"));
         assert!(second.contains("## Section"));

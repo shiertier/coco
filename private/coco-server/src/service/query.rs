@@ -23,7 +23,7 @@ pub(crate) fn extract_version_id_filter(
 ) -> CocoResult<Option<String>> {
     let mut retained = Vec::with_capacity(intent.filters.len());
     for filter in intent.filters.drain(..) {
-        if filter.field == "version_id" {
+        if filter.field.as_str() == "version_id" {
             return Err(CocoError::user(
                 "version_id filter is not supported for server queries",
             ));

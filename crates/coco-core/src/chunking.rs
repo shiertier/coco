@@ -38,9 +38,9 @@ impl Chunker for FixedTokenSplitter {
 
         while index < tokens.len() {
             let end_index = (index + chunk_size).min(tokens.len());
-            let start = tokens[index].start;
-            let end = tokens[end_index - 1].end;
-            spans.push(TextSpan { start, end });
+            let start = tokens[index].start();
+            let end = tokens[end_index - 1].end();
+            spans.push(TextSpan::new(start, end)?);
 
             if end_index == tokens.len() {
                 break;
@@ -94,7 +94,7 @@ mod tests {
         let spans = splitter.chunk(&doc, &config).expect("split tokens");
         let texts: Vec<&str> = spans
             .iter()
-            .map(|span| &doc.content[span.start..span.end])
+            .map(|span| &doc.content[span.start()..span.end()])
             .collect();
         assert_eq!(texts, vec!["one two", "two three", "three four", "four five"]);
     }

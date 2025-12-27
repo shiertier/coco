@@ -90,7 +90,7 @@ pub fn truncate_tokens(content: &str, max_tokens: usize) -> String {
         return content.to_string();
     }
 
-    let end = tokens[max_tokens - 1].end;
+    let end = tokens[max_tokens - 1].end();
     content[..end].to_string()
 }
 
@@ -119,10 +119,10 @@ pub fn token_windows(
 
     while index < tokens.len() {
         let end_index = (index + window_size).min(tokens.len());
-        spans.push(TextSpan {
-            start: tokens[index].start,
-            end: tokens[end_index - 1].end,
-        });
+        spans.push(TextSpan::new(
+            tokens[index].start(),
+            tokens[end_index - 1].end(),
+        )?);
 
         if end_index == tokens.len() {
             break;
@@ -142,7 +142,7 @@ pub(crate) fn token_spans(content: &str) -> Vec<TextSpan> {
     for (index, ch) in content.char_indices() {
         if ch.is_whitespace() {
             if in_token {
-                spans.push(TextSpan { start, end: index });
+                spans.push(TextSpan::new(start, index).expect("valid span"));
                 in_token = false;
             }
         } else if !in_token {
@@ -152,10 +152,7 @@ pub(crate) fn token_spans(content: &str) -> Vec<TextSpan> {
     }
 
     if in_token {
-        spans.push(TextSpan {
-            start,
-            end: content.len(),
-        });
+        spans.push(TextSpan::new(start, content.len()).expect("valid span"));
     }
 
     spans
@@ -203,7 +200,7 @@ mod tests {
         let windows = token_windows(input, 2, 1).expect("build windows");
         let texts: Vec<&str> = windows
             .iter()
-            .map(|span| &input[span.start..span.end])
+            .map(|span| &input[span.start()..span.end()])
             .collect();
         assert_eq!(texts, vec!["one two", "two three", "three four"]);
     }
