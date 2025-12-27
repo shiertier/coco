@@ -386,11 +386,11 @@ impl SearchIntent {
     }
 
     pub fn validate_context(&self, context: &ValidationContext) -> CocoResult<()> {
-        if let Some(expected) = context.embedding_dimensions {
-            if let Some(embedding) = self.query_embedding() {
-                if embedding.len() != expected {
-                    return Err(validation_error("query_embedding has wrong dimension"));
-                }
+        if let (Some(expected), Some(embedding)) =
+            (context.embedding_dimensions, self.query_embedding())
+        {
+            if embedding.len() != expected {
+                return Err(validation_error("query_embedding has wrong dimension"));
             }
         }
         if let Some(config_id) = self.indexing_config_id() {
@@ -430,9 +430,6 @@ impl TryFrom<SearchIntentInput> for SearchIntent {
             filters,
             reranker,
         } = input;
-        if top_k == 0 {
-            return Err(validation_error("top_k must be greater than zero"));
-        }
         if !(0.0..=1.0).contains(&hybrid_alpha) {
             return Err(validation_error("hybrid_alpha must be between 0 and 1"));
         }
