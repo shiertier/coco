@@ -21,9 +21,6 @@ pub fn build_search_intent(input: SearchIntentInput) -> CocoResult<SearchIntent>
         filters,
         reranker,
     } = input;
-    if !(0.0..=1.0).contains(&hybrid_alpha) {
-        return Err(validation_error("hybrid_alpha must be between 0 and 1"));
-    }
     let query = match retrieval_mode {
         RetrievalMode::Vector => {
             let embedding = query_embedding.ok_or_else(|| {
@@ -66,28 +63,14 @@ pub fn build_search_intent_from_parts(
     filters: Vec<Filter>,
     reranker: Option<RerankerConfig>,
 ) -> CocoResult<SearchIntent> {
-    match &query {
-        SearchQuery::Vector { embedding } => {
-            ensure_non_empty_embedding(embedding)?;
-        }
-        SearchQuery::Fts { text } => {
-            ensure_non_empty_trimmed(text, "query_text")?;
-        }
-        SearchQuery::Hybrid { text, embedding } => {
-            ensure_non_empty_trimmed(text, "query_text")?;
-            ensure_non_empty_embedding(embedding)?;
-        }
+    validate_search_query(&query)?;
+    validate_hybrid_alpha(hybrid_alpha)?;
+    validate_reranker(reranker.as_ref(), top_k)?;
+    if let Some(config_id) = indexing_config_id.as_deref() {
+        ensure_normalized_config_id(config_id)?;
     }
-    if !(0.0..=1.0).contains(&hybrid_alpha) {
-        return Err(validation_error("hybrid_alpha must be between 0 and 1"));
-    }
-    if let Some(reranker) = reranker.as_ref() {
-        if reranker.rerank_top_n == 0 {
-            return Err(validation_error("rerank_top_n must be greater than zero"));
-        }
-        if reranker.rerank_top_n > top_k.get() {
-            return Err(validation_error("rerank_top_n must be <= top_k"));
-        }
+    for filter in &filters {
+        validate_filter_value(filter)?;
     }
     Ok(SearchIntent::new_unchecked(
         query,
@@ -131,6 +114,9 @@ pub fn validate_search_intent(
     intent: &SearchIntent,
     context: &ValidationContext,
 ) -> CocoResult<()> {
+    validate_search_query(intent.query())?;
+    validate_hybrid_alpha(intent.hybrid_alpha())?;
+    validate_reranker(intent.reranker(), intent.top_k())?;
     if let (Some(expected), Some(embedding)) =
         (context.embedding_dimensions, intent.query_embedding())
     {
@@ -351,6 +337,41 @@ fn validate_filter_value(filter: &Filter) -> CocoResult<()> {
         )),
         _ => Ok(()),
     }
+}
+
+fn validate_search_query(query: &SearchQuery) -> CocoResult<()> {
+    match query {
+        SearchQuery::Vector { embedding } => {
+            ensure_non_empty_embedding(embedding)?;
+        }
+        SearchQuery::Fts { text } => {
+            ensure_non_empty_trimmed(text, "query_text")?;
+        }
+        SearchQuery::Hybrid { text, embedding } => {
+            ensure_non_empty_trimmed(text, "query_text")?;
+            ensure_non_empty_embedding(embedding)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_hybrid_alpha(hybrid_alpha: f32) -> CocoResult<()> {
+    if !(0.0..=1.0).contains(&hybrid_alpha) {
+        return Err(validation_error("hybrid_alpha must be between 0 and 1"));
+    }
+    Ok(())
+}
+
+fn validate_reranker(reranker: Option<&RerankerConfig>, top_k: NonZeroU32) -> CocoResult<()> {
+    if let Some(reranker) = reranker {
+        if reranker.rerank_top_n == 0 {
+            return Err(validation_error("rerank_top_n must be greater than zero"));
+        }
+        if reranker.rerank_top_n > top_k.get() {
+            return Err(validation_error("rerank_top_n must be <= top_k"));
+        }
+    }
+    Ok(())
 }
 
 fn ensure_non_empty_embedding(value: &[f32]) -> CocoResult<()> {

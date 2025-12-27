@@ -88,7 +88,7 @@ impl Chunker for CodeSplitter {
         for (index, boundary_line) in boundary_lines.iter().enumerate() {
             let start_line = include_comment_block(&lines, *boundary_line, doc.file_type);
             let mut start = lines[start_line].start;
-            if include_preamble && start > preamble_end {
+            if include_preamble && index == 0 && start > preamble_end {
                 start = 0;
             }
 

@@ -148,7 +148,11 @@ impl AstQuery {
     }
 
     /// Runs the query against the given node and returns all captures.
-    pub fn captures<'a>(&'a self, node: Node<'a>, source: &'a [u8]) -> Vec<AstCapture> {
+    pub fn captures<'a>(
+        &'a self,
+        node: Node<'a>,
+        source: &'a [u8],
+    ) -> CocoResult<Vec<AstCapture>> {
         let mut cursor = QueryCursor::new();
         let mut captures = Vec::new();
         for (matched, capture_index) in cursor.captures(&self.query, node, |_| source) {
@@ -159,20 +163,21 @@ impl AstQuery {
                     .cloned()
                     .unwrap_or_else(|| capture.index.to_string());
                 let range = capture.node.byte_range();
-                let text = capture
-                    .node
-                    .utf8_text(source)
-                    .map(|value| value.to_string())
-                    .unwrap_or_default();
+                let text = capture.node.utf8_text(source).map_err(|err| {
+                    CocoError::compute(format!(
+                        "invalid utf8 in capture {name} at {}..{}: {err}",
+                        range.start, range.end
+                    ))
+                })?;
                 captures.push(AstCapture {
                     name,
                     start_byte: range.start,
                     end_byte: range.end,
-                    text,
+                    text: text.to_string(),
                 });
             }
         }
-        captures
+        Ok(captures)
     }
 
     /// Returns capture names in declaration order.

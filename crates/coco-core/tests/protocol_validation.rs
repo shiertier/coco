@@ -1,9 +1,13 @@
-use coco_core::{build_search_intent, normalize_config_id, validate_indexing_config, validate_search_intent};
+use std::num::NonZeroU32;
+
+use coco_core::{
+    build_search_intent, normalize_config_id, validate_indexing_config, validate_search_intent,
+};
 use coco_protocol::{
     ChunkId, ChunkingStrategy, CocoError, CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse,
     Filter, FilterField, FilterOp, FilterValue, HnswParams, IndexingConfig, RetrievalMode,
-    SearchIntentInput, TextSpan, ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric,
-    VectorRecord,
+    RerankerConfig, SearchIntent, SearchIntentInput, SearchQuery, TextSpan, ValidationContext,
+    VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -161,6 +165,76 @@ fn validate_search_intent_rejects_reranker_zero_or_oversized() {
 }
 
 #[test]
+fn build_search_intent_rejects_invalid_indexing_config_id() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.indexing_config_id = Some(" Bad".to_string());
+    assert!(build_search_intent(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_invalid_indexing_config_id() {
+    let intent = SearchIntent::new_unchecked(
+        SearchQuery::Fts {
+            text: "hello".to_string(),
+        },
+        Some(" Bad".to_string()),
+        NonZeroU32::new(5).expect("top_k"),
+        0.5,
+        Vec::new(),
+        None,
+    );
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_invalid_hybrid_alpha() {
+    let intent = SearchIntent::new_unchecked(
+        SearchQuery::Fts {
+            text: "hello".to_string(),
+        },
+        None,
+        NonZeroU32::new(5).expect("top_k"),
+        1.5,
+        Vec::new(),
+        None,
+    );
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_invalid_reranker() {
+    let intent = SearchIntent::new_unchecked(
+        SearchQuery::Fts {
+            text: "hello".to_string(),
+        },
+        None,
+        NonZeroU32::new(5).expect("top_k"),
+        0.5,
+        Vec::new(),
+        Some(RerankerConfig {
+            model_name: "rerank".to_string(),
+            rerank_top_n: 0,
+        }),
+    );
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+
+    let intent = SearchIntent::new_unchecked(
+        SearchQuery::Fts {
+            text: "hello".to_string(),
+        },
+        None,
+        NonZeroU32::new(3).expect("top_k"),
+        0.5,
+        Vec::new(),
+        Some(RerankerConfig {
+            model_name: "rerank".to_string(),
+            rerank_top_n: 5,
+        }),
+    );
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+}
+
+#[test]
 fn validate_search_intent_enforces_filter_allowlist() {
     let intent = SearchIntentInput {
         filters: vec![Filter {
@@ -179,7 +253,7 @@ fn validate_search_intent_enforces_filter_allowlist() {
 }
 
 #[test]
-fn validate_search_intent_rejects_filter_value_mismatch() {
+fn build_search_intent_rejects_filter_value_mismatch() {
     let intent = SearchIntentInput {
         filters: vec![Filter {
             field: FilterField::new("path").expect("filter field"),
@@ -188,8 +262,7 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = build_search_intent(intent).expect("validated intent");
-    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+    assert!(build_search_intent(intent).is_err());
 
     let intent = SearchIntentInput {
         filters: vec![Filter {
@@ -199,8 +272,7 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = build_search_intent(intent).expect("validated intent");
-    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+    assert!(build_search_intent(intent).is_err());
 
     let intent = SearchIntentInput {
         filters: vec![Filter {
@@ -210,7 +282,25 @@ fn validate_search_intent_rejects_filter_value_mismatch() {
         }],
         ..sample_intent(RetrievalMode::Fts)
     };
-    let intent = build_search_intent(intent).expect("validated intent");
+    assert!(build_search_intent(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_filter_value_mismatch() {
+    let intent = SearchIntent::new_unchecked(
+        SearchQuery::Fts {
+            text: "hello".to_string(),
+        },
+        None,
+        NonZeroU32::new(5).expect("top_k"),
+        0.5,
+        vec![Filter {
+            field: FilterField::new("path").expect("filter field"),
+            op: FilterOp::Contains,
+            value: FilterValue::Int(42),
+        }],
+        None,
+    );
     assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 }
 
