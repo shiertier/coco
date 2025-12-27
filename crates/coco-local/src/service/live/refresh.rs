@@ -44,7 +44,7 @@ pub(crate) async fn refresh_results_from_fs(
                 continue;
             }
         };
-        let stale = match file_is_stale(&record) {
+        let stale = match file_is_stale(&record).await {
             Ok(value) => value,
             Err(err) => {
                 warn!("failed to stat {}: {err}", record.path);
@@ -77,7 +77,7 @@ pub(crate) async fn refresh_results_from_fs(
             refreshed.push(hit);
             continue;
         };
-        let content = match load_document_content(snapshot, path) {
+        let content = match load_document_content(snapshot, path).await {
             Some(content) => content,
             None => {
                 refreshed.push(hit);
@@ -96,11 +96,11 @@ pub(crate) async fn refresh_results_from_fs(
     }
 }
 
-fn file_is_stale(record: &DocumentRecord) -> CocoResult<bool> {
+async fn file_is_stale(record: &DocumentRecord) -> CocoResult<bool> {
     let Some(path) = non_empty_path(&record.path) else {
         return Ok(false);
     };
-    let metadata = std::fs::metadata(path).map_err(|err| {
+    let metadata = tokio::fs::metadata(path).await.map_err(|err| {
         CocoError::system(format!("failed to read metadata: {err}"))
     })?;
     let modified = metadata
@@ -118,12 +118,12 @@ pub(crate) fn non_empty_path(path: &str) -> Option<&Path> {
     Some(Path::new(trimmed))
 }
 
-fn load_document_content<'a>(
+async fn load_document_content<'a>(
     snapshot: &'a mut DocumentSnapshot,
     path: &Path,
 ) -> Option<&'a str> {
     if snapshot.content.is_none() {
-        match std::fs::read_to_string(path) {
+        match tokio::fs::read_to_string(path).await {
             Ok(content) => snapshot.content = Some(content),
             Err(err) => {
                 warn!("failed to read {}: {err}", path.display());

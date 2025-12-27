@@ -93,7 +93,7 @@ pub(crate) async fn query_documents(
 
     let version_id = state.meta.ensure_active_version_id(project_id).await?;
     intent.indexing_config_id = Some(selected_config_id.clone());
-    fill_query_embedding(&mut intent, state.embedder.as_deref())?;
+    fill_query_embedding(&mut intent, state.embedder.as_deref()).await?;
     let intent = build_search_intent(intent)?;
     validate_local_search_intent(&intent, &config)?;
 

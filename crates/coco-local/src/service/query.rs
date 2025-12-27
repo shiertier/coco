@@ -145,7 +145,7 @@ pub(crate) fn indexing_config_from_record(record: IndexingConfigRecord) -> Index
     }
 }
 
-pub(crate) fn fill_query_embedding(
+pub(crate) async fn fill_query_embedding(
     intent: &mut SearchIntentInput,
     embedder: Option<&LocalEmbedder>,
 ) -> CocoResult<()> {
@@ -160,8 +160,15 @@ pub(crate) fn fill_query_embedding(
                 .ok_or_else(|| CocoError::user("query_text required to build embedding"))?;
             let embedder =
                 embedder.ok_or_else(|| CocoError::user("embedding model not configured"))?;
-            let embeddings = embedder.embed(&[query_text])?;
-            let embedding = embeddings
+            let query_text = query_text.to_string();
+            let embedder = embedder.clone();
+            let embeddings = tokio::task::spawn_blocking(move || {
+                let refs = [query_text.as_str()];
+                embedder.embed(&refs)
+            })
+            .await
+            .map_err(|err| CocoError::system(format!("embedding task failed: {err}")))?;
+            let embedding = embeddings?
                 .into_iter()
                 .next()
                 .ok_or_else(|| CocoError::compute("empty embedding output"))?;

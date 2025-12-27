@@ -414,29 +414,41 @@ impl ModelPool {
         override_url: Option<&str>,
     ) -> CocoResult<Arc<OrtEmbedder>> {
         let key = spec.file_name.clone();
-        let mut guard = self
-            .models
-            .lock()
-            .map_err(|_| CocoError::system("model pool lock poisoned"))?;
-
-        if let Some(entry) = guard.get(&key) {
-            return Ok(Arc::clone(&entry.embedder));
+        {
+            let guard = self
+                .models
+                .lock()
+                .map_err(|_| CocoError::system("model pool lock poisoned"))?;
+            if let Some(entry) = guard.get(&key) {
+                return Ok(Arc::clone(&entry.embedder));
+            }
         }
 
         let path = self.store.ensure_model(spec, override_url, None)?;
         let size = std::fs::metadata(&path)
             .map_err(|err| CocoError::system(format!("failed to read model metadata: {err}")))?
             .len();
-        let embedder = OrtEmbedder::from_file(&path, spec.name.clone(), spec.dimensions)?;
-        let shared = Arc::new(embedder);
+        let embedder = Arc::new(OrtEmbedder::from_file(
+            &path,
+            spec.name.clone(),
+            spec.dimensions,
+        )?);
+
+        let mut guard = self
+            .models
+            .lock()
+            .map_err(|_| CocoError::system("model pool lock poisoned"))?;
+        if let Some(entry) = guard.get(&key) {
+            return Ok(Arc::clone(&entry.embedder));
+        }
         guard.insert(
             key,
             ModelEntry {
-                embedder: Arc::clone(&shared),
+                embedder: Arc::clone(&embedder),
                 bytes: size,
             },
         );
-        Ok(shared)
+        Ok(embedder)
     }
 
     /// Returns aggregated model pool statistics.
