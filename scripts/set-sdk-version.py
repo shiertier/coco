@@ -22,6 +22,16 @@ def main() -> int:
     text = re.sub(r'(?m)^version = ".*"$', f'version = "{version}"', text)
     pyproject.write_text(text)
 
+    python_config = repo_root / "scripts" / "openapi-python-client.yaml"
+    if python_config.exists():
+        text = python_config.read_text()
+        text = re.sub(
+            r'(?m)^package_version_override: ".*"$',
+            f'package_version_override: "{version}"',
+            text,
+        )
+        python_config.write_text(text)
+
     return 0
 
 

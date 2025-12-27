@@ -6,3 +6,8 @@ __pycache__/
 *.git-cache
 
 *target
+.cache/
+**/.cache/
+sdk/node_modules/
+sdk/dist/
+sdk/package-lock.json

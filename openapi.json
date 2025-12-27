@@ -9,12 +9,12 @@
     "version": "0.0.1"
   },
   "paths": {
-    "/v1/docs/index": {
+    "/v1/docs/import": {
       "post": {
         "tags": [
           "Docs"
         ],
-        "operationId": "index_documents",
+        "operationId": "import_documents",
         "parameters": [
           {
             "name": "x-coco-org-id",
@@ -26,160 +26,9 @@
             }
           },
           {
-            "name": "x-coco-project-id",
+            "name": "x-coco-user-id",
             "in": "header",
-            "description": "Project identifier",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IndexRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Reindex accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IndexResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/docs/query": {
-      "post": {
-        "tags": [
-          "Memo"
-        ],
-        "operationId": "query_documents",
-        "parameters": [
-          {
-            "name": "x-coco-org-id",
-            "in": "header",
-            "description": "Organization identifier",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-coco-project-id",
-            "in": "header",
-            "description": "Project identifier",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QueryRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Query results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QueryResponseEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/ingest/batch": {
-      "post": {
-        "tags": [
-          "Docs"
-        ],
-        "operationId": "ingest_batch",
-        "parameters": [
-          {
-            "name": "x-coco-org-id",
-            "in": "header",
-            "description": "Organization identifier",
+            "description": "User identifier",
             "required": true,
             "schema": {
               "type": "string"
@@ -247,6 +96,621 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "import_documents",
+        "parameters": [
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestBatchResponse"
+                }
+              }
+            },
+            "description": "Batch accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "tags": [
+          "Docs"
+        ]
+      }
+    },
+    "/v1/docs/index": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "index_documents",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-user-id",
+            "in": "header",
+            "description": "User identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Reindex accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "index_documents",
+        "parameters": [
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexResponse"
+                }
+              }
+            },
+            "description": "Reindex accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "tags": [
+          "Docs"
+        ]
+      }
+    },
+    "/v1/docs/query": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "query_documents",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-user-id",
+            "in": "header",
+            "description": "User identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Query results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponseEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "query_documents",
+        "parameters": [
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponseEnvelope"
+                }
+              }
+            },
+            "description": "Query results"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "tags": [
+          "Docs"
+        ]
+      }
+    },
+    "/v1/ingest/batch": {
+      "post": {
+        "tags": [
+          "Docs"
+        ],
+        "operationId": "ingest_batch",
+        "parameters": [
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-user-id",
+            "in": "header",
+            "description": "User identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Batch accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "ingest_batch",
+        "parameters": [
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestBatchResponse"
+                }
+              }
+            },
+            "description": "Batch accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "tags": [
+          "Docs"
+        ]
       }
     },
     "/v1/jobs/{id}": {
@@ -263,6 +727,34 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-user-id",
+            "in": "header",
+            "description": "User identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
             }
           }
         ],
@@ -298,6 +790,83 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "get_job",
+        "parameters": [
+          {
+            "description": "Job identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            },
+            "description": "Job status"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Job not found"
+          }
+        },
+        "tags": [
+          "Jobs"
+        ]
       }
     },
     "/v1/jobs/{id}/events": {
@@ -315,6 +884,34 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "x-coco-org-id",
+            "in": "header",
+            "description": "Organization identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-user-id",
+            "in": "header",
+            "description": "User identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-coco-project-id",
+            "in": "header",
+            "description": "Project identifier",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -329,12 +926,69 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "job_events",
+        "parameters": [
+          {
+            "description": "Job identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Organization identifier",
+            "in": "header",
+            "name": "x-coco-org-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "header",
+            "name": "x-coco-user-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "header",
+            "name": "x-coco-project-id",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            },
+            "description": "Job event stream"
+          }
+        },
+        "tags": [
+          "Jobs"
+        ]
       }
     },
     "/v1/memo/query": {
       "post": {
         "tags": [
-          "Docs"
+          "Memo"
         ],
         "operationId": "query_memos",
         "requestBody": {
@@ -389,6 +1043,64 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "query_memos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoQueryResponseEnvelope"
+                }
+              }
+            },
+            "description": "Memo query results"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "tags": [
+          "Memo"
+        ]
       }
     },
     "/v1/sys/configs": {
@@ -405,6 +1117,16 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "User identifier",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
             }
           },
           {
@@ -498,6 +1220,123 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "list_configs",
+        "parameters": [
+          {
+            "description": "Organization identifier",
+            "in": "query",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "User identifier",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project identifier",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListConfigsResponse"
+                }
+              }
+            },
+            "description": "Indexing configs"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      },
+      "post": {
+        "operationId": "upsert_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingConfigResponse"
+                }
+              }
+            },
+            "description": "Indexing config"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "System"
+        ]
       }
     },
     "/v1/sys/configs/activate": {
@@ -548,6 +1387,54 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "activate_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivateConfigResponse"
+                }
+              }
+            },
+            "description": "Activated config"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "System"
+        ]
       }
     },
     "/v1/sys/health": {
@@ -568,6 +1455,62 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Service health"
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/v1/sys/openapi": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "openapi_json",
+        "responses": {
+          "200": {
+            "description": "OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "openapi_json",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OpenAPI document"
+          }
+        },
+        "tags": [
+          "System"
+        ]
       }
     },
     "/v1/sys/prune": {
@@ -618,6 +1561,54 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "prune_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PruneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PruneResponse"
+                }
+              }
+            },
+            "description": "Prune completed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "System"
+        ]
       }
     },
     "/v1/sys/register": {
@@ -668,6 +1659,54 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "register_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterProjectResponse"
+                }
+              }
+            },
+            "description": "Project registered"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "System"
+        ]
       }
     }
   },
@@ -677,6 +1716,7 @@
         "type": "object",
         "required": [
           "org_id",
+          "user_id",
           "project_id",
           "config_id"
         ],
@@ -688,6 +1728,9 @@
             "type": "string"
           },
           "project_id": {
+            "type": "string"
+          },
+          "user_id": {
             "type": "string"
           }
         }
@@ -750,6 +1793,33 @@
           }
         }
       },
+      "ChunkingStrategy": {
+        "type": "object",
+        "description": "Chunking strategy parameters.",
+        "required": [
+          "strategy_name",
+          "chunk_size",
+          "chunk_overlap"
+        ],
+        "properties": {
+          "chunk_overlap": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Overlap size between adjacent chunks.",
+            "minimum": 0
+          },
+          "chunk_size": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Target chunk size in tokens or characters.",
+            "minimum": 0
+          },
+          "strategy_name": {
+            "type": "string",
+            "description": "Strategy name (e.g., markdown_header, fixed_token)."
+          }
+        }
+      },
       "CocoErrorKind": {
         "type": "string",
         "description": "High-level error categories for CoCo.\n\nAdding new variants is a breaking change for the public API.",
@@ -760,6 +1830,26 @@
           "storage",
           "compute"
         ]
+      },
+      "EmbeddingConfig": {
+        "type": "object",
+        "description": "Embedding model configuration.",
+        "required": [
+          "model_name"
+        ],
+        "properties": {
+          "dimensions": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Embedding dimensions if known.",
+            "nullable": true,
+            "minimum": 0
+          },
+          "model_name": {
+            "type": "string",
+            "description": "Model name used to generate embeddings."
+          }
+        }
       },
       "ErrorResponse": {
         "type": "object",
@@ -846,6 +1936,47 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "IndexingConfig": {
+        "type": "object",
+        "description": "Indexing-time configuration for a project.",
+        "required": [
+          "config_id",
+          "chunking",
+          "embedding",
+          "vector_metric"
+        ],
+        "properties": {
+          "chunking": {
+            "$ref": "#/components/schemas/ChunkingStrategy"
+          },
+          "config_id": {
+            "type": "string",
+            "description": "Stable identifier of this indexing strategy.\nNote: a config_id must map to a compatible embedding dimension/metric."
+          },
+          "embedding": {
+            "$ref": "#/components/schemas/EmbeddingConfig"
+          },
+          "index_params": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VectorIndexParams"
+              }
+            ],
+            "nullable": true
+          },
+          "vector_backend": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VectorBackendConfig"
+              }
+            ],
+            "nullable": true
+          },
+          "vector_metric": {
+            "$ref": "#/components/schemas/VectorMetric"
           }
         }
       },
@@ -1055,6 +2186,10 @@
           "project_id": {
             "type": "string",
             "nullable": true
+          },
+          "user_id": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -1086,6 +2221,14 @@
           "intent": {
             "$ref": "#/components/schemas/PublicSearchIntent"
           },
+          "retrieval_config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RetrievalConfig"
+              }
+            ],
+            "nullable": true
+          },
           "session_token": {
             "type": "string"
           }
@@ -1110,6 +2253,7 @@
         "type": "object",
         "required": [
           "org_id",
+          "user_id",
           "project_id"
         ],
         "properties": {
@@ -1122,6 +2266,9 @@
             "type": "string"
           },
           "project_id": {
+            "type": "string"
+          },
+          "user_id": {
             "type": "string"
           }
         }
@@ -1212,13 +2359,13 @@
           "reranker": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/coco_protocol.RerankerConfig"
+                "$ref": "#/components/schemas/RerankerConfig"
               }
             ],
             "nullable": true
           },
           "retrieval_mode": {
-            "$ref": "#/components/schemas/coco_protocol.RetrievalMode"
+            "$ref": "#/components/schemas/RetrievalMode"
           },
           "top_k": {
             "type": "integer",
@@ -1311,6 +2458,7 @@
         "type": "object",
         "required": [
           "org_id",
+          "user_id",
           "name",
           "source_ref"
         ],
@@ -1334,6 +2482,9 @@
             "nullable": true
           },
           "source_ref": {
+            "type": "string"
+          },
+          "user_id": {
             "type": "string"
           }
         }
@@ -1404,6 +2555,47 @@
           "fresh",
           "stale"
         ]
+      },
+      "RetrievalConfig": {
+        "type": "object",
+        "description": "Query-time retrieval configuration.",
+        "required": [
+          "retrieval_mode",
+          "top_k",
+          "hybrid_alpha"
+        ],
+        "properties": {
+          "hybrid_alpha": {
+            "type": "number",
+            "format": "float",
+            "description": "Hybrid weight for vector vs. keyword scoring."
+          },
+          "reranker": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RerankerConfig"
+              }
+            ],
+            "nullable": true
+          },
+          "retrieval_mode": {
+            "$ref": "#/components/schemas/RetrievalMode"
+          },
+          "top_k": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of candidates to return.",
+            "minimum": 0
+          },
+          "vector_backend": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VectorBackendConfig"
+              }
+            ],
+            "nullable": true
+          }
+        }
       },
       "RetrievalMode": {
         "type": "string",
@@ -1487,6 +2679,33 @@
           },
           "org_id": {
             "type": "string"
+          }
+        }
+      },
+      "VectorBackendConfig": {
+        "type": "object",
+        "description": "Configuration for selecting a vector backend.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "description": "Optional API key or token.",
+            "nullable": true
+          },
+          "collection_prefix": {
+            "type": "string",
+            "description": "Optional collection name prefix.",
+            "nullable": true
+          },
+          "kind": {
+            "$ref": "#/components/schemas/VectorBackendKind"
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional endpoint or connection URL.",
+            "nullable": true
           }
         }
       },

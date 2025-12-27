@@ -5,8 +5,8 @@ use axum::response::Response;
 use axum::{extract::State, Json};
 
 use coco_protocol::{
-    validate_search_intent, CocoError, IndexingPlan, ResponseMeta, ResponseStatus, SearchIntent,
-    SearchIntentInput, ValidationContext, VectorStore,
+    validate_search_intent, CocoError, FilterField, IndexingPlan, ResponseMeta, ResponseStatus,
+    SearchIntent, SearchIntentInput, ValidationContext, VectorStore,
 };
 
 use super::super::constants::{SERVER_FILTER_FIELDS, SERVER_FILTER_OPS};
@@ -31,7 +31,7 @@ use crate::storage::meta::NewIngestJob;
 #[utoipa::path(
     post,
     path = "/v1/docs/query",
-    tag = "Memo",
+    tag = "Docs",
     params(
         ("x-coco-org-id" = String, Header, description = "Organization identifier"),
         ("x-coco-user-id" = String, Header, description = "User identifier"),
@@ -54,7 +54,7 @@ pub(crate) async fn query_documents(
     if payload.indexing_config.is_some() {
         return Err(CocoError::user("indexing_config must be registered before query").into());
     }
-    let mut intent: SearchIntentInput = payload.intent.into();
+    let mut intent: SearchIntentInput = payload.intent.try_into()?;
     if let Some(retrieval) = payload.retrieval_config {
         apply_retrieval_config(&mut intent, retrieval, state.vector_backend_kind)?;
     }
@@ -111,8 +111,8 @@ pub(crate) async fn query_documents(
         allowed_filter_fields: Some(
             SERVER_FILTER_FIELDS
                 .iter()
-                .map(|field| (*field).to_string())
-                .collect(),
+                .map(|field| FilterField::new(*field))
+                .collect::<Result<Vec<_>, _>>()?,
         ),
         allowed_filter_ops: Some(SERVER_FILTER_OPS.to_vec()),
         active_config_id: Some(active_config_id.clone()),
@@ -202,7 +202,7 @@ pub(crate) async fn index_documents(
 #[utoipa::path(
     post,
     path = "/v1/memo/query",
-    tag = "Docs",
+    tag = "Memo",
     request_body = MemoQueryRequest,
     responses(
         (status = 200, description = "Memo query results", body = MemoQueryResponseEnvelope),
@@ -221,7 +221,7 @@ pub(crate) async fn query_memos(
     if payload.intent.indexing_config_id.is_some() {
         return Err(CocoError::user("indexing_config_id is not supported for memo query").into());
     }
-    let mut intent: SearchIntentInput = payload.intent.into();
+    let mut intent: SearchIntentInput = payload.intent.try_into()?;
     if let Some(retrieval) = payload.retrieval_config {
         if retrieval.vector_backend.is_some() {
             return Err(CocoError::user(
@@ -238,8 +238,8 @@ pub(crate) async fn query_memos(
         allowed_filter_fields: Some(
             SERVER_FILTER_FIELDS
                 .iter()
-                .map(|field| (*field).to_string())
-                .collect(),
+                .map(|field| FilterField::new(*field))
+                .collect::<Result<Vec<_>, _>>()?,
         ),
         allowed_filter_ops: Some(SERVER_FILTER_OPS.to_vec()),
         active_config_id: None,

@@ -1,8 +1,8 @@
 use coco_protocol::{
     validate_indexing_config, validate_search_intent, ChunkId, ChunkingStrategy, CocoError,
-    CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse, Filter, FilterOp, FilterValue,
-    HnswParams, IndexingConfig, RetrievalMode, SearchIntent, SearchIntentInput, TextSpan,
-    ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+    CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse, Filter, FilterField, FilterOp,
+    FilterValue, HnswParams, IndexingConfig, RetrievalMode, SearchIntent, SearchIntentInput,
+    TextSpan, ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -77,7 +77,7 @@ fn vector_record_serializes_config_id() {
             config_id: Some("default".to_string()),
             doc_id: DocumentId::new("doc-1"),
             content: "hello".to_string(),
-            span: TextSpan { start: 0, end: 5 },
+            span: TextSpan::new(0, 5).expect("span"),
         },
     };
     let value = serde_json::to_value(&record).expect("serialize record");
@@ -129,10 +129,34 @@ fn validate_search_intent_rejects_out_of_range_alpha() {
 }
 
 #[test]
+fn validate_search_intent_rejects_blank_query_text() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.query_text = Some("   ".to_string());
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_reranker_zero_or_oversized() {
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.reranker = Some(coco_protocol::RerankerConfig {
+        model_name: "rerank".to_string(),
+        rerank_top_n: 0,
+    });
+    assert!(SearchIntent::try_from(intent).is_err());
+
+    let mut intent = sample_intent(RetrievalMode::Fts);
+    intent.reranker = Some(coco_protocol::RerankerConfig {
+        model_name: "rerank".to_string(),
+        rerank_top_n: 999,
+    });
+    assert!(SearchIntent::try_from(intent).is_err());
+}
+
+#[test]
 fn validate_search_intent_enforces_filter_allowlist() {
     let intent = SearchIntentInput {
         filters: vec![Filter {
-            field: "path".to_string(),
+            field: FilterField::new("path").expect("filter field"),
             op: FilterOp::Contains,
             value: FilterValue::String("src".to_string()),
         }],
@@ -140,10 +164,35 @@ fn validate_search_intent_enforces_filter_allowlist() {
     };
     let intent = SearchIntent::try_from(intent).expect("validated intent");
     let context = ValidationContext {
-        allowed_filter_fields: Some(vec!["doc_id".to_string()]),
+        allowed_filter_fields: Some(vec![FilterField::new("doc_id").expect("filter field")]),
         ..ValidationContext::default()
     };
     assert!(validate_search_intent(&intent, &context).is_err());
+}
+
+#[test]
+fn validate_search_intent_rejects_filter_value_mismatch() {
+    let intent = SearchIntentInput {
+        filters: vec![Filter {
+            field: FilterField::new("path").expect("filter field"),
+            op: FilterOp::Contains,
+            value: FilterValue::Int(42),
+        }],
+        ..sample_intent(RetrievalMode::Fts)
+    };
+    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
+
+    let intent = SearchIntentInput {
+        filters: vec![Filter {
+            field: FilterField::new("path").expect("filter field"),
+            op: FilterOp::In,
+            value: FilterValue::Bool(true),
+        }],
+        ..sample_intent(RetrievalMode::Fts)
+    };
+    let intent = SearchIntent::try_from(intent).expect("validated intent");
+    assert!(validate_search_intent(&intent, &ValidationContext::default()).is_err());
 }
 
 #[test]

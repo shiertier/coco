@@ -1,13 +1,18 @@
 # CoCo TypeScript SDK
 
-This SDK is generated from `openapi.json`.
+This SDK is generated from `openapi.json` via `openapi-typescript-codegen`.
 
 ## Regenerate
 
 ```
 COCO_OFFLINE=1 bash scripts/generate-openapi.sh
-python scripts/generate-ts-sdk.py
+python3 scripts/generate-ts-sdk.py
 ```
+
+The generator is downloaded automatically using `npm` into `scripts/.cache`.
+Node.js and npm are required. Use `OPENAPI_TS_CODEGEN_VERSION` to pin the generator version.
+
+Regeneration may change the public API surface; use the generated docs in this directory after running the script.
 
 ## Install
 
@@ -17,22 +22,18 @@ npm install coco-sdk
 
 ## Usage
 
-Query endpoints return `ResponseEnvelope` objects. Use `data` for payloads and `meta` for status.
+Service class names are derived from OpenAPI tags; use the generated `services/` exports to call endpoints.
 
 ```ts
-import { CocoClient } from "coco-sdk";
+import { DocsService, OpenAPI } from "coco-sdk";
 
-const client = new CocoClient({
-  baseUrl: "http://127.0.0.1:3456",
-  apiKey: "YOUR_API_KEY",
-});
+OpenAPI.BASE = "http://127.0.0.1:3456";
+OpenAPI.TOKEN = "YOUR_API_KEY";
 
-const headers = {
-  "x-coco-org-id": "org-123",
-  "x-coco-project-id": "proj-456",
-};
-
-const result = await client.queryDocuments(
+const result = await DocsService.queryDocuments(
+  "org-123",
+  "user-789",
+  "proj-456",
   {
     intent: {
       query_text: "how to start the service",
@@ -43,8 +44,7 @@ const result = await client.queryDocuments(
       filters: [],
       reranker: null,
     },
-  },
-  headers
+  }
 );
 
 console.log(result.data.results.length);

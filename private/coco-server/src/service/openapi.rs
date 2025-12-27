@@ -65,8 +65,13 @@ use super::types::{
             coco_protocol::Chunk,
             coco_protocol::TextSpan,
             coco_protocol::RetrievalMode,
+            coco_protocol::RetrievalConfig,
             PublicFilter,
             PublicFilterOp,
+            coco_protocol::IndexingConfig,
+            coco_protocol::ChunkingStrategy,
+            coco_protocol::EmbeddingConfig,
+            coco_protocol::VectorBackendConfig,
             coco_protocol::RerankerConfig,
             coco_protocol::ErrorResponse,
             coco_protocol::CocoErrorKind,
@@ -88,7 +93,6 @@ use super::types::{
 struct ApiDoc;
 
 struct SecurityAddon;
-
 impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         let components = openapi.components.get_or_insert_with(Default::default);
@@ -105,5 +109,17 @@ impl Modify for SecurityAddon {
 
 /// Generates the OpenAPI document for the server API.
 pub fn openapi_document() -> utoipa::openapi::OpenApi {
-    ApiDoc::openapi()
+    sanitize_openapi(ApiDoc::openapi())
+}
+
+fn sanitize_openapi(openapi: utoipa::openapi::OpenApi) -> utoipa::openapi::OpenApi {
+    let json = match serde_json::to_string(&openapi) {
+        Ok(json) => json,
+        Err(_) => return openapi,
+    };
+    let fixed = json.replace(
+        "#/components/schemas/coco_protocol.",
+        "#/components/schemas/",
+    );
+    serde_json::from_str(&fixed).unwrap_or(openapi)
 }

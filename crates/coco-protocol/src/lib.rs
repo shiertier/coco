@@ -138,12 +138,53 @@ pub struct Document {
 }
 
 /// A span inside a document, expressed as byte offsets.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, ToSchema)]
 pub struct TextSpan {
     /// Inclusive start byte offset.
-    pub start: usize,
+    start: usize,
     /// Exclusive end byte offset.
-    pub end: usize,
+    end: usize,
+}
+
+impl TextSpan {
+    pub fn new(start: usize, end: usize) -> CocoResult<Self> {
+        if start > end {
+            return Err(validation_error("text span start must be <= end"));
+        }
+        Ok(Self { start, end })
+    }
+
+    pub fn start(&self) -> usize {
+        self.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.end
+    }
+
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+}
+
+impl<'de> Deserialize<'de> for TextSpan {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct TextSpanDef {
+            start: usize,
+            end: usize,
+        }
+
+        let def = TextSpanDef::deserialize(deserializer)?;
+        TextSpan::new(def.start, def.end).map_err(serde::de::Error::custom)
+    }
 }
 
 /// A chunk extracted from a document.
@@ -231,11 +272,79 @@ pub enum FilterValueScalar {
     Bool(bool),
 }
 
+/// Validated filter field identifier.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, ToSchema)]
+#[serde(transparent)]
+#[schema(value_type = String)]
+pub struct FilterField(String);
+
+impl FilterField {
+    pub fn new(value: impl Into<String>) -> CocoResult<Self> {
+        let value = value.into();
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err(validation_error("filter field must not be empty"));
+        }
+        if trimmed != value.as_str() {
+            return Err(validation_error("filter field must be normalized"));
+        }
+        Ok(Self(value))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for FilterField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Deref for FilterField {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl AsRef<str> for FilterField {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for FilterField {
+    type Error = CocoError;
+
+    fn try_from(value: String) -> CocoResult<Self> {
+        FilterField::new(value)
+    }
+}
+
+impl From<FilterField> for String {
+    fn from(value: FilterField) -> Self {
+        value.0
+    }
+}
+
+impl<'de> Deserialize<'de> for FilterField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        FilterField::new(value).map_err(serde::de::Error::custom)
+    }
+}
+
 /// A field-level filter constraint.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Filter {
     /// Field name to filter on.
-    pub field: String,
+    pub field: FilterField,
     /// Comparison operator.
     pub op: FilterOp,
     /// Typed filter value.
@@ -336,8 +445,28 @@ impl SearchIntent {
         filters: Vec<Filter>,
         reranker: Option<RerankerConfig>,
     ) -> CocoResult<Self> {
+        match &query {
+            SearchQuery::Vector { embedding } => {
+                ensure_non_empty_embedding(embedding)?;
+            }
+            SearchQuery::Fts { text } => {
+                ensure_non_empty_trimmed(text, "query_text")?;
+            }
+            SearchQuery::Hybrid { text, embedding } => {
+                ensure_non_empty_trimmed(text, "query_text")?;
+                ensure_non_empty_embedding(embedding)?;
+            }
+        }
         if !(0.0..=1.0).contains(&hybrid_alpha) {
             return Err(validation_error("hybrid_alpha must be between 0 and 1"));
+        }
+        if let Some(reranker) = reranker.as_ref() {
+            if reranker.rerank_top_n == 0 {
+                return Err(validation_error("rerank_top_n must be greater than zero"));
+            }
+            if reranker.rerank_top_n > top_k.get() {
+                return Err(validation_error("rerank_top_n must be <= top_k"));
+            }
         }
         Ok(Self {
             query,
@@ -398,6 +527,9 @@ impl SearchIntent {
         } else if let Some(active_config_id) = context.active_config_id.as_deref() {
             ensure_normalized_config_id(active_config_id)?;
         }
+        for filter in &self.filters {
+            validate_filter_value(filter)?;
+        }
         if let Some(allowed) = context.allowed_filter_fields.as_ref() {
             for filter in &self.filters {
                 if !allowed.iter().any(|field| field == &filter.field) {
@@ -442,13 +574,27 @@ impl TryFrom<SearchIntentInput> for SearchIntent {
             }
             RetrievalMode::Fts => {
                 let text = query_text
-                    .filter(|value| !value.is_empty())
+                    .and_then(|value| {
+                        let trimmed = value.trim();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some(trimmed.to_string())
+                        }
+                    })
                     .ok_or_else(|| validation_error("query_text required for fts search"))?;
                 SearchQuery::Fts { text }
             }
             RetrievalMode::Hybrid => {
                 let text = query_text
-                    .filter(|value| !value.is_empty())
+                    .and_then(|value| {
+                        let trimmed = value.trim();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some(trimmed.to_string())
+                        }
+                    })
                     .ok_or_else(|| validation_error("query_text required for hybrid search"))?;
                 let embedding = query_embedding.ok_or_else(|| {
                     validation_error("query_embedding required for hybrid search")
@@ -904,10 +1050,10 @@ pub struct ValidationContext {
     /// Expected vector backend kind for validation.
     pub expected_vector_backend: Option<VectorBackendKind>,
     /// Allowed filter fields, if validation should enforce a whitelist.
-    pub allowed_filter_fields: Option<Vec<String>>,
+    pub allowed_filter_fields: Option<Vec<FilterField>>,
     /// Allowed filter operators, if validation should enforce a whitelist.
     pub allowed_filter_ops: Option<Vec<FilterOp>>,
-    /// Active config identifier, if validation should enforce selection.
+    /// Active config identifier for validating implicit config selection.
     pub active_config_id: Option<String>,
 }
 
@@ -984,6 +1130,9 @@ pub fn validate_retrieval_config(
     if let Some(reranker) = config.reranker.as_ref() {
         if reranker.rerank_top_n == 0 {
             return Err(validation_error("rerank_top_n must be greater than zero"));
+        }
+        if reranker.rerank_top_n > config.top_k {
+            return Err(validation_error("rerank_top_n must be <= top_k"));
         }
     }
     if let Some(expected) = context.expected_vector_backend {
@@ -1112,6 +1261,44 @@ fn validate_positive_u32(value: Option<u32>, label: &str) -> CocoResult<()> {
     Ok(())
 }
 
+fn validate_filter_value(filter: &Filter) -> CocoResult<()> {
+    match (&filter.op, &filter.value) {
+        (FilterOp::Contains, FilterValue::String(_)) => Ok(()),
+        (FilterOp::Contains, _) => Err(validation_error(
+            "filter value must be string for contains",
+        )),
+        (FilterOp::In, FilterValue::List(values)) => {
+            if values.is_empty() {
+                Err(validation_error("filter value must be non-empty list for in"))
+            } else {
+                Ok(())
+            }
+        }
+        (FilterOp::In, _) => Err(validation_error("filter value must be list for in")),
+        (_, FilterValue::List(_)) => Err(validation_error(
+            "filter value must be scalar for this operator",
+        )),
+        _ => Ok(()),
+    }
+}
+
+fn ensure_non_empty_embedding(value: &[f32]) -> CocoResult<()> {
+    if value.is_empty() {
+        return Err(validation_error("query_embedding must not be empty"));
+    }
+    Ok(())
+}
+
+fn ensure_non_empty_trimmed(value: &str, label: &str) -> CocoResult<()> {
+    if value.is_empty() {
+        return Err(validation_error(&format!("{label} must not be empty")));
+    }
+    if value.trim() != value {
+        return Err(validation_error(&format!("{label} must be normalized")));
+    }
+    Ok(())
+}
+
 fn validation_error(message: &str) -> CocoError {
     CocoError::user(format!("validation error: {message}"))
 }
@@ -1225,7 +1412,7 @@ mod tests {
             top_k: 8,
             hybrid_alpha: 0.7,
             filters: vec![Filter {
-                field: "path".to_string(),
+                field: FilterField::new("path").expect("filter field"),
                 op: FilterOp::Contains,
                 value: FilterValue::String("src/".to_string()),
             }],
@@ -1301,7 +1488,7 @@ mod tests {
                 doc_id: DocumentId::new("doc-1"),
                 content: "hello".to_string(),
                 embedding: None,
-                span: TextSpan { start: 0, end: 5 },
+                span: TextSpan::new(0, 5).expect("span"),
                 quality_score: None,
                 verified: None,
             },
@@ -1367,7 +1554,7 @@ mod tests {
             top_k: 3,
             hybrid_alpha: 0.5,
             filters: vec![Filter {
-                field: "doc_id".to_string(),
+                field: FilterField::new("doc_id").expect("filter field"),
                 op: FilterOp::Gt,
                 value: FilterValue::String("doc-1".to_string()),
             }],
@@ -1377,7 +1564,7 @@ mod tests {
         let context = ValidationContext {
             embedding_dimensions: None,
             expected_vector_backend: None,
-            allowed_filter_fields: Some(vec!["doc_id".to_string()]),
+            allowed_filter_fields: Some(vec![FilterField::new("doc_id").expect("filter field")]),
             allowed_filter_ops: Some(vec![FilterOp::Eq, FilterOp::Contains]),
             active_config_id: None,
         };
