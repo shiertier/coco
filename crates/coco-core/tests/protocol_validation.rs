@@ -119,8 +119,8 @@ fn validate_search_intent_rejects_missing_query_text_for_fts() {
         "filters": [],
         "reranker": null
     });
-    let intent: SearchIntentInput = serde_json::from_value(json).expect("deserialize intent");
-    assert!(build_search_intent(intent).is_err());
+    let decoded = serde_json::from_value::<SearchIntentInput>(json);
+    assert!(decoded.is_err());
 }
 
 #[test]
@@ -133,8 +133,8 @@ fn validate_search_intent_rejects_missing_query_text_for_hybrid() {
         "filters": [],
         "reranker": null
     });
-    let intent: SearchIntentInput = serde_json::from_value(json).expect("deserialize intent");
-    assert!(build_search_intent(intent).is_err());
+    let decoded = serde_json::from_value::<SearchIntentInput>(json);
+    assert!(decoded.is_err());
 }
 
 #[test]

@@ -157,13 +157,17 @@ pub struct Document {
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, ToSchema)]
 pub struct TextSpan {
     /// Inclusive start byte offset.
-    start: usize,
+    start: u32,
     /// Exclusive end byte offset.
-    end: usize,
+    end: u32,
 }
 
 impl TextSpan {
     pub fn new(start: usize, end: usize) -> CocoResult<Self> {
+        let start = u32::try_from(start)
+            .map_err(|_| validation_error("text span start exceeds u32::MAX"))?;
+        let end =
+            u32::try_from(end).map_err(|_| validation_error("text span end exceeds u32::MAX"))?;
         if start > end {
             return Err(validation_error("text span start must be <= end"));
         }
@@ -171,15 +175,15 @@ impl TextSpan {
     }
 
     pub fn start(&self) -> usize {
-        self.start
+        self.start as usize
     }
 
     pub fn end(&self) -> usize {
-        self.end
+        self.end as usize
     }
 
     pub fn len(&self) -> usize {
-        self.end - self.start
+        (self.end - self.start) as usize
     }
 
     pub fn is_empty(&self) -> bool {
@@ -194,12 +198,12 @@ impl<'de> Deserialize<'de> for TextSpan {
     {
         #[derive(Deserialize)]
         struct TextSpanDef {
-            start: usize,
-            end: usize,
+            start: u32,
+            end: u32,
         }
 
         let def = TextSpanDef::deserialize(deserializer)?;
-        TextSpan::new(def.start, def.end).map_err(serde::de::Error::custom)
+        TextSpan::new(def.start as usize, def.end as usize).map_err(serde::de::Error::custom)
     }
 }
 
@@ -554,10 +558,8 @@ impl<'de> Deserialize<'de> for VectorQueryInput {
         }
 
         let def = VectorQueryInputDef::deserialize(deserializer)?;
-        Ok(Self {
-            query_text: def.query_text,
-            query_embedding: def.query_embedding,
-        })
+        VectorQueryInput::new(def.query_text, def.query_embedding)
+            .map_err(serde::de::Error::custom)
     }
 }
 
@@ -597,9 +599,10 @@ impl<'de> Deserialize<'de> for FtsQueryInput {
         }
 
         let def = FtsQueryInputDef::deserialize(deserializer)?;
-        Ok(Self {
-            query_text: def.query_text,
-        })
+        let query_text = def.query_text.ok_or_else(|| {
+            serde::de::Error::custom("query_text required for fts search")
+        })?;
+        FtsQueryInput::new(query_text).map_err(serde::de::Error::custom)
     }
 }
 
@@ -657,10 +660,11 @@ impl<'de> Deserialize<'de> for HybridQueryInput {
         }
 
         let def = HybridQueryInputDef::deserialize(deserializer)?;
-        Ok(Self {
-            query_text: def.query_text,
-            query_embedding: def.query_embedding,
-        })
+        let query_text = def.query_text.ok_or_else(|| {
+            serde::de::Error::custom("query_text required for hybrid search")
+        })?;
+        HybridQueryInput::new(query_text, def.query_embedding)
+            .map_err(serde::de::Error::custom)
     }
 }
 
