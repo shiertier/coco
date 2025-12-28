@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::num::NonZeroU32;
 
 use coco_protocol::{
-    CocoError, CocoResult, Filter, FilterOp, FilterValue, HnswParams, IndexingConfig, IndexingPlan,
-    IvfPqParams, QueryPlan, RetrievalConfig, RetrievalMode, RerankerConfig, SearchIntent,
-    SearchIntentInput, SearchQuery, SearchQueryInput, ValidationContext, VectorBackendKind,
-    VectorIndexParams, VectorMetric, INDEXING_PLAN_DEFAULT_STEPS, INDEXING_PLAN_VERSION,
-    MAX_CONFIG_ID_LEN, QUERY_PLAN_DEFAULT_STEPS, QUERY_PLAN_VERSION,
+    CocoError, CocoResult, Filter, FilterOp, FilterValue, HnswParams, INDEXING_PLAN_DEFAULT_STEPS,
+    INDEXING_PLAN_VERSION, IndexingConfig, IndexingPlan, IvfPqParams, MAX_CONFIG_ID_LEN,
+    QUERY_PLAN_DEFAULT_STEPS, QUERY_PLAN_VERSION, QueryPlan, RerankerConfig, RetrievalConfig,
+    SearchIntent, SearchIntentInput, SearchQuery, SearchQueryInput, ValidationContext,
+    VectorBackendKind, VectorIndexParams, VectorMetric,
 };
 
 /// Builds a validated search intent from wire input.
@@ -22,9 +22,8 @@ pub fn build_search_intent(input: SearchIntentInput) -> CocoResult<SearchIntent>
     let query = match query {
         SearchQueryInput::Vector(vector) => {
             let (_, embedding) = vector.into_parts();
-            let embedding = embedding.ok_or_else(|| {
-                validation_error("query_embedding required for vector search")
-            })?;
+            let embedding = embedding
+                .ok_or_else(|| validation_error("query_embedding required for vector search"))?;
             SearchQuery::Vector { embedding }
         }
         SearchQueryInput::Fts(fts) => {
@@ -35,12 +34,10 @@ pub fn build_search_intent(input: SearchIntentInput) -> CocoResult<SearchIntent>
         }
         SearchQueryInput::Hybrid(hybrid) => {
             let (text, embedding) = hybrid.into_parts();
-            let text = text.ok_or_else(|| {
-                validation_error("query_text required for hybrid search")
-            })?;
-            let embedding = embedding.ok_or_else(|| {
-                validation_error("query_embedding required for hybrid search")
-            })?;
+            let text =
+                text.ok_or_else(|| validation_error("query_text required for hybrid search"))?;
+            let embedding = embedding
+                .ok_or_else(|| validation_error("query_embedding required for hybrid search"))?;
             SearchQuery::Hybrid { text, embedding }
         }
     };
@@ -209,11 +206,7 @@ pub fn validate_indexing_plan(plan: &IndexingPlan) -> CocoResult<()> {
     if plan.version != INDEXING_PLAN_VERSION {
         return Err(validation_error("unsupported indexing plan version"));
     }
-    validate_plan_steps(
-        "indexing plan",
-        &plan.steps,
-        &INDEXING_PLAN_DEFAULT_STEPS,
-    )
+    validate_plan_steps("indexing plan", &plan.steps, &INDEXING_PLAN_DEFAULT_STEPS)
 }
 
 /// Validates the query plan schema and required steps.
@@ -226,14 +219,14 @@ pub fn validate_query_plan(plan: &QueryPlan) -> CocoResult<()> {
 
 fn validate_plan_steps(label: &str, steps: &[String], required: &[&str]) -> CocoResult<()> {
     if steps.is_empty() {
-        return Err(validation_error(&format!("{label} steps must not be empty")));
+        return Err(validation_error(&format!(
+            "{label} steps must not be empty"
+        )));
     }
     let mut seen = HashSet::with_capacity(steps.len());
     for step in steps {
         if step.trim().is_empty() {
-            return Err(validation_error(&format!(
-                "{label} step must not be empty"
-            )));
+            return Err(validation_error(&format!("{label} step must not be empty")));
         }
         if step.trim() != step {
             return Err(validation_error(&format!(
@@ -241,9 +234,7 @@ fn validate_plan_steps(label: &str, steps: &[String], required: &[&str]) -> Coco
             )));
         }
         if !seen.insert(step.as_str()) {
-            return Err(validation_error(&format!(
-                "{label} steps must be unique"
-            )));
+            return Err(validation_error(&format!("{label} steps must be unique")));
         }
     }
     for required_step in required {
@@ -281,7 +272,9 @@ fn validate_index_params(
         return Err(validation_error("index_params must specify an index kind"));
     }
     if kinds > 1 {
-        return Err(validation_error("index_params must specify a single index kind"));
+        return Err(validation_error(
+            "index_params must specify a single index kind",
+        ));
     }
     if let Some(backend) = backend {
         match backend {
@@ -313,7 +306,9 @@ fn validate_ivf_pq(params: &IvfPqParams) -> CocoResult<()> {
 
 fn validate_positive_u32(value: Option<u32>, label: &str) -> CocoResult<()> {
     if let Some(0) = value {
-        return Err(validation_error(&format!("{label} must be greater than zero")));
+        return Err(validation_error(&format!(
+            "{label} must be greater than zero"
+        )));
     }
     Ok(())
 }
@@ -321,12 +316,14 @@ fn validate_positive_u32(value: Option<u32>, label: &str) -> CocoResult<()> {
 fn validate_filter_value(filter: &Filter) -> CocoResult<()> {
     match (&filter.op, &filter.value) {
         (FilterOp::Contains, FilterValue::String(_)) => Ok(()),
-        (FilterOp::Contains, _) => Err(validation_error(
-            "filter value must be string for contains",
-        )),
+        (FilterOp::Contains, _) => {
+            Err(validation_error("filter value must be string for contains"))
+        }
         (FilterOp::In, FilterValue::List(values)) => {
             if values.is_empty() {
-                Err(validation_error("filter value must be non-empty list for in"))
+                Err(validation_error(
+                    "filter value must be non-empty list for in",
+                ))
             } else {
                 Ok(())
             }

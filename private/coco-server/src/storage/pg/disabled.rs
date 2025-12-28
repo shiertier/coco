@@ -159,79 +159,72 @@ impl PgBackendConfig {
 }
 
 impl StorageBackend for PgBackend {
-    async fn upsert_chunks(&self, _chunks: &[Chunk]) -> CocoResult<()> {
-        Err(CocoError::storage(
+    type UpsertChunksFuture<'a> = std::future::Ready<CocoResult<()>>;
+    type SearchSimilarFuture<'a> = std::future::Ready<CocoResult<Vec<coco_protocol::SearchHit>>>;
+    type DeleteByDocFuture<'a> = std::future::Ready<CocoResult<()>>;
+    type GetChunkFuture<'a> = std::future::Ready<CocoResult<Option<Chunk>>>;
+
+    fn upsert_chunks<'a>(&'a self, _chunks: &'a [Chunk]) -> Self::UpsertChunksFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
             "server-storage feature disabled for PgBackend",
-        ))
+        )))
     }
 
-    async fn search_similar(
-        &self,
+    fn search_similar<'a>(
+        &'a self,
         _intent: coco_protocol::SearchIntent,
-    ) -> CocoResult<Vec<coco_protocol::SearchHit>> {
-        Err(CocoError::storage(
+    ) -> Self::SearchSimilarFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
             "server-storage feature disabled for PgBackend",
-        ))
+        )))
     }
 
-    async fn delete_by_doc(&self, _doc_id: coco_protocol::DocumentId) -> CocoResult<()> {
-        Err(CocoError::storage(
+    fn delete_by_doc<'a>(
+        &'a self,
+        _doc_id: coco_protocol::DocumentId,
+    ) -> Self::DeleteByDocFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
             "server-storage feature disabled for PgBackend",
-        ))
+        )))
     }
 
-    async fn get_chunk(
-        &self,
-        _chunk_id: coco_protocol::ChunkId,
-    ) -> CocoResult<Option<Chunk>> {
-        Err(CocoError::storage(
+    fn get_chunk<'a>(&'a self, _chunk_id: coco_protocol::ChunkId) -> Self::GetChunkFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
             "server-storage feature disabled for PgBackend",
-        ))
+        )))
     }
 }
 
 impl VectorStore for PgBackend {
-    fn upsert_vectors(
-        &self,
-        _records: &[VectorRecord],
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
-        async move {
-            Err(CocoError::storage(
-                "server-storage feature disabled for PgBackend",
-            ))
-        }
+    type UpsertVectorsFuture<'a> = std::future::Ready<CocoResult<()>>;
+    type SearchVectorsFuture<'a> = std::future::Ready<CocoResult<Vec<SearchHit>>>;
+    type DeleteVectorsByDocFuture<'a> = std::future::Ready<CocoResult<()>>;
+    type GetVectorFuture<'a> = std::future::Ready<CocoResult<Option<VectorRecord>>>;
+
+    fn upsert_vectors<'a>(&'a self, _records: &'a [VectorRecord]) -> Self::UpsertVectorsFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
+            "server-storage feature disabled for PgBackend",
+        )))
     }
 
-    fn search_vectors(
-        &self,
-        _intent: SearchIntent,
-    ) -> impl std::future::Future<Output = CocoResult<Vec<SearchHit>>> + Send {
-        async move {
-            Err(CocoError::storage(
-                "server-storage feature disabled for PgBackend",
-            ))
-        }
+    fn search_vectors<'a>(&'a self, _intent: SearchIntent) -> Self::SearchVectorsFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
+            "server-storage feature disabled for PgBackend",
+        )))
     }
 
-    fn delete_vectors_by_doc(
-        &self,
+    fn delete_vectors_by_doc<'a>(
+        &'a self,
         _doc_id: DocumentId,
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
-        async move {
-            Err(CocoError::storage(
-                "server-storage feature disabled for PgBackend",
-            ))
-        }
+    ) -> Self::DeleteVectorsByDocFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
+            "server-storage feature disabled for PgBackend",
+        )))
     }
 
-    fn get_vector(
-        &self,
-        _chunk_id: ChunkId,
-    ) -> impl std::future::Future<Output = CocoResult<Option<VectorRecord>>> + Send {
-        async move {
-            Err(CocoError::storage(
-                "server-storage feature disabled for PgBackend",
-            ))
-        }
+    fn get_vector<'a>(&'a self, _chunk_id: ChunkId) -> Self::GetVectorFuture<'a> {
+        std::future::ready(Err(CocoError::storage(
+            "server-storage feature disabled for PgBackend",
+        )))
     }
 }

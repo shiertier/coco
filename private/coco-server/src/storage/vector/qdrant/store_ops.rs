@@ -3,24 +3,29 @@ use coco_protocol::{
     CocoError, CocoResult, SearchHit, SearchIntent, StorageBackend, VectorRecord, VectorStore,
 };
 use qdrant_client::qdrant::{
-    Condition, DeletePointsBuilder, GetPointsBuilder, PointStruct, UpsertPointsBuilder,
-    Filter as QdrantFilter,
+    Condition, DeletePointsBuilder, Filter as QdrantFilter, GetPointsBuilder, PointStruct,
+    UpsertPointsBuilder,
 };
+use std::pin::Pin;
 
 use super::executor::QdrantExecutor;
 use super::store::QdrantStore;
 use super::util::{
-    map_qdrant_err, PAYLOAD_CONFIG_ID, PAYLOAD_DOC_ID, PAYLOAD_ORG_ID, PAYLOAD_PROJECT_ID,
-    PAYLOAD_USER_ID, PAYLOAD_VERSION_ID,
+    PAYLOAD_CONFIG_ID, PAYLOAD_DOC_ID, PAYLOAD_ORG_ID, PAYLOAD_PROJECT_ID, PAYLOAD_USER_ID,
+    PAYLOAD_VERSION_ID, map_qdrant_err,
 };
 
+type StoreFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = CocoResult<T>> + Send + 'a>>;
+
 impl VectorStore for QdrantStore {
-    fn upsert_vectors(
-        &self,
-        records: &[VectorRecord],
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    type UpsertVectorsFuture<'a> = StoreFuture<'a, ()>;
+    type SearchVectorsFuture<'a> = StoreFuture<'a, Vec<SearchHit>>;
+    type DeleteVectorsByDocFuture<'a> = StoreFuture<'a, ()>;
+    type GetVectorFuture<'a> = StoreFuture<'a, Option<VectorRecord>>;
+
+    fn upsert_vectors<'a>(&'a self, records: &'a [VectorRecord]) -> Self::UpsertVectorsFuture<'a> {
         let store = self.clone();
-        async move {
+        Box::pin(async move {
             if records.is_empty() {
                 return Ok(());
             }
@@ -57,9 +62,7 @@ impl VectorStore for QdrantStore {
             }
             let config_id = config_id.ok_or_else(|| CocoError::user("config_id required"))?;
             if config_id != store.config_id() {
-                return Err(CocoError::user(
-                    "config_id does not match qdrant backend",
-                ));
+                return Err(CocoError::user("config_id does not match qdrant backend"));
             }
             let vector_len = vector_len.unwrap_or(0);
             let collection = store.collection_name(&config_id, store.version_id())?;
@@ -83,23 +86,20 @@ impl VectorStore for QdrantStore {
                 .await
                 .map_err(|err| map_qdrant_err("qdrant upsert failed", err))?;
             Ok(())
-        }
+        })
     }
 
-    fn search_vectors(
-        &self,
-        intent: SearchIntent,
-    ) -> impl std::future::Future<Output = CocoResult<Vec<SearchHit>>> + Send {
+    fn search_vectors<'a>(&'a self, intent: SearchIntent) -> Self::SearchVectorsFuture<'a> {
         let executor = QdrantExecutor::new(self);
-        async move { executor.search(intent).await }
+        Box::pin(async move { executor.search(intent).await })
     }
 
-    fn delete_vectors_by_doc(
-        &self,
+    fn delete_vectors_by_doc<'a>(
+        &'a self,
         doc_id: coco_protocol::DocumentId,
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    ) -> Self::DeleteVectorsByDocFuture<'a> {
         let store = self.clone();
-        async move {
+        Box::pin(async move {
             let collection = store.collection_name(store.config_id(), store.version_id())?;
             let exists = store
                 .client()
@@ -123,15 +123,12 @@ impl VectorStore for QdrantStore {
                 .await
                 .map_err(|err| map_qdrant_err("qdrant delete failed", err))?;
             Ok(())
-        }
+        })
     }
 
-    fn get_vector(
-        &self,
-        chunk_id: coco_protocol::ChunkId,
-    ) -> impl std::future::Future<Output = CocoResult<Option<VectorRecord>>> + Send {
+    fn get_vector<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetVectorFuture<'a> {
         let store = self.clone();
-        async move {
+        Box::pin(async move {
             let collection = store.collection_name(store.config_id(), store.version_id())?;
             let exists = store
                 .client()
@@ -167,7 +164,7 @@ impl VectorStore for QdrantStore {
                 _ => {
                     return Err(CocoError::storage(
                         "qdrant vector output format not supported",
-                    ))
+                    ));
                 }
             };
             let chunk = store
@@ -188,6 +185,6 @@ impl VectorStore for QdrantStore {
                     span: chunk.span,
                 },
             }))
-        }
+        })
     }
 }

@@ -4,13 +4,14 @@
 mod enabled {
     use std::collections::HashMap;
     use std::path::{Path, PathBuf};
+    use std::pin::Pin;
     use std::sync::Arc;
 
+    use arrow_array::types::Float32Type;
     use arrow_array::{
         Array, ArrayRef, FixedSizeListArray, Float32Array, Float64Array, RecordBatch,
         RecordBatchIterator, StringArray, UInt32Array,
     };
-    use arrow_array::types::Float32Type;
     use arrow_schema::{DataType, Field, Schema, SchemaRef};
     use coco_core::normalize_config_id;
     use coco_protocol::{
@@ -25,7 +26,7 @@ mod enabled {
     use lancedb::index::vector::IvfPqIndexBuilder;
     use lancedb::query::{ExecutableQuery, QueryBase, Select};
     use lancedb::table::NewColumnTransform;
-    use lancedb::{connect, DistanceType, Table};
+    use lancedb::{DistanceType, Table, connect};
     use tokio::sync::RwLock;
 
     const CHUNK_TABLE: &str = "chunks";
@@ -154,13 +155,9 @@ mod enabled {
                 return Ok(existing.clone());
             }
 
-            let mut backend = LanceBackend::open_with_config(
-                &self.root,
-                self.dimensions,
-                &config_id,
-                version_id,
-            )
-            .await?;
+            let mut backend =
+                LanceBackend::open_with_config(&self.root, self.dimensions, &config_id, version_id)
+                    .await?;
             backend
                 .create_vector_index_with_config(metric, index_params)
                 .await?;
@@ -186,11 +183,7 @@ mod enabled {
 
     impl LanceBackend {
         /// Opens (or creates) the default LanceDB table at the given path.
-        pub async fn open(
-            path: &Path,
-            dimensions: usize,
-            version_id: &str,
-        ) -> CocoResult<Self> {
+        pub async fn open(path: &Path, dimensions: usize, version_id: &str) -> CocoResult<Self> {
             Self::open_with_config(path, dimensions, DEFAULT_CONFIG_ID, version_id).await
         }
 
@@ -202,7 +195,9 @@ mod enabled {
             version_id: &str,
         ) -> CocoResult<Self> {
             if dimensions == 0 {
-                return Err(CocoError::user("embedding dimensions must be greater than zero"));
+                return Err(CocoError::user(
+                    "embedding dimensions must be greater than zero",
+                ));
             }
             let config_id = normalize_config_id(config_id)?;
             if version_id.trim().is_empty() {
@@ -212,10 +207,7 @@ mod enabled {
             let path_str = path
                 .to_str()
                 .ok_or_else(|| CocoError::user("invalid lancedb path"))?;
-            let connection = connect(path_str)
-                .execute()
-                .await
-                .map_err(map_storage_err)?;
+            let connection = connect(path_str).execute().await.map_err(map_storage_err)?;
 
             let table_name = table_name_for_config(&config_id);
             let schema = chunk_schema(dimensions);
@@ -274,10 +266,7 @@ mod enabled {
 
         /// Deletes all records for the current version.
         pub async fn delete_by_version(&self) -> CocoResult<()> {
-            let predicate = format!(
-                "{COL_VERSION_ID} = '{}'",
-                escape_literal(&self.version_id)
-            );
+            let predicate = format!("{COL_VERSION_ID} = '{}'", escape_literal(&self.version_id));
             self.table
                 .delete(&predicate)
                 .await
@@ -317,14 +306,10 @@ mod enabled {
             let filters = build_filter(intent.filters(), config_id, &self.version_id)?;
             match intent.retrieval_mode() {
                 RetrievalMode::Vector => {
-                    let embedding = intent
-                        .query_embedding()
-                        .ok_or_else(|| {
-                            CocoError::user("query embedding required for vector search")
-                        })?;
-                    let mut query = table
-                        .vector_search(embedding)
-                        .map_err(map_storage_err)?;
+                    let embedding = intent.query_embedding().ok_or_else(|| {
+                        CocoError::user("query embedding required for vector search")
+                    })?;
+                    let mut query = table.vector_search(embedding).map_err(map_storage_err)?;
                     query = query
                         .select(Select::columns(&[
                             COL_CHUNK_ID,
@@ -345,12 +330,11 @@ mod enabled {
                     collect_vector_results(&batches, dimensions)
                 }
                 RetrievalMode::Fts => {
-                    let query_text = intent.query_text().ok_or_else(|| {
-                        CocoError::user("query text required for fts search")
-                    })?;
+                    let query_text = intent
+                        .query_text()
+                        .ok_or_else(|| CocoError::user("query text required for fts search"))?;
                     let mut query = table.query().full_text_search(
-                        FullTextSearchQuery::new(query_text.to_string())
-                            .limit(Some(top_k as i64)),
+                        FullTextSearchQuery::new(query_text.to_string()).limit(Some(top_k as i64)),
                     );
                     if let Some(filter) = filters {
                         query = query.only_if(filter);
@@ -369,11 +353,9 @@ mod enabled {
                     collect_fts_results(&batches)
                 }
                 RetrievalMode::Hybrid => {
-                    let embedding = intent
-                        .query_embedding()
-                        .ok_or_else(|| {
-                            CocoError::user("query embedding required for hybrid search")
-                        })?;
+                    let embedding = intent.query_embedding().ok_or_else(|| {
+                        CocoError::user("query embedding required for hybrid search")
+                    })?;
                     let query_text = intent
                         .query_text()
                         .ok_or_else(|| CocoError::user("query text required for hybrid search"))?;
@@ -400,8 +382,7 @@ mod enabled {
                     let vector_results = collect_vector_results(&vector_batches, dimensions)?;
 
                     let mut fts_query = table.query().full_text_search(
-                        FullTextSearchQuery::new(query_text.to_string())
-                            .limit(Some(top_k as i64)),
+                        FullTextSearchQuery::new(query_text.to_string()).limit(Some(top_k as i64)),
                     );
                     if let Some(filter) = filters {
                         fts_query = fts_query.only_if(filter);
@@ -430,16 +411,21 @@ mod enabled {
         }
     }
 
+    type BackendFuture<'a, T> =
+        Pin<Box<dyn std::future::Future<Output = CocoResult<T>> + Send + 'a>>;
+
     impl StorageBackend for LanceBackend {
-        fn upsert_chunks(
-            &self,
-            chunks: &[Chunk],
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        type UpsertChunksFuture<'a> = BackendFuture<'a, ()>;
+        type SearchSimilarFuture<'a> = BackendFuture<'a, Vec<SearchHit>>;
+        type DeleteByDocFuture<'a> = BackendFuture<'a, ()>;
+        type GetChunkFuture<'a> = BackendFuture<'a, Option<Chunk>>;
+
+        fn upsert_chunks<'a>(&'a self, chunks: &'a [Chunk]) -> Self::UpsertChunksFuture<'a> {
             let table = self.table.clone();
             let dimensions = self.dimensions;
             let config_id = self.config_id.clone();
             let version_id = self.version_id.clone();
-            async move {
+            Box::pin(async move {
                 if chunks.is_empty() {
                     return Ok(());
                 }
@@ -456,44 +442,35 @@ mod enabled {
                     .await
                     .map_err(map_storage_err)?;
                 Ok(())
-            }
+            })
         }
 
-        fn search_similar(
-            &self,
-            intent: SearchIntent,
-        ) -> impl std::future::Future<Output = CocoResult<Vec<SearchHit>>> + Send {
+        fn search_similar<'a>(&'a self, intent: SearchIntent) -> Self::SearchSimilarFuture<'a> {
             let executor = LanceExecutor::new(self);
-            async move { executor.search(intent).await }
+            Box::pin(async move { executor.search(intent).await })
         }
 
-        fn delete_by_doc(
-            &self,
+        fn delete_by_doc<'a>(
+            &'a self,
             doc_id: coco_protocol::DocumentId,
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        ) -> Self::DeleteByDocFuture<'a> {
             let table = self.table.clone();
             let version_id = self.version_id.clone();
-            async move {
+            Box::pin(async move {
                 let predicate = format!(
                     "{COL_DOC_ID} = '{}' AND {COL_VERSION_ID} = '{}'",
                     escape_literal(&doc_id),
                     escape_literal(&version_id)
                 );
-                table
-                    .delete(&predicate)
-                    .await
-                    .map_err(map_storage_err)?;
+                table.delete(&predicate).await.map_err(map_storage_err)?;
                 Ok(())
-            }
+            })
         }
 
-        fn get_chunk(
-            &self,
-            chunk_id: coco_protocol::ChunkId,
-        ) -> impl std::future::Future<Output = CocoResult<Option<Chunk>>> + Send {
+        fn get_chunk<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetChunkFuture<'a> {
             let table = self.table.clone();
             let version_id = self.version_id.clone();
-            async move {
+            Box::pin(async move {
                 let predicate = format!(
                     "{COL_CHUNK_ID} = '{}' AND {COL_VERSION_ID} = '{}'",
                     escape_literal(&chunk_id),
@@ -523,17 +500,22 @@ mod enabled {
                     embedding: None,
                     ..chunk
                 }))
-            }
+            })
         }
     }
 
     impl VectorStore for LanceBackend {
-        fn upsert_vectors(
-            &self,
-            records: &[VectorRecord],
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        type UpsertVectorsFuture<'a> = BackendFuture<'a, ()>;
+        type SearchVectorsFuture<'a> = BackendFuture<'a, Vec<SearchHit>>;
+        type DeleteVectorsByDocFuture<'a> = BackendFuture<'a, ()>;
+        type GetVectorFuture<'a> = BackendFuture<'a, Option<VectorRecord>>;
+
+        fn upsert_vectors<'a>(
+            &'a self,
+            records: &'a [VectorRecord],
+        ) -> Self::UpsertVectorsFuture<'a> {
             let backend = self.clone();
-            async move {
+            Box::pin(async move {
                 for record in records {
                     check_record_config_id(&record.metadata.config_id, &backend.config_id)?;
                 }
@@ -550,31 +532,25 @@ mod enabled {
                     })
                     .collect();
                 backend.upsert_chunks(&chunks).await
-            }
+            })
         }
 
-        fn search_vectors(
-            &self,
-            intent: SearchIntent,
-        ) -> impl std::future::Future<Output = CocoResult<Vec<SearchHit>>> + Send {
+        fn search_vectors<'a>(&'a self, intent: SearchIntent) -> Self::SearchVectorsFuture<'a> {
             self.search_similar(intent)
         }
 
-        fn delete_vectors_by_doc(
-            &self,
+        fn delete_vectors_by_doc<'a>(
+            &'a self,
             doc_id: coco_protocol::DocumentId,
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        ) -> Self::DeleteVectorsByDocFuture<'a> {
             self.delete_by_doc(doc_id)
         }
 
-        fn get_vector(
-            &self,
-            chunk_id: coco_protocol::ChunkId,
-        ) -> impl std::future::Future<Output = CocoResult<Option<VectorRecord>>> + Send {
+        fn get_vector<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetVectorFuture<'a> {
             let table = self.table.clone();
             let config_id = self.config_id.clone();
             let version_id = self.version_id.clone();
-            async move {
+            Box::pin(async move {
                 let predicate = format!(
                     "{COL_CHUNK_ID} = '{}' AND {COL_VERSION_ID} = '{}'",
                     escape_literal(&chunk_id),
@@ -621,13 +597,12 @@ mod enabled {
                         span: chunk.span,
                     },
                 }))
-            }
+            })
         }
     }
 
     fn chunk_schema(dimensions: usize) -> SchemaRef {
-        let embedding_field =
-            Field::new("item", DataType::Float32, true);
+        let embedding_field = Field::new("item", DataType::Float32, true);
         let embedding = DataType::FixedSizeList(Arc::new(embedding_field), dimensions as i32);
         Arc::new(Schema::new(vec![
             Field::new(COL_CHUNK_ID, DataType::Utf8, false),
@@ -643,27 +618,27 @@ mod enabled {
 
     async fn validate_schema(table: &Table, dimensions: usize) -> CocoResult<()> {
         let schema = table.schema().await.map_err(map_storage_err)?;
-        let field = schema.field_with_name(COL_CONFIG_ID).map_err(|err| {
-            CocoError::storage(format!("config_id column missing: {err}"))
-        })?;
+        let field = schema
+            .field_with_name(COL_CONFIG_ID)
+            .map_err(|err| CocoError::storage(format!("config_id column missing: {err}")))?;
         if !matches!(field.data_type(), DataType::Utf8 | DataType::LargeUtf8) {
             return Err(CocoError::storage(format!(
                 "config_id column has unexpected type: {:?}",
                 field.data_type()
             )));
         }
-        let field = schema.field_with_name(COL_VERSION_ID).map_err(|err| {
-            CocoError::storage(format!("version_id column missing: {err}"))
-        })?;
+        let field = schema
+            .field_with_name(COL_VERSION_ID)
+            .map_err(|err| CocoError::storage(format!("version_id column missing: {err}")))?;
         if !matches!(field.data_type(), DataType::Utf8 | DataType::LargeUtf8) {
             return Err(CocoError::storage(format!(
                 "version_id column has unexpected type: {:?}",
                 field.data_type()
             )));
         }
-        let field = schema.field_with_name(COL_EMBEDDING).map_err(|err| {
-            CocoError::storage(format!("embedding column missing: {err}"))
-        })?;
+        let field = schema
+            .field_with_name(COL_EMBEDDING)
+            .map_err(|err| CocoError::storage(format!("embedding column missing: {err}")))?;
         match field.data_type() {
             DataType::FixedSizeList(_, length) if *length as usize == dimensions => Ok(()),
             DataType::FixedSizeList(_, length) => Err(CocoError::storage(format!(
@@ -683,10 +658,7 @@ mod enabled {
         let expression = format!("'{}'", escape_literal(config_id));
         table
             .add_columns(
-                NewColumnTransform::SqlExpressions(vec![(
-                    COL_CONFIG_ID.to_string(),
-                    expression,
-                )]),
+                NewColumnTransform::SqlExpressions(vec![(COL_CONFIG_ID.to_string(), expression)]),
                 None,
             )
             .await
@@ -740,12 +712,14 @@ mod enabled {
             version_ids.push(version_id);
             doc_ids.push(chunk.doc_id.as_str());
             contents.push(chunk.content.as_str());
-            starts.push(u32::try_from(chunk.span.start()).map_err(|_| {
-                CocoError::user("chunk start offset exceeds u32 range")
-            })?);
-            ends.push(u32::try_from(chunk.span.end()).map_err(|_| {
-                CocoError::user("chunk end offset exceeds u32 range")
-            })?);
+            starts.push(
+                u32::try_from(chunk.span.start())
+                    .map_err(|_| CocoError::user("chunk start offset exceeds u32 range"))?,
+            );
+            ends.push(
+                u32::try_from(chunk.span.end())
+                    .map_err(|_| CocoError::user("chunk end offset exceeds u32 range"))?,
+            );
 
             let mut values = Vec::with_capacity(dimensions);
             for value in embedding {
@@ -765,10 +739,12 @@ mod enabled {
                 Arc::new(StringArray::from(contents)),
                 Arc::new(UInt32Array::from(starts)),
                 Arc::new(UInt32Array::from(ends)),
-                Arc::new(FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
-                    embeddings,
-                    dimensions as i32,
-                )),
+                Arc::new(
+                    FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                        embeddings,
+                        dimensions as i32,
+                    ),
+                ),
             ],
         )
         .map_err(|err| CocoError::storage(format!("failed to build batch: {err}")))?;
@@ -916,10 +892,7 @@ mod enabled {
         Err(CocoError::storage("score column has unexpected type"))
     }
 
-    fn downcast_string<'a>(
-        batch: &'a RecordBatch,
-        name: &str,
-    ) -> CocoResult<&'a StringArray> {
+    fn downcast_string<'a>(batch: &'a RecordBatch, name: &str) -> CocoResult<&'a StringArray> {
         let array = batch
             .column_by_name(name)
             .ok_or_else(|| CocoError::storage(format!("missing column {name}")))?;
@@ -929,10 +902,7 @@ mod enabled {
             .ok_or_else(|| CocoError::storage(format!("column {name} type mismatch")))
     }
 
-    fn downcast_u32<'a>(
-        batch: &'a RecordBatch,
-        name: &str,
-    ) -> CocoResult<&'a UInt32Array> {
+    fn downcast_u32<'a>(batch: &'a RecordBatch, name: &str) -> CocoResult<&'a UInt32Array> {
         let array = batch
             .column_by_name(name)
             .ok_or_else(|| CocoError::storage(format!("missing column {name}")))?;
@@ -962,10 +932,7 @@ mod enabled {
         version_id: &str,
     ) -> CocoResult<Option<String>> {
         let mut parts = Vec::new();
-        parts.push(format!(
-            "{COL_CONFIG_ID} = '{}'",
-            escape_literal(config_id)
-        ));
+        parts.push(format!("{COL_CONFIG_ID} = '{}'", escape_literal(config_id)));
         parts.push(format!(
             "{COL_VERSION_ID} = '{}'",
             escape_literal(version_id)
@@ -977,7 +944,7 @@ mod enabled {
                     return Err(CocoError::user(format!(
                         "unsupported filter field: {}",
                         filter.field
-                    )))
+                    )));
                 }
             };
             let value = match &filter.value {
@@ -986,7 +953,7 @@ mod enabled {
                     return Err(CocoError::user(format!(
                         "unsupported filter value for field: {}",
                         filter.field
-                    )))
+                    )));
                 }
             };
             let value = escape_literal(value);
@@ -997,7 +964,7 @@ mod enabled {
                     return Err(CocoError::user(format!(
                         "unsupported filter op: {:?}",
                         filter.op
-                    )))
+                    )));
                 }
             };
             parts.push(expr);
@@ -1311,39 +1278,40 @@ mod disabled {
     }
 
     impl StorageBackend for LanceBackend {
-        fn upsert_chunks(
-            &self,
-            _chunks: &[coco_protocol::Chunk],
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        type UpsertChunksFuture<'a> = std::future::Ready<CocoResult<()>>;
+        type SearchSimilarFuture<'a> =
+            std::future::Ready<CocoResult<Vec<coco_protocol::SearchHit>>>;
+        type DeleteByDocFuture<'a> = std::future::Ready<CocoResult<()>>;
+        type GetChunkFuture<'a> = std::future::Ready<CocoResult<Option<coco_protocol::Chunk>>>;
+
+        fn upsert_chunks<'a>(
+            &'a self,
+            _chunks: &'a [coco_protocol::Chunk],
+        ) -> Self::UpsertChunksFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn search_similar(
-            &self,
+        fn search_similar<'a>(
+            &'a self,
             _intent: coco_protocol::SearchIntent,
-        ) -> impl std::future::Future<Output = CocoResult<Vec<coco_protocol::SearchHit>>> + Send
-        {
+        ) -> Self::SearchSimilarFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn delete_by_doc(
-            &self,
+        fn delete_by_doc<'a>(
+            &'a self,
             _doc_id: coco_protocol::DocumentId,
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        ) -> Self::DeleteByDocFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn get_chunk(
-            &self,
-            _chunk_id: coco_protocol::ChunkId,
-        ) -> impl std::future::Future<Output = CocoResult<Option<coco_protocol::Chunk>>> + Send
-        {
+        fn get_chunk<'a>(&'a self, _chunk_id: coco_protocol::ChunkId) -> Self::GetChunkFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
@@ -1351,39 +1319,43 @@ mod disabled {
     }
 
     impl VectorStore for LanceBackend {
-        fn upsert_vectors(
-            &self,
-            _records: &[VectorRecord],
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        type UpsertVectorsFuture<'a> = std::future::Ready<CocoResult<()>>;
+        type SearchVectorsFuture<'a> =
+            std::future::Ready<CocoResult<Vec<coco_protocol::SearchHit>>>;
+        type DeleteVectorsByDocFuture<'a> = std::future::Ready<CocoResult<()>>;
+        type GetVectorFuture<'a> = std::future::Ready<CocoResult<Option<VectorRecord>>>;
+
+        fn upsert_vectors<'a>(
+            &'a self,
+            _records: &'a [VectorRecord],
+        ) -> Self::UpsertVectorsFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn search_vectors(
-            &self,
+        fn search_vectors<'a>(
+            &'a self,
             _intent: coco_protocol::SearchIntent,
-        ) -> impl std::future::Future<Output = CocoResult<Vec<coco_protocol::SearchHit>>> + Send
-        {
+        ) -> Self::SearchVectorsFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn delete_vectors_by_doc(
-            &self,
+        fn delete_vectors_by_doc<'a>(
+            &'a self,
             _doc_id: coco_protocol::DocumentId,
-        ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+        ) -> Self::DeleteVectorsByDocFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))
         }
 
-        fn get_vector(
-            &self,
+        fn get_vector<'a>(
+            &'a self,
             _chunk_id: coco_protocol::ChunkId,
-        ) -> impl std::future::Future<Output = CocoResult<Option<VectorRecord>>> + Send
-        {
+        ) -> Self::GetVectorFuture<'a> {
             std::future::ready(Err(CocoError::user(
                 "local-storage feature disabled for LanceBackend",
             )))

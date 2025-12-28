@@ -1,12 +1,14 @@
 //! Vector backend selection and hybrid search aggregation.
 
 use std::num::NonZeroU32;
+use std::pin::Pin;
 
 use coco_core::build_search_intent_from_parts;
 use coco_protocol::{
     CocoError, CocoResult, RetrievalMode, SearchHit, SearchIntent, SearchQuery,
     VectorBackendConfig, VectorBackendKind, VectorIndexParams, VectorMetric, VectorStore,
 };
+type BackendFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = CocoResult<T>> + Send + 'a>>;
 use tracing::info;
 
 use super::pg::{PgBackend, PgBackendConfig, PgExecutor};
@@ -84,11 +86,7 @@ impl ServerVectorBackend {
                     fts_backend.clone(),
                 )
                 .await?;
-                let endpoint = vector_backend
-                    .config()
-                    .url
-                    .as_deref()
-                    .unwrap_or("unknown");
+                let endpoint = vector_backend.config().url.as_deref().unwrap_or("unknown");
                 info!("vector backend: qdrant endpoint={endpoint} version=unknown");
                 Ok(Self::Qdrant {
                     vector: Box::new(vector_backend),
@@ -108,25 +106,27 @@ impl ServerVectorBackend {
 }
 
 impl VectorStore for ServerVectorBackend {
-    fn upsert_vectors(
-        &self,
-        records: &[coco_protocol::VectorRecord],
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    type UpsertVectorsFuture<'a> = BackendFuture<'a, ()>;
+    type SearchVectorsFuture<'a> = BackendFuture<'a, Vec<coco_protocol::SearchHit>>;
+    type DeleteVectorsByDocFuture<'a> = BackendFuture<'a, ()>;
+    type GetVectorFuture<'a> = BackendFuture<'a, Option<coco_protocol::VectorRecord>>;
+
+    fn upsert_vectors<'a>(
+        &'a self,
+        records: &'a [coco_protocol::VectorRecord],
+    ) -> Self::UpsertVectorsFuture<'a> {
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             match backend {
                 Self::PgVector(pg) => pg.upsert_vectors(records).await,
                 Self::Qdrant { vector, .. } => vector.upsert_vectors(records).await,
             }
-        }
+        })
     }
 
-    fn search_vectors(
-        &self,
-        intent: SearchIntent,
-    ) -> impl std::future::Future<Output = CocoResult<Vec<coco_protocol::SearchHit>>> + Send {
+    fn search_vectors<'a>(&'a self, intent: SearchIntent) -> Self::SearchVectorsFuture<'a> {
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             match backend {
                 Self::PgVector(pg) => pg.search_vectors(intent).await,
                 Self::Qdrant { vector, fts } => match intent.retrieval_mode() {
@@ -187,39 +187,38 @@ impl VectorStore for ServerVectorBackend {
                     }
                 },
             }
-        }
+        })
     }
 
-    fn delete_vectors_by_doc(
-        &self,
+    fn delete_vectors_by_doc<'a>(
+        &'a self,
         doc_id: coco_protocol::DocumentId,
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    ) -> Self::DeleteVectorsByDocFuture<'a> {
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             match backend {
                 Self::PgVector(pg) => pg.delete_vectors_by_doc(doc_id).await,
                 Self::Qdrant { vector, .. } => vector.delete_vectors_by_doc(doc_id).await,
             }
-        }
+        })
     }
 
-    fn get_vector(
-        &self,
-        chunk_id: coco_protocol::ChunkId,
-    ) -> impl std::future::Future<Output = CocoResult<Option<coco_protocol::VectorRecord>>> + Send
-    {
+    fn get_vector<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetVectorFuture<'a> {
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             match backend {
                 Self::PgVector(pg) => pg.get_vector(chunk_id).await,
                 Self::Qdrant { vector, .. } => vector.get_vector(chunk_id).await,
             }
-        }
+        })
     }
 }
 
 async fn log_pgvector(backend: &PgBackend) -> CocoResult<()> {
-    let version = backend.pgvector_version().await?.unwrap_or("unknown".to_string());
+    let version = backend
+        .pgvector_version()
+        .await?
+        .unwrap_or("unknown".to_string());
     info!("vector backend: pgvector version={version}");
     Ok(())
 }

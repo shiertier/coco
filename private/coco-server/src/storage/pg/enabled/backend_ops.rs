@@ -3,26 +3,31 @@ use coco_protocol::{
     Chunk, CocoError, CocoResult, StorageBackend, VectorMetadata, VectorRecord, VectorStore,
 };
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
+use std::pin::Pin;
 
 use super::backend::PgBackend;
 use super::executor::PgExecutor;
 use super::helpers::{
-    map_storage_err, push_value, to_i64, validate_tenant, vector_literal, COL_CONFIG_ID,
-    COL_CONTENT, COL_DOC_ID, COL_EMBEDDING, COL_EMBEDDING_TEXT, COL_END_LINE, COL_ID, COL_ORG_ID,
-    COL_PROJECT_ID, COL_QUALITY_SCORE, COL_START_LINE, COL_USER_ID, COL_VERIFIED, COL_VERSION_ID,
-    TABLE_CHUNKS,
+    COL_CONFIG_ID, COL_CONTENT, COL_DOC_ID, COL_EMBEDDING, COL_EMBEDDING_TEXT, COL_END_LINE,
+    COL_ID, COL_ORG_ID, COL_PROJECT_ID, COL_QUALITY_SCORE, COL_START_LINE, COL_USER_ID,
+    COL_VERIFIED, COL_VERSION_ID, TABLE_CHUNKS, map_storage_err, push_value, to_i64,
+    validate_tenant, vector_literal,
 };
 use super::helpers::{chunk_from_row, parse_vector_text};
 
+type BackendFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = CocoResult<T>> + Send + 'a>>;
+
 impl StorageBackend for PgBackend {
-    fn upsert_chunks(
-        &self,
-        chunks: &[Chunk],
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    type UpsertChunksFuture<'a> = BackendFuture<'a, ()>;
+    type SearchSimilarFuture<'a> = BackendFuture<'a, Vec<coco_protocol::SearchHit>>;
+    type DeleteByDocFuture<'a> = BackendFuture<'a, ()>;
+    type GetChunkFuture<'a> = BackendFuture<'a, Option<coco_protocol::Chunk>>;
+
+    fn upsert_chunks<'a>(&'a self, chunks: &'a [Chunk]) -> Self::UpsertChunksFuture<'a> {
         let db = self.db.clone();
         let tenant = self.tenant.clone();
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             if chunks.is_empty() {
                 return Ok(());
             }
@@ -56,54 +61,37 @@ impl StorageBackend for PgBackend {
                 let embed_ph = push_value(&mut values, embedding_literal);
 
                 rows.push(format!(
-                    "({id_ph}, {org_ph}, {user_ph}, {project_ph}, {doc_ph}, {version_ph}, \
-                         {config_ph}, {content_ph}, {start_ph}, {end_ph}, {quality_ph}, \
-                         {verified_ph}, {embed_ph}::vector)"
+                    "({id_ph}, {org_ph}, {user_ph}, {project_ph}, {doc_ph}, {version_ph},                          {config_ph}, {content_ph}, {start_ph}, {end_ph}, {quality_ph},                          {verified_ph}, {embed_ph}::vector)"
                 ));
             }
 
             let sql = format!(
-                "INSERT INTO {TABLE_CHUNKS} \
-                     ({COL_ID}, {COL_ORG_ID}, {COL_USER_ID}, {COL_PROJECT_ID}, {COL_DOC_ID}, \
-                     {COL_VERSION_ID}, {COL_CONFIG_ID}, {COL_CONTENT}, {COL_START_LINE}, \
-                     {COL_END_LINE}, {COL_QUALITY_SCORE}, {COL_VERIFIED}, {COL_EMBEDDING}) \
-                     VALUES {} \
-                     ON CONFLICT ({COL_ID}) DO UPDATE SET \
-                     {COL_USER_ID} = EXCLUDED.{COL_USER_ID}, \
-                     {COL_DOC_ID} = EXCLUDED.{COL_DOC_ID}, \
-                     {COL_VERSION_ID} = EXCLUDED.{COL_VERSION_ID}, \
-                     {COL_CONFIG_ID} = EXCLUDED.{COL_CONFIG_ID}, \
-                     {COL_CONTENT} = EXCLUDED.{COL_CONTENT}, \
-                     {COL_START_LINE} = EXCLUDED.{COL_START_LINE}, \
-                     {COL_END_LINE} = EXCLUDED.{COL_END_LINE}, \
-                     {COL_QUALITY_SCORE} = EXCLUDED.{COL_QUALITY_SCORE}, \
-                     {COL_VERIFIED} = EXCLUDED.{COL_VERIFIED}, \
-                     {COL_EMBEDDING} = EXCLUDED.{COL_EMBEDDING}",
+                "INSERT INTO {TABLE_CHUNKS}                      ({COL_ID}, {COL_ORG_ID}, {COL_USER_ID}, {COL_PROJECT_ID}, {COL_DOC_ID},                      {COL_VERSION_ID}, {COL_CONFIG_ID}, {COL_CONTENT}, {COL_START_LINE},                      {COL_END_LINE}, {COL_QUALITY_SCORE}, {COL_VERIFIED}, {COL_EMBEDDING})                      VALUES {}                      ON CONFLICT ({COL_ID}) DO UPDATE SET                      {COL_USER_ID} = EXCLUDED.{COL_USER_ID},                      {COL_DOC_ID} = EXCLUDED.{COL_DOC_ID},                      {COL_VERSION_ID} = EXCLUDED.{COL_VERSION_ID},                      {COL_CONFIG_ID} = EXCLUDED.{COL_CONFIG_ID},                      {COL_CONTENT} = EXCLUDED.{COL_CONTENT},                      {COL_START_LINE} = EXCLUDED.{COL_START_LINE},                      {COL_END_LINE} = EXCLUDED.{COL_END_LINE},                      {COL_QUALITY_SCORE} = EXCLUDED.{COL_QUALITY_SCORE},                      {COL_VERIFIED} = EXCLUDED.{COL_VERIFIED},                      {COL_EMBEDDING} = EXCLUDED.{COL_EMBEDDING}",
                 rows.join(", ")
             );
 
             let stmt = Statement::from_sql_and_values(DatabaseBackend::Postgres, sql, values);
             db.execute(stmt).await.map_err(map_storage_err)?;
             Ok(())
-        }
+        })
     }
 
-    fn search_similar(
-        &self,
+    fn search_similar<'a>(
+        &'a self,
         intent: coco_protocol::SearchIntent,
-    ) -> impl std::future::Future<Output = CocoResult<Vec<coco_protocol::SearchHit>>> + Send {
+    ) -> Self::SearchSimilarFuture<'a> {
         let executor = PgExecutor::new(self);
-        async move { executor.search(intent).await }
+        Box::pin(async move { executor.search(intent).await })
     }
 
-    fn delete_by_doc(
-        &self,
+    fn delete_by_doc<'a>(
+        &'a self,
         doc_id: coco_protocol::DocumentId,
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    ) -> Self::DeleteByDocFuture<'a> {
         let db = self.db.clone();
         let tenant = self.tenant.clone();
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             validate_tenant(&tenant)?;
             let version_id = backend.resolve_version_id().await?;
             let config_id = backend.resolve_config_id(None).await?;
@@ -113,13 +101,9 @@ impl StorageBackend for PgBackend {
             let project_ph = push_value(&mut values, tenant.project_id);
             let doc_ph = push_value(&mut values, doc_id.to_string());
             let version_ph = push_value(&mut values, version_id);
-            let config_ph = push_value(&mut values, config_id);
+            let config_ph = push_value(&mut values, config_id.clone());
             let sql = format!(
-                "DELETE FROM {TABLE_CHUNKS} \
-                 WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph} \
-                 AND {COL_PROJECT_ID} = {project_ph} \
-                 AND {COL_DOC_ID} = {doc_ph} AND {COL_VERSION_ID} = {version_ph} \
-                 AND {COL_CONFIG_ID} = {config_ph}"
+                "DELETE FROM {TABLE_CHUNKS}                  WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph}                  AND {COL_PROJECT_ID} = {project_ph}                  AND {COL_DOC_ID} = {doc_ph} AND {COL_VERSION_ID} = {version_ph}                  AND {COL_CONFIG_ID} = {config_ph}"
             );
             db.execute(Statement::from_sql_and_values(
                 DatabaseBackend::Postgres,
@@ -129,17 +113,14 @@ impl StorageBackend for PgBackend {
             .await
             .map_err(map_storage_err)?;
             Ok(())
-        }
+        })
     }
 
-    fn get_chunk(
-        &self,
-        chunk_id: coco_protocol::ChunkId,
-    ) -> impl std::future::Future<Output = CocoResult<Option<coco_protocol::Chunk>>> + Send {
+    fn get_chunk<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetChunkFuture<'a> {
         let db = self.db.clone();
         let tenant = self.tenant.clone();
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             validate_tenant(&tenant)?;
             let version_id = backend.resolve_version_id().await?;
             let config_id = backend.resolve_config_id(None).await?;
@@ -149,15 +130,9 @@ impl StorageBackend for PgBackend {
             let project_ph = push_value(&mut values, tenant.project_id);
             let chunk_ph = push_value(&mut values, chunk_id.to_string());
             let version_ph = push_value(&mut values, version_id);
-            let config_ph = push_value(&mut values, config_id);
+            let config_ph = push_value(&mut values, config_id.clone());
             let sql = format!(
-                "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT}, \
-                 {COL_START_LINE}, {COL_END_LINE}, {COL_QUALITY_SCORE}, {COL_VERIFIED} \
-                 FROM {TABLE_CHUNKS} \
-                 WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph} \
-                 AND {COL_PROJECT_ID} = {project_ph} \
-                 AND {COL_ID} = {chunk_ph} AND {COL_VERSION_ID} = {version_ph} \
-                 AND {COL_CONFIG_ID} = {config_ph}"
+                "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT},                  {COL_START_LINE}, {COL_END_LINE}, {COL_QUALITY_SCORE}, {COL_VERIFIED}                  FROM {TABLE_CHUNKS}                  WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph}                  AND {COL_PROJECT_ID} = {project_ph}                  AND {COL_ID} = {chunk_ph} AND {COL_VERSION_ID} = {version_ph}                  AND {COL_CONFIG_ID} = {config_ph}"
             );
             let row = db
                 .query_one(Statement::from_sql_and_values(
@@ -172,17 +147,19 @@ impl StorageBackend for PgBackend {
             };
             let chunk = chunk_from_row(&row)?;
             Ok(Some(chunk))
-        }
+        })
     }
 }
 
 impl VectorStore for PgBackend {
-    fn upsert_vectors(
-        &self,
-        records: &[VectorRecord],
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    type UpsertVectorsFuture<'a> = BackendFuture<'a, ()>;
+    type SearchVectorsFuture<'a> = BackendFuture<'a, Vec<coco_protocol::SearchHit>>;
+    type DeleteVectorsByDocFuture<'a> = BackendFuture<'a, ()>;
+    type GetVectorFuture<'a> = BackendFuture<'a, Option<VectorRecord>>;
+
+    fn upsert_vectors<'a>(&'a self, records: &'a [VectorRecord]) -> Self::UpsertVectorsFuture<'a> {
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             if records.is_empty() {
                 return Ok(());
             }
@@ -198,12 +175,14 @@ impl VectorStore for PgBackend {
                 }
                 if let Some(existing) = resolved_config.as_deref() {
                     if existing != config_id {
-                        return Err(CocoError::user("config_id mismatch in vector batch"));
+                        return Err(CocoError::user(
+                            "all records in batch must have same config_id",
+                        ));
                     }
                 } else {
                     resolved_config = Some(config_id.to_string());
                 }
-                chunks.push(Chunk {
+                let chunk = Chunk {
                     id: record.chunk_id.clone(),
                     doc_id: record.metadata.doc_id.clone(),
                     content: record.metadata.content.clone(),
@@ -211,35 +190,32 @@ impl VectorStore for PgBackend {
                     span: record.metadata.span,
                     quality_score: None,
                     verified: None,
-                });
+                };
+                chunks.push(chunk);
             }
             backend.upsert_chunks(&chunks).await
-        }
+        })
     }
 
-    fn search_vectors(
-        &self,
+    fn search_vectors<'a>(
+        &'a self,
         intent: coco_protocol::SearchIntent,
-    ) -> impl std::future::Future<Output = CocoResult<Vec<coco_protocol::SearchHit>>> + Send {
-        let executor = PgExecutor::new(self);
-        async move { executor.search(intent).await }
+    ) -> Self::SearchVectorsFuture<'a> {
+        self.search_similar(intent)
     }
 
-    fn delete_vectors_by_doc(
-        &self,
+    fn delete_vectors_by_doc<'a>(
+        &'a self,
         doc_id: coco_protocol::DocumentId,
-    ) -> impl std::future::Future<Output = CocoResult<()>> + Send {
+    ) -> Self::DeleteVectorsByDocFuture<'a> {
         self.delete_by_doc(doc_id)
     }
 
-    fn get_vector(
-        &self,
-        chunk_id: coco_protocol::ChunkId,
-    ) -> impl std::future::Future<Output = CocoResult<Option<VectorRecord>>> + Send {
+    fn get_vector<'a>(&'a self, chunk_id: coco_protocol::ChunkId) -> Self::GetVectorFuture<'a> {
         let db = self.db.clone();
         let tenant = self.tenant.clone();
         let backend = self.clone();
-        async move {
+        Box::pin(async move {
             validate_tenant(&tenant)?;
             let version_id = backend.resolve_version_id().await?;
             let config_id = backend.resolve_config_id(None).await?;
@@ -251,13 +227,7 @@ impl VectorStore for PgBackend {
             let version_ph = push_value(&mut values, version_id);
             let config_ph = push_value(&mut values, config_id.clone());
             let sql = format!(
-                "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT}, {COL_START_LINE}, {COL_END_LINE}, \
-                 {COL_QUALITY_SCORE}, {COL_VERIFIED}, {COL_EMBEDDING}::text AS {COL_EMBEDDING_TEXT} \
-                 FROM {TABLE_CHUNKS} \
-                 WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph} \
-                 AND {COL_PROJECT_ID} = {project_ph} \
-                 AND {COL_ID} = {chunk_ph} AND {COL_VERSION_ID} = {version_ph} \
-                 AND {COL_CONFIG_ID} = {config_ph}"
+                "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT},                  {COL_START_LINE}, {COL_END_LINE}, {COL_EMBEDDING_TEXT}                  FROM {TABLE_CHUNKS}                  WHERE {COL_ORG_ID} = {org_ph} AND {COL_USER_ID} = {user_ph}                  AND {COL_PROJECT_ID} = {project_ph}                  AND {COL_ID} = {chunk_ph} AND {COL_VERSION_ID} = {version_ph}                  AND {COL_CONFIG_ID} = {config_ph}"
             );
             let row = db
                 .query_one(Statement::from_sql_and_values(
@@ -270,12 +240,11 @@ impl VectorStore for PgBackend {
             let Some(row) = row else {
                 return Ok(None);
             };
-            let embedding_text: Option<String> =
-                row.try_get("", COL_EMBEDDING_TEXT).map_err(map_storage_err)?;
-            let embedding_text =
-                embedding_text.ok_or_else(|| CocoError::storage("embedding missing for vector"))?;
-            let embedding = parse_vector_text(&embedding_text)?;
             let chunk = chunk_from_row(&row)?;
+            let embedding_text: String = row
+                .try_get_by(COL_EMBEDDING_TEXT)
+                .map_err(map_storage_err)?;
+            let embedding = parse_vector_text(&embedding_text)?;
             Ok(Some(VectorRecord {
                 chunk_id: chunk.id,
                 embedding,
@@ -286,6 +255,6 @@ impl VectorStore for PgBackend {
                     span: chunk.span,
                 },
             }))
-        }
+        })
     }
 }

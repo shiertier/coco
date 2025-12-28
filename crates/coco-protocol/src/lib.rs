@@ -305,10 +305,11 @@ impl FilterField {
         if trimmed.is_empty() {
             return Err(validation_error("filter field must not be empty"));
         }
-        if trimmed != value.as_str() {
-            return Err(validation_error("filter field must be normalized"));
+        if trimmed.len() == value.len() {
+            Ok(Self(value))
+        } else {
+            Ok(Self(trimmed.to_string()))
         }
-        Ok(Self(value))
     }
 
     pub fn as_str(&self) -> &str {
@@ -427,16 +428,28 @@ pub enum SearchQueryInput {
 }
 
 impl SearchQueryInput {
-    pub fn vector(query_text: Option<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
-        Ok(Self::Vector(VectorQueryInput::new(query_text, query_embedding)?))
+    pub fn vector(
+        query_text: Option<String>,
+        query_embedding: Option<Vec<f32>>,
+    ) -> CocoResult<Self> {
+        Ok(Self::Vector(VectorQueryInput::new(
+            query_text,
+            query_embedding,
+        )?))
     }
 
     pub fn fts(query_text: impl Into<String>) -> CocoResult<Self> {
         Ok(Self::Fts(FtsQueryInput::new(query_text.into())?))
     }
 
-    pub fn hybrid(query_text: impl Into<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
-        Ok(Self::Hybrid(HybridQueryInput::new(query_text.into(), query_embedding)?))
+    pub fn hybrid(
+        query_text: impl Into<String>,
+        query_embedding: Option<Vec<f32>>,
+    ) -> CocoResult<Self> {
+        Ok(Self::Hybrid(HybridQueryInput::new(
+            query_text.into(),
+            query_embedding,
+        )?))
     }
 
     pub fn retrieval_mode(&self) -> RetrievalMode {
@@ -482,15 +495,13 @@ impl SearchQueryInput {
         match mode {
             RetrievalMode::Vector => SearchQueryInput::vector(query_text, query_embedding),
             RetrievalMode::Fts => {
-                let query_text = query_text.ok_or_else(|| {
-                    validation_error("query_text required for fts search")
-                })?;
+                let query_text = query_text
+                    .ok_or_else(|| validation_error("query_text required for fts search"))?;
                 SearchQueryInput::fts(query_text)
             }
             RetrievalMode::Hybrid => {
-                let query_text = query_text.ok_or_else(|| {
-                    validation_error("query_text required for hybrid search")
-                })?;
+                let query_text = query_text
+                    .ok_or_else(|| validation_error("query_text required for hybrid search"))?;
                 SearchQueryInput::hybrid(query_text, query_embedding)
             }
         }
@@ -510,9 +521,7 @@ pub struct VectorQueryInput {
 
 impl VectorQueryInput {
     pub fn new(query_text: Option<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
-        let query_text = query_text
-            .map(normalize_query_text)
-            .transpose()?;
+        let query_text = query_text.map(normalize_query_text).transpose()?;
         if let Some(embedding) = query_embedding.as_ref() {
             ensure_non_empty_embedding(embedding)?;
         }
@@ -544,6 +553,10 @@ impl VectorQueryInput {
     pub fn into_parts(self) -> (Option<String>, Option<Vec<f32>>) {
         (self.query_text, self.query_embedding)
     }
+
+    fn take_parts(&mut self) -> (Option<String>, Option<Vec<f32>>) {
+        (self.query_text.take(), self.query_embedding.take())
+    }
 }
 
 impl<'de> Deserialize<'de> for VectorQueryInput {
@@ -558,8 +571,7 @@ impl<'de> Deserialize<'de> for VectorQueryInput {
         }
 
         let def = VectorQueryInputDef::deserialize(deserializer)?;
-        VectorQueryInput::new(def.query_text, def.query_embedding)
-            .map_err(serde::de::Error::custom)
+        VectorQueryInput::new(def.query_text, def.query_embedding).map_err(serde::de::Error::custom)
     }
 }
 
@@ -586,6 +598,10 @@ impl FtsQueryInput {
     pub fn into_text(self) -> Option<String> {
         self.query_text
     }
+
+    fn take_text(&mut self) -> Option<String> {
+        self.query_text.take()
+    }
 }
 
 impl<'de> Deserialize<'de> for FtsQueryInput {
@@ -599,9 +615,9 @@ impl<'de> Deserialize<'de> for FtsQueryInput {
         }
 
         let def = FtsQueryInputDef::deserialize(deserializer)?;
-        let query_text = def.query_text.ok_or_else(|| {
-            serde::de::Error::custom("query_text required for fts search")
-        })?;
+        let query_text = def
+            .query_text
+            .ok_or_else(|| serde::de::Error::custom("query_text required for fts search"))?;
         FtsQueryInput::new(query_text).map_err(serde::de::Error::custom)
     }
 }
@@ -646,6 +662,10 @@ impl HybridQueryInput {
     pub fn into_parts(self) -> (Option<String>, Option<Vec<f32>>) {
         (self.query_text, self.query_embedding)
     }
+
+    fn take_parts(&mut self) -> (Option<String>, Option<Vec<f32>>) {
+        (self.query_text.take(), self.query_embedding.take())
+    }
 }
 
 impl<'de> Deserialize<'de> for HybridQueryInput {
@@ -660,11 +680,10 @@ impl<'de> Deserialize<'de> for HybridQueryInput {
         }
 
         let def = HybridQueryInputDef::deserialize(deserializer)?;
-        let query_text = def.query_text.ok_or_else(|| {
-            serde::de::Error::custom("query_text required for hybrid search")
-        })?;
-        HybridQueryInput::new(query_text, def.query_embedding)
-            .map_err(serde::de::Error::custom)
+        let query_text = def
+            .query_text
+            .ok_or_else(|| serde::de::Error::custom("query_text required for hybrid search"))?;
+        HybridQueryInput::new(query_text, def.query_embedding).map_err(serde::de::Error::custom)
     }
 }
 
@@ -728,7 +747,27 @@ impl SearchIntentInput {
     }
 
     pub fn set_retrieval_mode(&mut self, mode: RetrievalMode) -> CocoResult<()> {
-        self.query = self.query.clone().into_retrieval_mode(mode)?;
+        if self.query.retrieval_mode() == mode {
+            return Ok(());
+        }
+        let (query_text, query_embedding) = match &mut self.query {
+            SearchQueryInput::Vector(query) => query.take_parts(),
+            SearchQueryInput::Fts(query) => (query.take_text(), None),
+            SearchQueryInput::Hybrid(query) => query.take_parts(),
+        };
+        self.query = match mode {
+            RetrievalMode::Vector => SearchQueryInput::vector(query_text, query_embedding)?,
+            RetrievalMode::Fts => {
+                let text = query_text
+                    .ok_or_else(|| validation_error("query_text required for fts search"))?;
+                SearchQueryInput::fts(text)?
+            }
+            RetrievalMode::Hybrid => {
+                let text = query_text
+                    .ok_or_else(|| validation_error("query_text required for hybrid search"))?;
+                SearchQueryInput::hybrid(text, query_embedding)?
+            }
+        };
         Ok(())
     }
 
@@ -784,7 +823,9 @@ impl SearchQuery {
         match self {
             SearchQuery::Vector { embedding } => (None, Some(embedding.as_slice())),
             SearchQuery::Fts { text } => (Some(text.as_str()), None),
-            SearchQuery::Hybrid { text, embedding } => (Some(text.as_str()), Some(embedding.as_slice())),
+            SearchQuery::Hybrid { text, embedding } => {
+                (Some(text.as_str()), Some(embedding.as_slice()))
+            }
         }
     }
 }
@@ -1269,10 +1310,11 @@ fn normalize_query_text(value: String) -> CocoResult<String> {
     if trimmed.is_empty() {
         return Err(validation_error("query_text must not be empty"));
     }
-    if trimmed != value {
-        return Err(validation_error("query_text must be normalized"));
+    if trimmed.len() == value.len() {
+        Ok(value)
+    } else {
+        Ok(trimmed.to_string())
     }
-    Ok(value)
 }
 
 fn ensure_non_empty_embedding(value: &[f32]) -> CocoResult<()> {
@@ -1317,44 +1359,55 @@ pub struct ParsedDocument {
 
 /// Storage backend contract for vector and keyword retrieval.
 pub trait StorageBackend {
+    type UpsertChunksFuture<'a>: Future<Output = CocoResult<()>> + Send + 'a
+    where
+        Self: 'a;
+    type SearchSimilarFuture<'a>: Future<Output = CocoResult<Vec<SearchHit>>> + Send + 'a
+    where
+        Self: 'a;
+    type DeleteByDocFuture<'a>: Future<Output = CocoResult<()>> + Send + 'a
+    where
+        Self: 'a;
+    type GetChunkFuture<'a>: Future<Output = CocoResult<Option<Chunk>>> + Send + 'a
+    where
+        Self: 'a;
+
     /// Upserts a batch of chunks into storage.
-    fn upsert_chunks(&self, chunks: &[Chunk]) -> impl Future<Output = CocoResult<()>> + Send;
+    fn upsert_chunks<'a>(&'a self, chunks: &'a [Chunk]) -> Self::UpsertChunksFuture<'a>;
     /// Searches for similar chunks given an intent.
-    fn search_similar(
-        &self,
-        intent: SearchIntent,
-    ) -> impl Future<Output = CocoResult<Vec<SearchHit>>> + Send;
+    fn search_similar<'a>(&'a self, intent: SearchIntent) -> Self::SearchSimilarFuture<'a>;
     /// Deletes all chunks associated with a document.
-    fn delete_by_doc(&self, doc_id: DocumentId) -> impl Future<Output = CocoResult<()>> + Send;
+    fn delete_by_doc<'a>(&'a self, doc_id: DocumentId) -> Self::DeleteByDocFuture<'a>;
     /// Fetches a single chunk by id.
-    fn get_chunk(
-        &self,
-        chunk_id: ChunkId,
-    ) -> impl Future<Output = CocoResult<Option<Chunk>>> + Send;
+    fn get_chunk<'a>(&'a self, chunk_id: ChunkId) -> Self::GetChunkFuture<'a>;
 }
 
 /// Vector store contract for dedicated vector backends.
 pub trait VectorStore {
+    type UpsertVectorsFuture<'a>: Future<Output = CocoResult<()>> + Send + 'a
+    where
+        Self: 'a;
+    type SearchVectorsFuture<'a>: Future<Output = CocoResult<Vec<SearchHit>>> + Send + 'a
+    where
+        Self: 'a;
+    type DeleteVectorsByDocFuture<'a>: Future<Output = CocoResult<()>> + Send + 'a
+    where
+        Self: 'a;
+    type GetVectorFuture<'a>: Future<Output = CocoResult<Option<VectorRecord>>> + Send + 'a
+    where
+        Self: 'a;
+
     /// Upserts vector records into storage.
-    fn upsert_vectors(
-        &self,
-        records: &[VectorRecord],
-    ) -> impl Future<Output = CocoResult<()>> + Send;
+    fn upsert_vectors<'a>(&'a self, records: &'a [VectorRecord]) -> Self::UpsertVectorsFuture<'a>;
     /// Searches for similar vectors given an intent.
-    fn search_vectors(
-        &self,
-        intent: SearchIntent,
-    ) -> impl Future<Output = CocoResult<Vec<SearchHit>>> + Send;
+    fn search_vectors<'a>(&'a self, intent: SearchIntent) -> Self::SearchVectorsFuture<'a>;
     /// Deletes vectors associated with a document.
-    fn delete_vectors_by_doc(
-        &self,
+    fn delete_vectors_by_doc<'a>(
+        &'a self,
         doc_id: DocumentId,
-    ) -> impl Future<Output = CocoResult<()>> + Send;
+    ) -> Self::DeleteVectorsByDocFuture<'a>;
     /// Fetches a single vector record by chunk id.
-    fn get_vector(
-        &self,
-        chunk_id: ChunkId,
-    ) -> impl Future<Output = CocoResult<Option<VectorRecord>>> + Send;
+    fn get_vector<'a>(&'a self, chunk_id: ChunkId) -> Self::GetVectorFuture<'a>;
 }
 
 /// Embedding model contract for vector generation.
@@ -1493,5 +1546,18 @@ mod tests {
     fn vector_metric_serialization_is_snake_case() {
         let json = serde_json::to_string(&VectorMetric::L2).expect("serialize metric");
         assert_eq!(json, "\"l2\"");
+    }
+
+    #[test]
+    fn vector_query_input_trims_text() {
+        let query =
+            VectorQueryInput::new(Some("  hello  ".to_string()), None).expect("vector query");
+        assert_eq!(query.query_text(), Some("hello"));
+    }
+
+    #[test]
+    fn filter_field_trims_whitespace() {
+        let field = FilterField::new("  path ").expect("filter field");
+        assert_eq!(field.as_str(), "path");
     }
 }
