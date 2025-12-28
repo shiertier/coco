@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use axum::extract::{Path as AxumPath, State};
 use axum::Json;
+use axum::extract::{Path as AxumPath, State};
 
 use coco_core::build_search_intent;
 use coco_protocol::{CocoError, StorageBackend};
 
-use super::super::live::{maybe_apply_live_grep, refresh_results_from_fs, RefreshSummary};
+use super::super::live::{RefreshSummary, maybe_apply_live_grep, refresh_results_from_fs};
 use super::super::query::{
     apply_retrieval_config, ensure_embedding_dimensions, fill_query_embedding,
     load_indexing_config, resolve_import_config_id, resolve_query_config_id,
@@ -110,12 +110,7 @@ pub(crate) async fn query_documents(
     let query_text = intent.query_text().map(str::to_string);
     let results = backend.search_similar(intent).await?;
     let refresh = if state.live_retrieval_enabled {
-        refresh_results_from_fs(
-            &state.meta,
-            results,
-            state.live_retrieval_window_bytes,
-        )
-        .await
+        refresh_results_from_fs(&state.meta, results, state.live_retrieval_window_bytes).await
     } else {
         RefreshSummary::new(results)
     };
@@ -147,5 +142,9 @@ pub(crate) async fn get_document(
 }
 
 fn ingestor_from_state(state: &ServiceState) -> Ingestor {
-    Ingestor::new(state.meta.clone(), state.vector.clone(), state.embedder.clone())
+    Ingestor::new(
+        state.meta.clone(),
+        state.vector.clone(),
+        state.embedder.clone(),
+    )
 }

@@ -19,7 +19,9 @@ pub struct Cli {
 impl Cli {
     /// Returns the explicit command or the default start command.
     pub fn command_or_default(&self) -> Command {
-        self.command.clone().unwrap_or(Command::Start(StartArgs::default()))
+        self.command
+            .clone()
+            .unwrap_or(Command::Start(StartArgs::default()))
     }
 }
 

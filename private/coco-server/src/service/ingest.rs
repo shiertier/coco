@@ -21,7 +21,7 @@ pub(crate) fn build_ipc_request(
         (None, None) => {
             return Err(CocoError::user(
                 "ingest payload requires request or blob_ref",
-            ))
+            ));
         }
     };
     Ok(worker_ipc::SubmitIngestRequest {

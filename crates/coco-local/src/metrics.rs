@@ -111,7 +111,11 @@ impl MetricsInner {
         let elapsed = now
             .checked_duration_since(self.last_tick)
             .unwrap_or(MIN_ELAPSED);
-        let elapsed = if elapsed < MIN_ELAPSED { MIN_ELAPSED } else { elapsed };
+        let elapsed = if elapsed < MIN_ELAPSED {
+            MIN_ELAPSED
+        } else {
+            elapsed
+        };
         let seconds = elapsed.as_secs_f64();
 
         let queries_delta = self.queries_total.saturating_sub(self.last_queries);

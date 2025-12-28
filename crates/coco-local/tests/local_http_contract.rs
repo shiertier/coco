@@ -4,7 +4,7 @@ mod support;
 
 use serde::Deserialize;
 
-use support::{env_lock, pick_port, spawn_service, temp_root, EnvSnapshot};
+use support::{EnvSnapshot, env_lock, pick_port, spawn_service, temp_root};
 
 #[derive(Debug, Deserialize)]
 struct Envelope<T> {

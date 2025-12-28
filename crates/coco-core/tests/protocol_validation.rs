@@ -4,10 +4,10 @@ use coco_core::{
     build_search_intent, normalize_config_id, validate_indexing_config, validate_search_intent,
 };
 use coco_protocol::{
-    ChunkId, ChunkingStrategy, CocoError, CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse,
-    Filter, FilterField, FilterOp, FilterValue, HnswParams, IndexingConfig, RetrievalMode,
-    RerankerConfig, SearchIntent, SearchIntentInput, SearchQuery, SearchQueryInput, TextSpan,
-    ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+    ChunkId, ChunkingStrategy, CocoError, CocoErrorKind, DocumentId, EmbeddingConfig,
+    ErrorResponse, Filter, FilterField, FilterOp, FilterValue, HnswParams, IndexingConfig,
+    RerankerConfig, RetrievalMode, SearchIntent, SearchIntentInput, SearchQuery, SearchQueryInput,
+    TextSpan, ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -361,7 +361,10 @@ fn vector_index_params_rejects_multiple_kinds() {
 
 #[test]
 fn vector_index_params_rejects_empty_params() {
-    let params = VectorIndexParams { hnsw: None, ivf_pq: None };
+    let params = VectorIndexParams {
+        hnsw: None,
+        ivf_pq: None,
+    };
     let config = IndexingConfig {
         index_params: Some(params),
         ..sample_indexing_config("default")
@@ -426,6 +429,9 @@ fn error_response_serialization_is_stable() {
     let value = serde_json::to_value(&response).expect("serialize error response");
     let object = value.as_object().expect("error response object");
     assert_eq!(object.len(), 2);
-    assert_eq!(value["kind"], serde_json::to_value(CocoErrorKind::User).unwrap());
+    assert_eq!(
+        value["kind"],
+        serde_json::to_value(CocoErrorKind::User).unwrap()
+    );
     assert_eq!(value["message"], "bad input");
 }

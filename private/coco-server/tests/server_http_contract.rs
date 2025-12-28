@@ -2,7 +2,7 @@ mod support;
 
 use serde::Deserialize;
 use serde_json::Value;
-use support::{unique_id, TestProject, TestServer};
+use support::{TestProject, TestServer, unique_id};
 
 const EMBEDDING_DIM: usize = 1536;
 
@@ -51,10 +51,7 @@ fn assert_error_response(response: reqwest::blocking::Response) -> Result<Value,
     if parsed.get("kind").is_none() || parsed.get("message").is_none() {
         return Err("error response must include kind/message".to_string());
     }
-    let message = parsed
-        .get("message")
-        .and_then(Value::as_str)
-        .unwrap_or("");
+    let message = parsed.get("message").and_then(Value::as_str).unwrap_or("");
     if message.trim().is_empty() {
         return Err("error message must not be empty".to_string());
     }
@@ -426,10 +423,7 @@ fn query_contract_rejections() -> Result<(), String> {
         .send()
         .map_err(|err| err.to_string())?;
     let error = assert_error_response(response)?;
-    let kind = error
-        .get("kind")
-        .and_then(Value::as_str)
-        .unwrap_or("");
+    let kind = error.get("kind").and_then(Value::as_str).unwrap_or("");
     if kind != "user" {
         return Err(format!("expected user error, got {kind}"));
     }

@@ -1,6 +1,6 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use coco_protocol::{
     CocoError, CocoErrorKind, CocoResult, ErrorResponse, FilterField, FilterValue, HybridAlpha,
     IndexingConfig, IndexingPlan, ResponseMeta, SearchHit, SearchIntentInput, SearchQueryInput,
@@ -344,8 +344,8 @@ impl IngestChunk {
     fn to_ipc(&self) -> coco_protocol::CocoResult<worker_ipc::IngestChunk> {
         let start = u64::try_from(self.start)
             .map_err(|_| CocoError::user("chunk start is out of range"))?;
-        let end = u64::try_from(self.end)
-            .map_err(|_| CocoError::user("chunk end is out of range"))?;
+        let end =
+            u64::try_from(self.end).map_err(|_| CocoError::user("chunk end is out of range"))?;
         Ok(worker_ipc::IngestChunk {
             chunk_id: self.chunk_id.clone(),
             content: self.content.clone(),

@@ -1,28 +1,28 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::Router;
 use axum::middleware;
 use axum::routing::{get, post};
-use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
-use tracing::info;
 use tower_http::trace::TraceLayer;
+use tracing::info;
 
 use coco_protocol::{CocoError, CocoResult, EmbeddingModel};
 
 use super::config::ServerConfig;
 use super::embedder::load_embedder;
 use super::handlers::{
-    activate_config, get_job, health, index_documents, ingest_batch, job_events, list_configs,
-    openapi_json, prune_project, query_documents, query_memos, register_project, upsert_config,
-    import_documents,
+    activate_config, get_job, health, import_documents, index_documents, ingest_batch, job_events,
+    list_configs, openapi_json, prune_project, query_documents, query_memos, register_project,
+    upsert_config,
 };
 use super::limiter::RateLimiter;
 use super::middleware::{access_log, require_admin, require_api};
 use super::state::AppState;
 use super::worker::check_worker_connectivity;
 use crate::queue::RedisQueue;
-use crate::storage::meta::{ServerMetaStore, DEFAULT_EMBEDDING_DIM};
+use crate::storage::meta::{DEFAULT_EMBEDDING_DIM, ServerMetaStore};
 
 /// Starts the server HTTP service.
 pub async fn run(config: ServerConfig) -> CocoResult<()> {
@@ -87,10 +87,7 @@ pub async fn run(config: ServerConfig) -> CocoResult<()> {
         .route("/v1/sys/configs", get(list_configs).post(upsert_config))
         .route("/v1/sys/configs/activate", post(activate_config))
         .route("/v1/sys/openapi", get(openapi_json))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            require_admin,
-        ));
+        .route_layer(middleware::from_fn_with_state(state.clone(), require_admin));
 
     let api_routes = Router::new()
         .route("/v1/docs/query", post(query_documents))
@@ -100,10 +97,7 @@ pub async fn run(config: ServerConfig) -> CocoResult<()> {
         .route("/v1/memo/query", post(query_memos))
         .route("/v1/jobs/:id", get(get_job))
         .route("/v1/jobs/:id/events", get(job_events))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            require_api,
-        ));
+        .route_layer(middleware::from_fn_with_state(state.clone(), require_api));
 
     let app = Router::new()
         .route("/v1/sys/health", get(health))

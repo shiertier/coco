@@ -17,8 +17,7 @@ use tempfile::TempDir;
 use url::Url;
 
 static ORDERED_LINK_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\[[^\]]*\]\(([^)]+)\)|https?://[^\s)]+")
-        .expect("valid llms.txt regex")
+    Regex::new(r"\[[^\]]*\]\(([^)]+)\)|https?://[^\s)]+").expect("valid llms.txt regex")
 });
 
 const GITHUB_API_BASE_URL: &str = "https://api.github.com";
@@ -58,7 +57,9 @@ pub fn discover_documents(
             default_language,
             cache_dir,
         ),
-        other => Err(DiscoveryError(format!("Unsupported entrypoint type: {other}"))),
+        other => Err(DiscoveryError(format!(
+            "Unsupported entrypoint type: {other}"
+        ))),
     }
 }
 
@@ -75,7 +76,10 @@ fn discover_llms_txt(
         .fetch_text(url)
         .map_err(|err| DiscoveryError(err.to_string()))?;
 
-    let base_language = entrypoint.language.as_ref().map(|lang| lang.trim().to_string());
+    let base_language = entrypoint
+        .language
+        .as_ref()
+        .map(|lang| lang.trim().to_string());
     let language_hint = base_language.as_ref().map(|lang| lang.to_lowercase());
     let variant_languages = entrypoint.language_variants.as_ref();
     if variant_languages.is_some() && base_language.is_none() {
@@ -140,7 +144,9 @@ fn discover_llms_txt(
                 if variant_clean.eq_ignore_ascii_case(base_language) {
                     continue;
                 }
-                let Some(variant_url) = rewrite_language_segment(&abs_url, base_language, variant_clean) else {
+                let Some(variant_url) =
+                    rewrite_language_segment(&abs_url, base_language, variant_clean)
+                else {
                     continue;
                 };
                 let variant_url = normalize_url(&variant_url);
@@ -257,8 +263,8 @@ fn discover_github_tree(
             continue;
         };
 
-        let raw_url = build_raw_url(raw_base_url, repo, &r#ref, &item_path)
-            .map_err(DiscoveryError)?;
+        let raw_url =
+            build_raw_url(raw_base_url, repo, &r#ref, &item_path).map_err(DiscoveryError)?;
 
         if !url_has_allowed_extension(&raw_url, allowed_extensions) {
             continue;
@@ -360,7 +366,11 @@ fn fetch_github_tree(api_url: &str, http: &HttpClient) -> Result<Vec<String>, Di
         Some("application/vnd.github+json"),
         None,
         None,
-        if headers.is_empty() { None } else { Some(&headers) },
+        if headers.is_empty() {
+            None
+        } else {
+            Some(&headers)
+        },
     );
     if result.status != 200 || result.body.is_none() {
         return Err(DiscoveryError(format!(
@@ -404,7 +414,9 @@ fn list_repo_paths_via_git(
     envs.insert("GIT_TERMINAL_PROMPT".to_string(), "0".to_string());
     envs.insert("GIT_HTTP_VERSION".to_string(), "HTTP/1.1".to_string());
 
-    let token = env::var("GITHUB_TOKEN").or_else(|_| env::var("GH_TOKEN")).ok();
+    let token = env::var("GITHUB_TOKEN")
+        .or_else(|_| env::var("GH_TOKEN"))
+        .ok();
     let mut fetch_args = Vec::new();
     if let Some(token) = token.as_deref() {
         fetch_args.push("-c".to_string());
@@ -431,9 +443,8 @@ fn list_repo_paths_via_git(
             true,
         )?
     } else {
-        let temp_root = TempDir::new().map_err(|err| {
-            DiscoveryError(format!("Failed to create git temp dir: {err}"))
-        })?;
+        let temp_root = TempDir::new()
+            .map_err(|err| DiscoveryError(format!("Failed to create git temp dir: {err}")))?;
         let repo_dir = temp_root.path().join("repo");
         let mut clone_args = Vec::new();
         if let Some(token) = token.as_deref() {
@@ -493,11 +504,20 @@ fn prepare_git_cache_dir(
     )
     .is_err()
     {
-        run_git(&["init".to_string(), "-q".to_string()], &repo_dir, envs, false)?;
+        run_git(
+            &["init".to_string(), "-q".to_string()],
+            &repo_dir,
+            envs,
+            false,
+        )?;
     }
 
     match run_git(
-        &["remote".to_string(), "get-url".to_string(), "origin".to_string()],
+        &[
+            "remote".to_string(),
+            "get-url".to_string(),
+            "origin".to_string(),
+        ],
         &repo_dir,
         envs,
         true,
@@ -553,9 +573,9 @@ fn run_git(
         command.stdout(Stdio::null()).stderr(Stdio::piped());
     }
 
-    let output = command.output().map_err(|err| {
-        DiscoveryError(format!("git command failed to start: {err}"))
-    })?;
+    let output = command
+        .output()
+        .map_err(|err| DiscoveryError(format!("git command failed to start: {err}")))?;
     if !output.status.success() {
         let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
         let detail = if detail.is_empty() {
@@ -573,7 +593,11 @@ fn run_git(
     }
 }
 
-fn rewrite_language_segment(url: &str, base_language: &str, target_language: &str) -> Option<String> {
+fn rewrite_language_segment(
+    url: &str,
+    base_language: &str,
+    target_language: &str,
+) -> Option<String> {
     let mut parsed = Url::parse(url).ok()?;
     let mut segments: Vec<String> = parsed
         .path_segments()

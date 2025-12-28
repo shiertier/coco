@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use coco_local::embedder::LocalEmbedder;
 use coco_protocol::EmbeddingModel;
+use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
 
 fn bench_stub_embedder(c: &mut Criterion) {
     let embedder = LocalEmbedder::stub("stub", 384).expect("stub embedder");

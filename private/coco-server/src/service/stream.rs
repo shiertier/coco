@@ -1,5 +1,5 @@
 use axum::body::{Body, Bytes};
-use axum::http::{header, HeaderValue};
+use axum::http::{HeaderValue, header};
 use axum::response::Response;
 use coco_protocol::{CocoError, CocoResult, ResponseMeta, ResponseStatus, SearchHit};
 use futures::stream;
@@ -11,7 +11,10 @@ struct StreamState {
     tail_sent: bool,
 }
 
-pub(crate) fn stream_results(results: Vec<SearchHit>, status: ResponseStatus) -> CocoResult<Response> {
+pub(crate) fn stream_results(
+    results: Vec<SearchHit>,
+    status: ResponseStatus,
+) -> CocoResult<Response> {
     ensure_serializable_hits(&results)?;
     let meta = ResponseMeta { status };
     let meta_json = serde_json::to_vec(&meta).map_err(CocoError::system)?;

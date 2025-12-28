@@ -1,7 +1,7 @@
 mod support;
 
 use serde_json::Value;
-use support::{build_ingest_payload, build_query_payload, make_embedding, TestProject, TestServer};
+use support::{TestProject, TestServer, build_ingest_payload, build_query_payload, make_embedding};
 
 fn assert_query_contains_chunk(
     server: &TestServer,
@@ -127,7 +127,8 @@ fn multi_tenant_isolation() -> Result<(), String> {
     server.wait_for_job(&project_b, job_id_b)?;
 
     assert_query_contains_chunk(&server, &project_a, make_embedding(1.0), "chunk-a")?;
-    let response_b = assert_query_contains_chunk(&server, &project_b, make_embedding(2.0), "chunk-b")?;
+    let response_b =
+        assert_query_contains_chunk(&server, &project_b, make_embedding(2.0), "chunk-b")?;
     let results_b = response_b
         .get("data")
         .and_then(|data| data.get("results"))

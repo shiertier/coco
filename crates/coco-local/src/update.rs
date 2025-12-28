@@ -206,11 +206,7 @@ fn extract_archive(archive: &Path, dest: &Path) -> CocoResult<()> {
         "-xf"
     };
     let mut status = std::process::Command::new("tar");
-    status
-        .arg(tar_flag)
-        .arg(archive)
-        .arg("-C")
-        .arg(dest);
+    status.arg(tar_flag).arg(archive).arg("-C").arg(dest);
     let output = status
         .output()
         .map_err(|err| CocoError::system(format!("failed to run tar: {err}")))?;

@@ -37,8 +37,7 @@ impl LocalEmbedder {
     /// Builds a stub embedder with deterministic outputs.
     pub fn stub(model_name: impl Into<String>, dimensions: usize) -> CocoResult<Self> {
         Ok(Self::Stub(Arc::new(StubEmbedder::new(
-            model_name,
-            dimensions,
+            model_name, dimensions,
         )?)))
     }
 }
@@ -77,7 +76,9 @@ impl StubEmbedder {
     /// Creates a new stub embedder.
     pub fn new(model_name: impl Into<String>, dimensions: usize) -> CocoResult<Self> {
         if dimensions == 0 {
-            return Err(CocoError::user("embedding dimensions must be greater than zero"));
+            return Err(CocoError::user(
+                "embedding dimensions must be greater than zero",
+            ));
         }
         Ok(Self {
             model_name: model_name.into(),
@@ -128,7 +129,9 @@ impl OrtEmbedder {
         config: OrtSessionConfig,
     ) -> CocoResult<Self> {
         if dimensions == 0 {
-            return Err(CocoError::user("embedding dimensions must be greater than zero"));
+            return Err(CocoError::user(
+                "embedding dimensions must be greater than zero",
+            ));
         }
 
         let path = model_path.as_ref();
@@ -161,7 +164,8 @@ impl EmbeddingModel for OrtEmbedder {
 
         let (outputs, attention_mask) = match &self.io.input {
             InputMode::Text { name } => {
-                let texts_owned: Vec<String> = texts.iter().map(|text| (*text).to_owned()).collect();
+                let texts_owned: Vec<String> =
+                    texts.iter().map(|text| (*text).to_owned()).collect();
                 let tensor = Tensor::from_string_array((
                     vec![texts_owned.len() as i64],
                     texts_owned.as_slice(),
@@ -203,9 +207,17 @@ impl EmbeddingModel for OrtEmbedder {
 
         let output = outputs
             .get(self.io.output.as_str())
-            .or_else(|| if outputs.len() > 0 { Some(&outputs[0]) } else { None })
+            .or_else(|| {
+                if outputs.len() > 0 {
+                    Some(&outputs[0])
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| CocoError::compute("embedding model produced no outputs"))?;
-        let (shape, values) = output.try_extract_tensor::<f32>().map_err(CocoError::compute)?;
+        let (shape, values) = output
+            .try_extract_tensor::<f32>()
+            .map_err(CocoError::compute)?;
         extract_embeddings(shape, values, self.dimensions, attention_mask.as_deref())
     }
 
@@ -580,11 +592,7 @@ fn build_session(path: &Path, config: OrtSessionConfig) -> CocoResult<Session> {
     builder.commit_from_file(path).map_err(CocoError::compute)
 }
 
-fn download_file(
-    url: &str,
-    dest: &Path,
-    progress: Option<&DownloadProgress>,
-) -> CocoResult<()> {
+fn download_file(url: &str, dest: &Path, progress: Option<&DownloadProgress>) -> CocoResult<()> {
     let client = Client::builder()
         .build()
         .map_err(|err| CocoError::network(format!("failed to build http client: {err}")))?;
@@ -618,9 +626,8 @@ fn download_file(
         if read == 0 {
             break;
         }
-        file.write_all(&buffer[..read]).map_err(|err| {
-            CocoError::system(format!("failed to write model file: {err}"))
-        })?;
+        file.write_all(&buffer[..read])
+            .map_err(|err| CocoError::system(format!("failed to write model file: {err}")))?;
         downloaded = downloaded.saturating_add(read as u64);
         if let Some(progress) = progress {
             progress.update(downloaded, total);
@@ -742,12 +749,8 @@ impl ModelIoSpec {
         Ok(Self {
             input: InputMode::TokenIds {
                 input_ids: TokenInput::from_input(input_ids)?,
-                attention_mask: attention_mask
-                    .map(TokenInput::from_input)
-                    .transpose()?,
-                token_type_ids: token_type_ids
-                    .map(TokenInput::from_input)
-                    .transpose()?,
+                attention_mask: attention_mask.map(TokenInput::from_input).transpose()?,
+                token_type_ids: token_type_ids.map(TokenInput::from_input).transpose()?,
             },
             output,
         })
@@ -789,9 +792,8 @@ fn build_token_tensor(
         TokenElementType::I32 => {
             let mut values = Vec::with_capacity(data.len());
             for value in data {
-                let cast = i32::try_from(value).map_err(|_| {
-                    CocoError::user("token id out of range for int32 input")
-                })?;
+                let cast = i32::try_from(value)
+                    .map_err(|_| CocoError::user("token id out of range for int32 input"))?;
                 values.push(cast);
             }
             Tensor::from_array((shape.to_vec(), values))
@@ -813,7 +815,10 @@ fn select_output_name(outputs: &[Output]) -> CocoResult<String> {
         "output",
     ];
     for candidate in preferred {
-        if let Some(output) = outputs.iter().find(|out| matches_name(&out.name, candidate)) {
+        if let Some(output) = outputs
+            .iter()
+            .find(|out| matches_name(&out.name, candidate))
+        {
             return Ok(output.name.clone());
         }
     }
@@ -828,10 +833,7 @@ fn matches_name(name: &str, candidate: &str) -> bool {
 }
 
 fn normalize_name(name: &str) -> String {
-    name.split(':')
-        .next()
-        .unwrap_or(name)
-        .to_ascii_lowercase()
+    name.split(':').next().unwrap_or(name).to_ascii_lowercase()
 }
 
 fn find_input<'a>(inputs: &'a [Input], names: &[&str]) -> Option<&'a Input> {
@@ -843,11 +845,7 @@ fn find_input<'a>(inputs: &'a [Input], names: &[&str]) -> Option<&'a Input> {
     None
 }
 
-fn pick_by_index<'a>(
-    inputs: &'a [Input],
-    index: usize,
-    excluded: &[&str],
-) -> Option<&'a Input> {
+fn pick_by_index<'a>(inputs: &'a [Input], index: usize, excluded: &[&str]) -> Option<&'a Input> {
     inputs.get(index).and_then(|input| {
         if excluded.contains(&input.name.as_str()) {
             None
@@ -914,9 +912,7 @@ fn extract_embeddings(
             let mut pooled = vec![0.0; dim];
             let mut count = 0usize;
             for t in 0..seq_len {
-                let mask_ok = mask
-                    .map(|mask| mask[b * seq_len + t] != 0)
-                    .unwrap_or(true);
+                let mask_ok = mask.map(|mask| mask[b * seq_len + t] != 0).unwrap_or(true);
                 if !mask_ok {
                     continue;
                 }

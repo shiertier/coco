@@ -65,8 +65,10 @@ impl LocalServiceConfig {
         let model_dimensions = env_usize("COCO_MODEL_DIMENSIONS", DEFAULT_DIMENSIONS)?;
         let chunk_size = env_u32("COCO_CHUNK_SIZE", DEFAULT_CHUNK_SIZE)?;
         let chunk_overlap = env_u32("COCO_CHUNK_OVERLAP", DEFAULT_CHUNK_OVERLAP)?;
-        let live_retrieval_enabled =
-            env_bool("COCO_LIVE_RETRIEVAL_ENABLED", DEFAULT_LIVE_RETRIEVAL_ENABLED)?;
+        let live_retrieval_enabled = env_bool(
+            "COCO_LIVE_RETRIEVAL_ENABLED",
+            DEFAULT_LIVE_RETRIEVAL_ENABLED,
+        )?;
         let live_retrieval_window_bytes = env_usize(
             "COCO_LIVE_RETRIEVAL_WINDOW_BYTES",
             DEFAULT_LIVE_RETRIEVAL_WINDOW_BYTES,

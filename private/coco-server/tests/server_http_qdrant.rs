@@ -1,12 +1,12 @@
 mod support;
 
-use qdrant_client::qdrant::{vectors_config, Distance};
 use qdrant_client::Qdrant;
+use qdrant_client::qdrant::{Distance, vectors_config};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use support::{
-    build_ingest_payload, build_query_payload, contains_chunk, make_embedding, query_with_config,
-    unique_id, upsert_config, TestServer,
+    TestServer, build_ingest_payload, build_query_payload, contains_chunk, make_embedding,
+    query_with_config, unique_id, upsert_config,
 };
 
 struct QdrantEnv {
@@ -139,8 +139,12 @@ fn qdrant_query_returns_meta() -> Result<(), String> {
     }
     let project = server.register_project("Qdrant Meta")?;
 
-    let ingest =
-        build_ingest_payload("doc-qdrant-meta", "chunk-qdrant-meta", make_embedding(1.0), None);
+    let ingest = build_ingest_payload(
+        "doc-qdrant-meta",
+        "chunk-qdrant-meta",
+        make_embedding(1.0),
+        None,
+    );
     let response = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest)
@@ -207,8 +211,7 @@ fn qdrant_tenant_isolation() -> Result<(), String> {
     let project_a = server.register_project("Qdrant Tenant A")?;
     let project_b = server.register_project("Qdrant Tenant B")?;
 
-    let ingest_a =
-        build_ingest_payload("doc-qa", "chunk-qa", make_embedding(1.0), None);
+    let ingest_a = build_ingest_payload("doc-qa", "chunk-qa", make_embedding(1.0), None);
     let response_a = server
         .api_post("/v1/docs/import", &project_a)
         .json(&ingest_a)
@@ -221,8 +224,7 @@ fn qdrant_tenant_isolation() -> Result<(), String> {
         .ok_or_else(|| "missing job_id for tenant A".to_string())?;
     server.wait_for_job(&project_a, job_id_a)?;
 
-    let ingest_b =
-        build_ingest_payload("doc-qb", "chunk-qb", make_embedding(2.0), None);
+    let ingest_b = build_ingest_payload("doc-qb", "chunk-qb", make_embedding(2.0), None);
     let response_b = server
         .api_post("/v1/docs/import", &project_b)
         .json(&ingest_b)
@@ -273,8 +275,12 @@ fn qdrant_config_isolation() -> Result<(), String> {
     upsert_config(&server, &project, &config_a, "l2")?;
     upsert_config(&server, &project, &config_b, "l2")?;
 
-    let ingest_a =
-        build_ingest_payload("doc-qcfg-a", "chunk-qcfg-a", make_embedding(1.0), Some(&config_a));
+    let ingest_a = build_ingest_payload(
+        "doc-qcfg-a",
+        "chunk-qcfg-a",
+        make_embedding(1.0),
+        Some(&config_a),
+    );
     let response_a = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest_a)
@@ -287,8 +293,12 @@ fn qdrant_config_isolation() -> Result<(), String> {
         .ok_or_else(|| "missing job_id for config A".to_string())?;
     server.wait_for_job(&project, job_id_a)?;
 
-    let ingest_b =
-        build_ingest_payload("doc-qcfg-b", "chunk-qcfg-b", make_embedding(2.0), Some(&config_b));
+    let ingest_b = build_ingest_payload(
+        "doc-qcfg-b",
+        "chunk-qcfg-b",
+        make_embedding(2.0),
+        Some(&config_b),
+    );
     let response_b = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest_b)
@@ -302,14 +312,12 @@ fn qdrant_config_isolation() -> Result<(), String> {
     server.wait_for_job(&project, job_id_b)?;
 
     let response_a = query_with_config(&server, &project, &config_a, make_embedding(1.0))?;
-    if !contains_chunk(&response_a, "chunk-qcfg-a") || contains_chunk(&response_a, "chunk-qcfg-b")
-    {
+    if !contains_chunk(&response_a, "chunk-qcfg-a") || contains_chunk(&response_a, "chunk-qcfg-b") {
         return Err("config A isolation violated".to_string());
     }
 
     let response_b = query_with_config(&server, &project, &config_b, make_embedding(2.0))?;
-    if !contains_chunk(&response_b, "chunk-qcfg-b") || contains_chunk(&response_b, "chunk-qcfg-a")
-    {
+    if !contains_chunk(&response_b, "chunk-qcfg-b") || contains_chunk(&response_b, "chunk-qcfg-a") {
         return Err("config B isolation violated".to_string());
     }
     Ok(())
@@ -333,8 +341,12 @@ fn qdrant_vector_metric_mapping() -> Result<(), String> {
     let config_id = unique_id("qmetric");
     upsert_config(&server, &project, &config_id, "cosine")?;
 
-    let ingest =
-        build_ingest_payload("doc-qmetric", "chunk-qmetric", make_embedding(1.0), Some(&config_id));
+    let ingest = build_ingest_payload(
+        "doc-qmetric",
+        "chunk-qmetric",
+        make_embedding(1.0),
+        Some(&config_id),
+    );
     let response = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest)

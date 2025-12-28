@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use coco_protocol::CocoError;
-use qdrant_client::qdrant::value::Kind as QdrantValueKind;
-use qdrant_client::qdrant::Value;
 use qdrant_client::QdrantError;
+use qdrant_client::qdrant::Value;
+use qdrant_client::qdrant::value::Kind as QdrantValueKind;
 use sha2::{Digest, Sha256};
 use tracing::warn;
 
@@ -51,7 +51,10 @@ pub(super) fn safe_collection_name(base: String) -> String {
     format!("{trimmed}_{suffix}")
 }
 
-pub(super) fn payload_string<'a>(payload: &'a HashMap<String, Value>, key: &str) -> Option<&'a str> {
+pub(super) fn payload_string<'a>(
+    payload: &'a HashMap<String, Value>,
+    key: &str,
+) -> Option<&'a str> {
     let value = payload.get(key)?;
     match value.kind.as_ref()? {
         QdrantValueKind::StringValue(value) => Some(value.as_str()),

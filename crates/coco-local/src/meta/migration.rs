@@ -73,12 +73,7 @@ impl MigrationTrait for CreateLocalMetaTables {
                 Table::create()
                     .table(Chunks::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Chunks::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Chunks::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Chunks::DocId).string().not_null())
                     .col(ColumnDef::new(Chunks::Content).text().not_null())
                     .col(ColumnDef::new(Chunks::StartLine).integer().not_null())
@@ -241,16 +236,8 @@ impl MigrationTrait for CreateLocalIndexingConfigs {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(IndexingConfigs::Chunking)
-                            .text()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(IndexingConfigs::Embedding)
-                            .text()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(IndexingConfigs::Chunking).text().not_null())
+                    .col(ColumnDef::new(IndexingConfigs::Embedding).text().not_null())
                     .col(ColumnDef::new(IndexingConfigs::VectorBackend).text())
                     .col(
                         ColumnDef::new(IndexingConfigs::VectorMetric)
@@ -299,7 +286,11 @@ impl MigrationTrait for AddLocalVersioning {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(ProjectVersions::ProjectId).string().not_null())
+                    .col(
+                        ColumnDef::new(ProjectVersions::ProjectId)
+                            .string()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(ProjectVersions::Status).string().not_null())
                     .col(
                         ColumnDef::new(ProjectVersions::CreatedAt)
@@ -400,7 +391,8 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         let count_stmt = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "SELECT COUNT(*) AS total FROM chunks \
-             WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)".to_string(),
+             WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)"
+                .to_string(),
             vec![Value::from(project_id.clone())],
         );
         let count_row = conn.query_one(count_stmt).await?;
@@ -411,7 +403,8 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         let insert = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "INSERT OR IGNORE INTO project_versions \
-             (id, project_id, status, created_at, item_count) VALUES (?, ?, ?, ?, ?)".to_string(),
+             (id, project_id, status, created_at, item_count) VALUES (?, ?, ?, ?, ?)"
+                .to_string(),
             vec![
                 Value::from(version_id.clone()),
                 Value::from(project_id.clone()),
@@ -426,22 +419,32 @@ async fn backfill_versions(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
             DatabaseBackend::Sqlite,
             "UPDATE projects SET active_version_id = ? WHERE id = ? AND active_version_id IS NULL"
                 .to_string(),
-            vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
+            vec![
+                Value::from(version_id.clone()),
+                Value::from(project_id.clone()),
+            ],
         );
         conn.execute(update_project).await?;
 
         let update_documents = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "UPDATE documents SET version_id = ? WHERE project_id = ?".to_string(),
-            vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
+            vec![
+                Value::from(version_id.clone()),
+                Value::from(project_id.clone()),
+            ],
         );
         conn.execute(update_documents).await?;
 
         let update_chunks = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "UPDATE chunks SET version_id = ? \
-             WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)".to_string(),
-            vec![Value::from(version_id.clone()), Value::from(project_id.clone())],
+             WHERE doc_id IN (SELECT id FROM documents WHERE project_id = ?)"
+                .to_string(),
+            vec![
+                Value::from(version_id.clone()),
+                Value::from(project_id.clone()),
+            ],
         );
         conn.execute(update_chunks).await?;
     }

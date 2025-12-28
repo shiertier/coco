@@ -114,7 +114,7 @@ impl ServerConfig {
             _ => {
                 return Err(CocoError::user(
                     "COCO_TLS_CERT and COCO_TLS_KEY must be set together",
-                ))
+                ));
             }
         };
         if tls.is_none() && tls_mode == TlsMode::Tls {
@@ -125,14 +125,12 @@ impl ServerConfig {
         let database_url = resolve_database_url()?;
         let admin_key = env_required("COCO_ADMIN_KEY")?;
         let api_key = env_required("COCO_API_KEY")?;
-        let rate_limit_per_min =
-            env_u32("COCO_RATE_LIMIT_PER_MIN", DEFAULT_RATE_LIMIT_PER_MIN)?;
+        let rate_limit_per_min = env_u32("COCO_RATE_LIMIT_PER_MIN", DEFAULT_RATE_LIMIT_PER_MIN)?;
         let rate_limit_burst = env_u32("COCO_RATE_LIMIT_BURST", DEFAULT_RATE_LIMIT_BURST)?;
         let org_max_documents = env_i64_optional("COCO_ORG_MAX_DOCUMENTS")?;
         let org_max_chunks = env_i64_optional("COCO_ORG_MAX_CHUNKS")?;
         let org_max_storage_bytes = env_i64_optional("COCO_ORG_MAX_STORAGE_BYTES")?;
-        let org_max_embeddings_per_day =
-            env_i64_optional("COCO_ORG_MAX_EMBEDDINGS_PER_DAY")?;
+        let org_max_embeddings_per_day = env_i64_optional("COCO_ORG_MAX_EMBEDDINGS_PER_DAY")?;
         warn_if_mode_set();
         let queue_mode = queue_mode_from_env()?;
         let redis_url = env_optional("COCO_REDIS_URL");
@@ -308,8 +306,8 @@ fn pg_pool_config_from_env(prefix: &str) -> CocoResult<PgPoolConfig> {
             )));
         }
     }
-    let connect_timeout = env_u64_optional(&format!("{prefix}_PG_CONNECT_TIMEOUT_SECS"))?
-        .map(Duration::from_secs);
+    let connect_timeout =
+        env_u64_optional(&format!("{prefix}_PG_CONNECT_TIMEOUT_SECS"))?.map(Duration::from_secs);
     Ok(PgPoolConfig {
         max_connections,
         min_connections,

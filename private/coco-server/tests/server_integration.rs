@@ -5,8 +5,7 @@ use coco_protocol::{
     SearchQueryInput, StorageBackend, TextSpan, VectorMetric,
 };
 use coco_server::storage::meta::{
-    NewDocument, NewIndexingConfig, NewOrganization, NewProject, ServerMetaStore,
-    DEFAULT_CONFIG_ID,
+    DEFAULT_CONFIG_ID, NewDocument, NewIndexingConfig, NewOrganization, NewProject, ServerMetaStore,
 };
 use coco_server::storage::pg::{PgBackend, PgBackendConfig};
 
@@ -298,8 +297,12 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
         quality_score: None,
         verified: Some(false),
     };
-    backend_a.upsert_chunks(std::slice::from_ref(&chunk_a)).await?;
-    backend_b.upsert_chunks(std::slice::from_ref(&chunk_b)).await?;
+    backend_a
+        .upsert_chunks(std::slice::from_ref(&chunk_a))
+        .await?;
+    backend_b
+        .upsert_chunks(std::slice::from_ref(&chunk_b))
+        .await?;
 
     let intent = SearchIntentInput::new(
         SearchQueryInput::vector(None, Some(make_embedding(1.0))).expect("query"),

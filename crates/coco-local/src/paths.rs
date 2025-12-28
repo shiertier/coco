@@ -20,8 +20,12 @@ pub fn lock_path() -> CocoResult<PathBuf> {
 
 /// Returns the SQLite metadata database path.
 pub fn meta_db_path() -> CocoResult<PathBuf> {
-    let primary = std::env::var("COCO_META_DB").ok().filter(|value| !value.is_empty());
-    let legacy = std::env::var("COCO_DB_URL").ok().filter(|value| !value.is_empty());
+    let primary = std::env::var("COCO_META_DB")
+        .ok()
+        .filter(|value| !value.is_empty());
+    let legacy = std::env::var("COCO_DB_URL")
+        .ok()
+        .filter(|value| !value.is_empty());
     let selected = match (primary, legacy) {
         (Some(primary), Some(legacy)) => {
             if primary != legacy {

@@ -77,14 +77,15 @@ fn scrapy_docs_root() -> Option<PathBuf> {
             return Some(expand_tilde(trimmed));
         }
     }
-    let username = env::var("USER")
-        .or_else(|_| env::var("USERNAME"))
-        .ok();
+    let username = env::var("USER").or_else(|_| env::var("USERNAME")).ok();
     if username.as_deref() == Some("scrapy") {
-        let home = env::var("HOME")
-            .or_else(|_| env::var("USERPROFILE"))
-            .ok()?;
-        return Some(PathBuf::from(home).join(".cache").join("coco").join("scrapy_docs"));
+        let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).ok()?;
+        return Some(
+            PathBuf::from(home)
+                .join(".cache")
+                .join("coco")
+                .join("scrapy_docs"),
+        );
     }
     None
 }
@@ -138,7 +139,10 @@ fn trim_optional(value: Option<String>) -> Option<String> {
     })
 }
 
-fn normalize_list(field: &str, items: Option<Vec<String>>) -> Result<Option<Vec<String>>, ConfigError> {
+fn normalize_list(
+    field: &str,
+    items: Option<Vec<String>>,
+) -> Result<Option<Vec<String>>, ConfigError> {
     let Some(items) = items else {
         return Ok(None);
     };
@@ -146,7 +150,10 @@ fn normalize_list(field: &str, items: Option<Vec<String>>) -> Result<Option<Vec<
     for item in items {
         let t = item.trim();
         if t.is_empty() {
-            return Err(ConfigError(format!("{} must be a list of non-empty strings", field)));
+            return Err(ConfigError(format!(
+                "{} must be a list of non-empty strings",
+                field
+            )));
         }
         trimmed.push(t.to_string());
     }
@@ -160,7 +167,10 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
         .map_err(|_| ConfigError(format!("Invalid JSON in config file: {}", path.display())))?;
 
     if parsed.version != 1 {
-        return Err(ConfigError(format!("Unsupported config version: {}", parsed.version)));
+        return Err(ConfigError(format!(
+            "Unsupported config version: {}",
+            parsed.version
+        )));
     }
 
     let defaults_raw = parsed.defaults.unwrap_or(DefaultsRaw {
@@ -174,24 +184,32 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
         .allowed_extensions
         .unwrap_or_else(|| vec![".md".to_string(), ".mdx".to_string()]);
     if allowed_extensions.is_empty() {
-        return Err(ConfigError("defaults.allowed_extensions must be a list of strings".to_string()));
+        return Err(ConfigError(
+            "defaults.allowed_extensions must be a list of strings".to_string(),
+        ));
     }
 
     let user_agent = defaults_raw
         .user_agent
         .unwrap_or_else(|| "docs-crawler/0.1".to_string());
     if user_agent.trim().is_empty() {
-        return Err(ConfigError("defaults.user_agent must be a non-empty string".to_string()));
+        return Err(ConfigError(
+            "defaults.user_agent must be a non-empty string".to_string(),
+        ));
     }
 
     let timeout_seconds = defaults_raw.timeout_seconds.unwrap_or(30);
     if timeout_seconds == 0 {
-        return Err(ConfigError("defaults.timeout_seconds must be a positive integer".to_string()));
+        return Err(ConfigError(
+            "defaults.timeout_seconds must be a positive integer".to_string(),
+        ));
     }
 
     let max_workers = defaults_raw.max_workers.unwrap_or(8);
     if max_workers == 0 {
-        return Err(ConfigError("defaults.max_workers must be a positive integer".to_string()));
+        return Err(ConfigError(
+            "defaults.max_workers must be a positive integer".to_string(),
+        ));
     }
 
     let defaults = DefaultsConfig {
@@ -211,12 +229,15 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
             src.default_language.unwrap_or_else(|| "en".to_string()),
         )?;
 
-        let allowed_extensions = normalize_list(&format!("sources[{idx}].allowed_extensions"), src.allowed_extensions)?;
+        let allowed_extensions = normalize_list(
+            &format!("sources[{idx}].allowed_extensions"),
+            src.allowed_extensions,
+        )?;
         let max_workers = match src.max_workers {
             Some(0) => {
                 return Err(ConfigError(format!(
                     "sources[{idx}].max_workers must be a positive integer"
-                )))
+                )));
             }
             other => other,
         };
@@ -291,10 +312,7 @@ pub fn load_config(path: &Path) -> Result<CrawlerConfig, ConfigError> {
         });
     }
 
-    Ok(CrawlerConfig {
-        defaults,
-        sources,
-    })
+    Ok(CrawlerConfig { defaults, sources })
 }
 
 pub fn get_source<'a>(config: &'a CrawlerConfig, source_id: &str) -> Option<&'a SourceConfig> {

@@ -54,7 +54,10 @@ pub fn path_to_string(path: &Path) -> CocoResult<String> {
 
 fn collect_shallow(root: &Path, output: &mut Vec<PathBuf>) -> CocoResult<()> {
     let entries = std::fs::read_dir(root).map_err(|err| {
-        CocoError::system(format!("failed to read directory {}: {err}", root.display()))
+        CocoError::system(format!(
+            "failed to read directory {}: {err}",
+            root.display()
+        ))
     })?;
     for entry in entries {
         let entry = entry.map_err(CocoError::system)?;
@@ -62,11 +65,7 @@ fn collect_shallow(root: &Path, output: &mut Vec<PathBuf>) -> CocoResult<()> {
         if should_ignore_path(&path) {
             continue;
         }
-        if entry
-            .metadata()
-            .map_err(CocoError::system)?
-            .is_file()
-        {
+        if entry.metadata().map_err(CocoError::system)?.is_file() {
             output.push(path);
         }
     }
@@ -75,7 +74,10 @@ fn collect_shallow(root: &Path, output: &mut Vec<PathBuf>) -> CocoResult<()> {
 
 fn collect_recursive(root: &Path, output: &mut Vec<PathBuf>) -> CocoResult<()> {
     let entries = std::fs::read_dir(root).map_err(|err| {
-        CocoError::system(format!("failed to read directory {}: {err}", root.display()))
+        CocoError::system(format!(
+            "failed to read directory {}: {err}",
+            root.display()
+        ))
     })?;
     for entry in entries {
         let entry = entry.map_err(CocoError::system)?;

@@ -58,6 +58,8 @@ impl QdrantExecutor {
             .search_points(search)
             .await
             .map_err(|err| map_qdrant_err("qdrant search failed", err))?;
-        self.store.collect_search_hits(response.result, &config_id).await
+        self.store
+            .collect_search_hits(response.result, &config_id)
+            .await
     }
 }

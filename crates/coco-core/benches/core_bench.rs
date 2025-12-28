@@ -1,9 +1,9 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use coco_core::chunking::FixedTokenSplitter;
 use coco_core::code::{CodeParser, CodeSplitter};
 use coco_core::markdown::{MarkdownParser, MarkdownSplitter};
 use coco_core::text::{sanitize_text, token_windows, truncate_tokens};
 use coco_protocol::{Chunker, ChunkingStrategy, DocumentParser, FileType, ParsedDocument};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 
 fn markdown_sample() -> String {
     let mut content = String::from("# Title\n\nIntro paragraph.\n\n");

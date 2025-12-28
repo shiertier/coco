@@ -35,17 +35,13 @@ pub(crate) fn extract_version_id_filter(
     Ok(None)
 }
 
-pub(crate) fn extract_indexing_config_id(
-    intent: &SearchIntentInput,
-) -> CocoResult<Option<String>> {
+pub(crate) fn extract_indexing_config_id(intent: &SearchIntentInput) -> CocoResult<Option<String>> {
     let Some(config_id) = intent.indexing_config_id.as_deref() else {
         return Ok(None);
     };
     let normalized = coco_core::normalize_config_id(config_id)?;
     if normalized != config_id {
-        return Err(CocoError::user(
-            "indexing_config_id must be normalized",
-        ));
+        return Err(CocoError::user("indexing_config_id must be normalized"));
     }
     Ok(Some(config_id.to_string()))
 }
@@ -73,8 +69,8 @@ pub(crate) async fn fill_query_embedding(
                     .next()
                     .ok_or_else(|| CocoError::compute("empty embedding output"))
             })
-                .await
-                .map_err(|err| CocoError::system(format!("embedding task failed: {err}")))??;
+            .await
+            .map_err(|err| CocoError::system(format!("embedding task failed: {err}")))??;
             intent.set_query_embedding(embedding)?;
         }
         coco_protocol::RetrievalMode::Fts => {

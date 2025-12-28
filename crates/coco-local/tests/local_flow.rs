@@ -3,11 +3,11 @@
 mod support;
 
 use chrono::Utc;
+use coco_core::build_search_intent;
 use coco_local::storage::lance::LanceBackend;
 use coco_local::storage::meta::{
-    LocalMetaStore, NewChunk, NewDocument, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
+    DEFAULT_CONFIG_ID, LocalMetaStore, NewChunk, NewDocument, NewIndexingConfig, NewProject,
 };
-use coco_core::build_search_intent;
 use coco_protocol::{
     Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, SearchIntentInput, SearchQueryInput,
     StorageBackend, TextSpan, VectorMetric,

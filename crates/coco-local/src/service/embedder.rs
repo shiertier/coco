@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use coco_protocol::{CocoError, CocoErrorKind, CocoResult};
 
-use crate::embedder::{LocalEmbedder, ModelPool, OrtEmbedder};
 use super::config::LocalServiceConfig;
+use crate::embedder::{LocalEmbedder, ModelPool, OrtEmbedder};
 
 pub(crate) async fn prepare_embedder(
     config: &LocalServiceConfig,
@@ -13,11 +13,8 @@ pub(crate) async fn prepare_embedder(
         return Ok(Some(Arc::new(stub)));
     }
     if let Some(path) = config.model_path.clone() {
-        let embedder = OrtEmbedder::from_file(
-            path,
-            config.model_name.clone(),
-            config.model_dimensions,
-        )?;
+        let embedder =
+            OrtEmbedder::from_file(path, config.model_name.clone(), config.model_dimensions)?;
         return Ok(Some(Arc::new(LocalEmbedder::Ort(Arc::new(embedder)))));
     }
 

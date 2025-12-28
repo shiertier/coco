@@ -2,8 +2,8 @@ mod support;
 
 use serde_json::Value;
 use support::{
-    activate_config, build_ingest_payload, contains_chunk, make_embedding, query_with_config,
-    unique_id, upsert_config, TestServer,
+    TestServer, activate_config, build_ingest_payload, contains_chunk, make_embedding,
+    query_with_config, unique_id, upsert_config,
 };
 
 #[test]
@@ -18,8 +18,7 @@ fn config_id_isolation_and_activation() -> Result<(), String> {
     upsert_config(&server, &project, &config_a, "l2")?;
     upsert_config(&server, &project, &config_b, "l2")?;
 
-    let ingest_a =
-        build_ingest_payload("doc-a", "chunk-a", make_embedding(1.0), Some(&config_a));
+    let ingest_a = build_ingest_payload("doc-a", "chunk-a", make_embedding(1.0), Some(&config_a));
     let response = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest_a)
@@ -32,8 +31,7 @@ fn config_id_isolation_and_activation() -> Result<(), String> {
         .ok_or_else(|| "missing job_id for config_a".to_string())?;
     server.wait_for_job(&project, job_id)?;
 
-    let ingest_b =
-        build_ingest_payload("doc-b", "chunk-b", make_embedding(2.0), Some(&config_b));
+    let ingest_b = build_ingest_payload("doc-b", "chunk-b", make_embedding(2.0), Some(&config_b));
     let response = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest_b)
@@ -98,8 +96,12 @@ fn referenced_config_rejects_updates() -> Result<(), String> {
     let config_id = unique_id("ref");
     upsert_config(&server, &project, &config_id, "l2")?;
 
-    let ingest =
-        build_ingest_payload("doc-ref", "chunk-ref", make_embedding(3.0), Some(&config_id));
+    let ingest = build_ingest_payload(
+        "doc-ref",
+        "chunk-ref",
+        make_embedding(3.0),
+        Some(&config_id),
+    );
     let response = server
         .api_post("/v1/docs/import", &project)
         .json(&ingest)
@@ -192,7 +194,10 @@ fn rejects_invalid_and_missing_configs() -> Result<(), String> {
         .send()
         .map_err(|err| err.to_string())?;
     if !response.status().is_client_error() {
-        return Err(format!("expected default update rejection, got {}", response.status()));
+        return Err(format!(
+            "expected default update rejection, got {}",
+            response.status()
+        ));
     }
 
     let response = server

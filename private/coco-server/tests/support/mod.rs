@@ -65,9 +65,7 @@ impl TestServer {
     }
 
     pub fn admin_get(&self, path: &str) -> RequestBuilder {
-        self.client
-            .get(self.url(path))
-            .bearer_auth(&self.admin_key)
+        self.client.get(self.url(path)).bearer_auth(&self.admin_key)
     }
 
     pub fn api_post(&self, path: &str, project: &TestProject) -> RequestBuilder {
@@ -147,11 +145,7 @@ impl TestServer {
             .ok_or_else(|| "health response missing vector_backend.kind".to_string())
     }
 
-    pub fn wait_for_job(
-        &self,
-        project: &TestProject,
-        job_id: &str,
-    ) -> Result<(), String> {
+    pub fn wait_for_job(&self, project: &TestProject, job_id: &str) -> Result<(), String> {
         let path = format!("/v1/jobs/{job_id}");
         for _ in 0..60 {
             let response = self
@@ -373,7 +367,9 @@ fn support_helpers_smoke() {
     let _ = ingest.get("documents").and_then(Value::as_array);
 
     let query = build_query_payload(embedding);
-    let _ = query.get("intent").and_then(|intent| intent.get("retrieval_mode"));
+    let _ = query
+        .get("intent")
+        .and_then(|intent| intent.get("retrieval_mode"));
 
     let parsed = serde_json::json!({
         "data": { "results": [ { "chunk": { "id": "chunk" } } ] }

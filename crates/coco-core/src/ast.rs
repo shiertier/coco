@@ -148,11 +148,7 @@ impl AstQuery {
     }
 
     /// Runs the query against the given node and returns all captures.
-    pub fn captures<'a>(
-        &'a self,
-        node: Node<'a>,
-        source: &'a [u8],
-    ) -> CocoResult<Vec<AstCapture>> {
+    pub fn captures<'a>(&'a self, node: Node<'a>, source: &'a [u8]) -> CocoResult<Vec<AstCapture>> {
         let mut cursor = QueryCursor::new();
         let mut captures = Vec::new();
         for (matched, capture_index) in cursor.captures(&self.query, node, |_| source) {

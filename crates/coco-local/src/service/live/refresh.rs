@@ -100,9 +100,9 @@ async fn file_is_stale(record: &DocumentRecord) -> CocoResult<bool> {
     let Some(path) = non_empty_path(&record.path) else {
         return Ok(false);
     };
-    let metadata = tokio::fs::metadata(path).await.map_err(|err| {
-        CocoError::system(format!("failed to read metadata: {err}"))
-    })?;
+    let metadata = tokio::fs::metadata(path)
+        .await
+        .map_err(|err| CocoError::system(format!("failed to read metadata: {err}")))?;
     let modified = metadata
         .modified()
         .map_err(|err| CocoError::system(format!("failed to read mtime: {err}")))?;

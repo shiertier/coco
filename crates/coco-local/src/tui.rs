@@ -8,14 +8,14 @@ use coco_protocol::{CocoError, CocoResult};
 use crossterm::event::{self, Event, KeyCode};
 use crossterm::execute;
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
+use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, Paragraph};
-use ratatui::Terminal;
 use sysinfo::{Pid, ProcessesToUpdate, System};
 
 use crate::embedder::{DownloadProgress, ModelPool};
@@ -117,10 +117,7 @@ pub fn run_dashboard(metrics: Arc<LocalMetrics>, host: String, port: u16) -> Coc
 }
 
 /// Runs a progress UI while downloading the default model.
-pub fn run_model_download(
-    progress: Arc<DownloadProgress>,
-    model_name: String,
-) -> CocoResult<()> {
+pub fn run_model_download(progress: Arc<DownloadProgress>, model_name: String) -> CocoResult<()> {
     let _guard = TerminalGuard::enter()?;
     let mut terminal = setup_terminal()?;
 
@@ -130,11 +127,7 @@ pub fn run_model_download(
             .map(|total| downloaded as f64 / total as f64)
             .unwrap_or(0.0);
         let label = match total {
-            Some(total) => format!(
-                "{} / {} MB",
-                format_mb(downloaded),
-                format_mb(total)
-            ),
+            Some(total) => format!("{} / {} MB", format_mb(downloaded), format_mb(total)),
             None => format!("{} MB", format_mb(downloaded)),
         };
 

@@ -1,7 +1,7 @@
 #[cfg(feature = "server-storage")]
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 
-use coco_protocol::{VectorBackendKind};
+use coco_protocol::VectorBackendKind;
 
 use super::config::QueueMode;
 use super::state::AppState;

@@ -3,8 +3,8 @@
 use std::time::Duration;
 
 use coco_protocol::{CocoError, CocoResult, EmbeddingModel};
-use reqwest::blocking::Client;
 use reqwest::StatusCode;
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_OPENAI_URL: &str = "https://api.openai.com/v1/embeddings";
@@ -37,9 +37,7 @@ impl ProviderConfig {
                 .map(|value| value.to_string())
                 .ok_or_else(|| CocoError::user("embedding base url must be provided"))?,
         };
-        let name = prefix
-            .trim_start_matches("COCO_")
-            .to_ascii_lowercase();
+        let name = prefix.trim_start_matches("COCO_").to_ascii_lowercase();
         Ok(Self {
             name,
             api_key,
@@ -118,10 +116,14 @@ impl HttpEmbedder {
     /// Creates a new HTTP embedding client.
     pub fn new(config: HttpEmbedderConfig) -> CocoResult<Self> {
         if config.dimensions == 0 {
-            return Err(CocoError::user("embedding dimensions must be greater than zero"));
+            return Err(CocoError::user(
+                "embedding dimensions must be greater than zero",
+            ));
         }
         if config.max_batch_size == 0 {
-            return Err(CocoError::user("embedding batch size must be greater than zero"));
+            return Err(CocoError::user(
+                "embedding batch size must be greater than zero",
+            ));
         }
         let client = Client::builder()
             .timeout(config.timeout)

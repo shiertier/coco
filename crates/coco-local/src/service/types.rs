@@ -1,6 +1,6 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use coco_protocol::{
     ChunkingStrategy, CocoError, CocoErrorKind, ErrorResponse, FileType, IndexingConfig,
     ResponseEnvelope, ResponseMeta, ResponseStatus, RetrievalConfig, SearchHit, SearchIntentInput,

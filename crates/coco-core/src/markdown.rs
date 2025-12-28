@@ -50,7 +50,9 @@ impl MarkdownSplitter {
 impl Chunker for MarkdownSplitter {
     fn chunk(&self, doc: &ParsedDocument, config: &ChunkingStrategy) -> CocoResult<Vec<TextSpan>> {
         if doc.file_type != FileType::Markdown {
-            return Err(CocoError::user("unsupported file type for MarkdownSplitter"));
+            return Err(CocoError::user(
+                "unsupported file type for MarkdownSplitter",
+            ));
         }
 
         let chunk_size = config.chunk_size as usize;
@@ -60,7 +62,9 @@ impl Chunker for MarkdownSplitter {
 
         let overlap = config.chunk_overlap as usize;
         if overlap >= chunk_size {
-            return Err(CocoError::user("chunk_overlap must be smaller than chunk_size"));
+            return Err(CocoError::user(
+                "chunk_overlap must be smaller than chunk_size",
+            ));
         }
 
         let content = doc.content.as_str();
@@ -112,12 +116,7 @@ impl Chunker for MarkdownSplitter {
     }
 }
 
-fn push_span(
-    content: &str,
-    start: usize,
-    end: usize,
-    spans: &mut Vec<TextSpan>,
-) -> CocoResult<()> {
+fn push_span(content: &str, start: usize, end: usize, spans: &mut Vec<TextSpan>) -> CocoResult<()> {
     if start >= end {
         return Ok(());
     }

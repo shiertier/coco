@@ -8,6 +8,7 @@ use chrono::{SecondsFormat, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 
+use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_local::cli::{
     Cli, Command, ConfigCommand, ExperimentCommand, ExperimentCompareArgs, ExperimentRunArgs,
     GrammarCommand, GrammarInstallArgs, GrammarUpdateArgs, SetupArgs, UpdateArgs,
@@ -23,7 +24,6 @@ use coco_local::metrics::LocalMetrics;
 use coco_local::service::LocalServiceConfig;
 use coco_local::storage::meta::DEFAULT_CONFIG_ID;
 use coco_local::{grammar, paths, update};
-use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{
     ChunkingStrategy, CocoError, CocoErrorKind, CocoResult, EmbeddingConfig, ErrorResponse,
     FileType, IndexingConfig, ResponseEnvelope, RetrievalConfig, RetrievalMode, SearchHit,
@@ -57,10 +57,12 @@ async fn main() {
 async fn run_start(args: coco_local::cli::StartArgs) -> CocoResult<()> {
     let mut config = LocalServiceConfig::from_env()?;
     args.apply_overrides(&mut config);
-    let (status, lock) =
-        coco_local::lifecycle::ensure_single_instance(&config.host, config.port)?;
+    let (status, lock) = coco_local::lifecycle::ensure_single_instance(&config.host, config.port)?;
     if status == coco_local::lifecycle::InstanceStatus::Running {
-        println!("coco-local already running on {}:{}", config.host, config.port);
+        println!(
+            "coco-local already running on {}:{}",
+            config.host, config.port
+        );
         return Ok(());
     }
     let _lock_guard = lock;
@@ -73,7 +75,9 @@ async fn run_start(args: coco_local::cli::StartArgs) -> CocoResult<()> {
     let service_metrics = Arc::clone(&metrics);
     let service_config = config.clone();
     let service_task =
-        tokio::spawn(async move { coco_local::service::run(service_config, service_metrics).await });
+        tokio::spawn(
+            async move { coco_local::service::run(service_config, service_metrics).await },
+        );
 
     if is_headless(args.headless) {
         return await_service(service_task).await;
@@ -106,9 +110,7 @@ async fn run_start(args: coco_local::cli::StartArgs) -> CocoResult<()> {
     result
 }
 
-async fn await_service(
-    service_task: tokio::task::JoinHandle<CocoResult<()>>,
-) -> CocoResult<()> {
+async fn await_service(service_task: tokio::task::JoinHandle<CocoResult<()>>) -> CocoResult<()> {
     match service_task.await {
         Ok(result) => result,
         Err(err) => Err(CocoError::system(format!("service task failed: {err}"))),
@@ -124,10 +126,7 @@ fn run_setup(args: SetupArgs) -> CocoResult<()> {
     let store = ModelStore::open(None)?;
     let dest = store.model_path(&config.model_file);
     std::fs::copy(&source, &dest).map_err(|err| {
-        CocoError::system(format!(
-            "failed to copy model to {}: {err}",
-            dest.display()
-        ))
+        CocoError::system(format!("failed to copy model to {}: {err}", dest.display()))
     })?;
     println!("installed model at {}", dest.display());
     Ok(())
@@ -291,8 +290,8 @@ async fn run_experiment_run(args: ExperimentRunArgs) -> CocoResult<()> {
     }
 
     let local_config = LocalServiceConfig::from_env()?;
-    let meta = coco_local::storage::meta::LocalMetaStore::connect(&local_config.meta_db_path)
-        .await?;
+    let meta =
+        coco_local::storage::meta::LocalMetaStore::connect(&local_config.meta_db_path).await?;
     let project = meta
         .get_project(&spec.project_id)
         .await?
@@ -319,13 +318,8 @@ async fn run_experiment_run(args: ExperimentRunArgs) -> CocoResult<()> {
             .await?;
             println!("indexed {indexed} files for {}", config.config_id);
 
-            activate_indexing_config(
-                &client,
-                &base_url,
-                &spec.project_id,
-                &config.config_id,
-            )
-            .await?;
+            activate_indexing_config(&client, &base_url, &spec.project_id, &config.config_id)
+                .await?;
 
             for strategy in &spec.query_strategies {
                 let metrics = metrics_for_strategy(&spec, strategy);
@@ -464,8 +458,7 @@ fn run_experiment_compare(args: ExperimentCompareArgs) -> CocoResult<()> {
         return Ok(());
     }
 
-    let mut rows: Vec<(MetricKey, MetricAccumulator)> =
-        aggregations.into_iter().collect();
+    let mut rows: Vec<(MetricKey, MetricAccumulator)> = aggregations.into_iter().collect();
     rows.sort_by(|(a, _), (b, _)| a.cmp(b));
     println!("indexing_config | query_config | retrieval_mode | metric | k | mean");
     for (key, acc) in rows {
@@ -490,10 +483,8 @@ async fn run_config_list(args: coco_local::cli::ConfigListArgs) -> CocoResult<()
     let (host, port) = resolve_host_port(args.host, args.port)?;
     let base_url = format!("http://{}:{port}", host);
     let client = reqwest::Client::new();
-    let mut url =
-        reqwest::Url::parse(&format!("{base_url}/v1/sys/configs")).map_err(|err| {
-            CocoError::system(format!("invalid config list url: {err}"))
-        })?;
+    let mut url = reqwest::Url::parse(&format!("{base_url}/v1/sys/configs"))
+        .map_err(|err| CocoError::system(format!("invalid config list url: {err}")))?;
     if let Some(project_id) = args.project_id.as_deref() {
         if project_id.trim().is_empty() {
             return Err(CocoError::user("project_id must not be empty"));
@@ -563,10 +554,7 @@ async fn run_config_set(args: coco_local::cli::ConfigSetArgs) -> CocoResult<()> 
         &request,
     )
     .await?;
-    println!(
-        "saved config {}",
-        response.data.config.config_id
-    );
+    println!("saved config {}", response.data.config.config_id);
     Ok(())
 }
 
@@ -631,7 +619,10 @@ async fn import_file(
     let content = tokio::fs::read_to_string(&normalized)
         .await
         .map_err(|err| {
-            CocoError::system(format!("failed to read file {}: {err}", normalized.display()))
+            CocoError::system(format!(
+                "failed to read file {}: {err}",
+                normalized.display()
+            ))
         })?;
     let file_type = file_type_for_path(&normalized);
     let title = title_for_path(&normalized);
@@ -704,10 +695,7 @@ async fn resolve_project_id(
     Ok(response.project_id)
 }
 
-fn resolve_host_port(
-    host: Option<String>,
-    port: Option<u16>,
-) -> CocoResult<(String, u16)> {
+fn resolve_host_port(host: Option<String>, port: Option<u16>) -> CocoResult<(String, u16)> {
     let mut config = LocalServiceConfig::from_env()?;
     if let Some(host) = host {
         config.host = host;
@@ -730,10 +718,7 @@ fn resolve_update_repo(repo: Option<String>) -> CocoResult<String> {
     }
 }
 
-async fn fetch_health(
-    client: &reqwest::Client,
-    url: &str,
-) -> CocoResult<HealthResponse> {
+async fn fetch_health(client: &reqwest::Client, url: &str) -> CocoResult<HealthResponse> {
     get_json::<HealthResponse>(client, url).await
 }
 
@@ -913,9 +898,10 @@ async fn run_experiment_cases(
     let semaphore = Arc::new(Semaphore::new(limit));
     let mut join_set = JoinSet::new();
     for case in cases {
-        let permit = semaphore.clone().acquire_owned().await.map_err(|_| {
-            CocoError::system("failed to acquire experiment concurrency permit")
-        })?;
+        let permit =
+            semaphore.clone().acquire_owned().await.map_err(|_| {
+                CocoError::system("failed to acquire experiment concurrency permit")
+            })?;
         let client = client.clone();
         let base_url = base_url.to_string();
         let project_id = project_id.to_string();
@@ -938,9 +924,8 @@ async fn run_experiment_cases(
 
     let mut outcomes = Vec::new();
     while let Some(result) = join_set.join_next().await {
-        let outcome = result.map_err(|err| {
-            CocoError::system(format!("experiment task failed: {err}"))
-        })??;
+        let outcome =
+            result.map_err(|err| CocoError::system(format!("experiment task failed: {err}")))??;
         outcomes.push(outcome);
     }
     Ok(outcomes)
@@ -993,9 +978,7 @@ fn build_experiment_intent(
             SearchQueryInput::vector(Some(case.query.clone()), None).expect("query")
         }
         RetrievalMode::Fts => SearchQueryInput::fts(case.query.clone()).expect("query"),
-        RetrievalMode::Hybrid => {
-            SearchQueryInput::hybrid(case.query.clone(), None).expect("query")
-        }
+        RetrievalMode::Hybrid => SearchQueryInput::hybrid(case.query.clone(), None).expect("query"),
     };
     SearchIntentInput::new(
         query,
@@ -1040,11 +1023,7 @@ fn update_metric_accumulators(
     latency_ms: f32,
     fallback_k: u32,
 ) {
-    let expected: HashSet<&str> = case
-        .expected_doc_ids
-        .iter()
-        .map(String::as_str)
-        .collect();
+    let expected: HashSet<&str> = case.expected_doc_ids.iter().map(String::as_str).collect();
 
     let mut first_rank = None;
     for (index, doc_id) in doc_ids.iter().enumerate() {
@@ -1054,9 +1033,7 @@ fn update_metric_accumulators(
         }
     }
     let hit_rate = if first_rank.is_some() { 1.0 } else { 0.0 };
-    let mrr = first_rank
-        .map(|rank| 1.0 / rank as f32)
-        .unwrap_or(0.0);
+    let mrr = first_rank.map(|rank| 1.0 / rank as f32).unwrap_or(0.0);
 
     for (metric, accumulator) in metrics.iter().zip(accumulators.iter_mut()) {
         let value = match metric.kind {
@@ -1095,9 +1072,8 @@ fn resolve_experiment_output_path(spec: &Path, output: Option<&Path>) -> PathBuf
 }
 
 fn load_result_file(path: &Path) -> CocoResult<ExperimentResultFile> {
-    let content = std::fs::read_to_string(path).map_err(|err| {
-        CocoError::system(format!("failed to read results file: {err}"))
-    })?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|err| CocoError::system(format!("failed to read results file: {err}")))?;
     serde_json::from_str::<ExperimentResultFile>(&content)
         .map_err(|err| CocoError::user(format!("invalid results json: {err}")))
 }
@@ -1267,30 +1243,23 @@ fn build_indexing_config(args: coco_local::cli::ConfigSetArgs) -> CocoResult<Ind
         let content = std::fs::read_to_string(&file).map_err(|err| {
             CocoError::system(format!("failed to read {}: {err}", file.display()))
         })?;
-        let config = serde_json::from_str::<IndexingConfig>(&content).map_err(|err| {
-            CocoError::user(format!("invalid config json: {err}"))
-        })?;
+        let config = serde_json::from_str::<IndexingConfig>(&content)
+            .map_err(|err| CocoError::user(format!("invalid config json: {err}")))?;
         let _ = ensure_normalized_config_id(&config.config_id, "config_id")?;
         return Ok(config);
     }
 
-    let config_id = config_id
-        .ok_or_else(|| CocoError::user("config_id is required"))?;
+    let config_id = config_id.ok_or_else(|| CocoError::user("config_id is required"))?;
     let config_id = ensure_normalized_config_id(&config_id, "config_id")?;
     let defaults = LocalServiceConfig::from_env()?;
     let chunking = ChunkingStrategy {
-        strategy_name: chunking_strategy
-            .unwrap_or_else(|| defaults.chunking.strategy_name.clone()),
+        strategy_name: chunking_strategy.unwrap_or_else(|| defaults.chunking.strategy_name.clone()),
         chunk_size: chunk_size.unwrap_or(defaults.chunking.chunk_size),
-        chunk_overlap: chunk_overlap
-            .unwrap_or(defaults.chunking.chunk_overlap),
+        chunk_overlap: chunk_overlap.unwrap_or(defaults.chunking.chunk_overlap),
     };
     let embedding = EmbeddingConfig {
-        model_name: embedding_model
-            .unwrap_or_else(|| defaults.model_name.clone()),
-        dimensions: Some(embedding_dimensions.unwrap_or(
-            defaults.model_dimensions as u32,
-        )),
+        model_name: embedding_model.unwrap_or_else(|| defaults.model_name.clone()),
+        dimensions: Some(embedding_dimensions.unwrap_or(defaults.model_dimensions as u32)),
     };
     let vector_metric = vector_metric
         .map(VectorMetric::from)
@@ -1298,15 +1267,11 @@ fn build_indexing_config(args: coco_local::cli::ConfigSetArgs) -> CocoResult<Ind
     let index_params = match index_params {
         Some(path) => {
             let content = std::fs::read_to_string(&path).map_err(|err| {
-                CocoError::system(format!(
-                    "failed to read {}: {err}",
-                    path.display()
-                ))
+                CocoError::system(format!("failed to read {}: {err}", path.display()))
             })?;
             Some(
-                serde_json::from_str::<VectorIndexParams>(&content).map_err(|err| {
-                    CocoError::user(format!("invalid index params json: {err}"))
-                })?,
+                serde_json::from_str::<VectorIndexParams>(&content)
+                    .map_err(|err| CocoError::user(format!("invalid index params json: {err}")))?,
             )
         }
         None => None,

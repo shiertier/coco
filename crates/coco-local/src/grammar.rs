@@ -40,9 +40,8 @@ impl GrammarStore {
         };
 
         if !root.exists() {
-            std::fs::create_dir_all(&root).map_err(|err| {
-                CocoError::system(format!("failed to create grammar dir: {err}"))
-            })?;
+            std::fs::create_dir_all(&root)
+                .map_err(|err| CocoError::system(format!("failed to create grammar dir: {err}")))?;
         }
 
         Ok(Self { root })
@@ -116,9 +115,8 @@ impl GrammarStore {
         if !self.root.exists() {
             return Ok(items);
         }
-        let entries = std::fs::read_dir(&self.root).map_err(|err| {
-            CocoError::system(format!("failed to read grammar dir: {err}"))
-        })?;
+        let entries = std::fs::read_dir(&self.root)
+            .map_err(|err| CocoError::system(format!("failed to read grammar dir: {err}")))?;
         for entry in entries {
             let entry = entry.map_err(CocoError::system)?;
             let path = entry.path();
@@ -158,7 +156,11 @@ impl GrammarCatalog {
     }
 
     /// Registers a file extension mapping.
-    pub fn register_extension(&mut self, extension: impl Into<String>, language: impl Into<String>) {
+    pub fn register_extension(
+        &mut self,
+        extension: impl Into<String>,
+        language: impl Into<String>,
+    ) {
         let extension = normalize_extension(&extension.into());
         self.extensions.insert(extension, language.into());
     }
@@ -216,9 +218,8 @@ fn download_file(url: &str, dest: &Path) -> CocoResult<()> {
         if read == 0 {
             break;
         }
-        file.write_all(&buffer[..read]).map_err(|err| {
-            CocoError::system(format!("failed to write grammar file: {err}"))
-        })?;
+        file.write_all(&buffer[..read])
+            .map_err(|err| CocoError::system(format!("failed to write grammar file: {err}")))?;
     }
 
     Ok(())

@@ -8,19 +8,17 @@ use std::time::Duration;
 use chrono::Utc;
 use coco_core::build_search_intent;
 use coco_local::embedder::LocalEmbedder;
-use coco_local::ingest::{file_type_for_path, title_for_path, IngestRequest, Ingestor};
+use coco_local::ingest::{IngestRequest, Ingestor, file_type_for_path, title_for_path};
 use coco_local::storage::lance::LanceStore;
-use coco_local::storage::meta::{
-    LocalMetaStore, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
-};
+use coco_local::storage::meta::{DEFAULT_CONFIG_ID, LocalMetaStore, NewIndexingConfig, NewProject};
 use coco_protocol::{
     EmbeddingModel, SearchHit, SearchIntentInput, SearchQueryInput, StorageBackend,
 };
 use serde::Deserialize;
 
 use support::{
-    default_chunking, default_indexing_config, env_lock, pick_port, spawn_service, temp_root,
-    EnvSnapshot,
+    EnvSnapshot, default_chunking, default_indexing_config, env_lock, pick_port, spawn_service,
+    temp_root,
 };
 
 #[derive(Debug, Deserialize)]
@@ -132,9 +130,11 @@ async fn file_change_ingest_and_query() -> coco_protocol::CocoResult<()> {
     .expect("intent");
     let intent = build_search_intent(intent)?;
     let results = backend.search_similar(intent).await?;
-    assert!(results
-        .iter()
-        .any(|item| item.chunk.doc_id.as_str() == result.document_id));
+    assert!(
+        results
+            .iter()
+            .any(|item| item.chunk.doc_id.as_str() == result.document_id)
+    );
 
     let _ = std::fs::remove_dir_all(&root);
     Ok(())

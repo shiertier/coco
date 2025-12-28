@@ -71,7 +71,9 @@ impl Chunker for CodeSplitter {
 
         let overlap = config.chunk_overlap as usize;
         if overlap >= chunk_size {
-            return Err(CocoError::user("chunk_overlap must be smaller than chunk_size"));
+            return Err(CocoError::user(
+                "chunk_overlap must be smaller than chunk_size",
+            ));
         }
 
         let lines = collect_lines(content);
@@ -92,8 +94,7 @@ impl Chunker for CodeSplitter {
                 start = 0;
             }
             if !include_preamble && index == 0 && start > 0 {
-                let mut preamble_spans =
-                    split_large_span(content, 0, start, chunk_size, overlap)?;
+                let mut preamble_spans = split_large_span(content, 0, start, chunk_size, overlap)?;
                 spans.append(&mut preamble_spans);
             }
 
@@ -150,7 +151,11 @@ fn boundary_line_indices(lines: &[LineInfo<'_>], file_type: FileType) -> Vec<usi
     boundaries
 }
 
-fn include_comment_block(lines: &[LineInfo<'_>], boundary_line: usize, file_type: FileType) -> usize {
+fn include_comment_block(
+    lines: &[LineInfo<'_>],
+    boundary_line: usize,
+    file_type: FileType,
+) -> usize {
     let mut start_line = boundary_line;
     while start_line > 0 {
         let previous = lines[start_line - 1].text.trim();
@@ -205,10 +210,7 @@ fn split_large_span(
     let windows = token_windows(slice, chunk_size, overlap)?;
     let mut spans = Vec::with_capacity(windows.len());
     for window in windows {
-        spans.push(TextSpan::new(
-            start + window.start(),
-            start + window.end(),
-        )?);
+        spans.push(TextSpan::new(start + window.start(), start + window.end())?);
     }
 
     Ok(spans)
@@ -237,9 +239,9 @@ fn is_boundary(file_type: FileType, line: &str) -> bool {
 
 fn is_comment_line(file_type: FileType, line: &str) -> bool {
     match file_type {
-        FileType::Python => line.starts_with('#')
-            || line.starts_with("\"\"\"")
-            || line.starts_with("'''"),
+        FileType::Python => {
+            line.starts_with('#') || line.starts_with("\"\"\"") || line.starts_with("'''")
+        }
         FileType::Rust | FileType::TypeScript | FileType::Go => {
             line.starts_with("//")
                 || line.starts_with("/*")
@@ -301,9 +303,7 @@ fn strip_visibility(line: &str) -> &str {
 }
 
 fn is_python_boundary(line: &str) -> bool {
-    line.starts_with("def ")
-        || line.starts_with("async def ")
-        || line.starts_with("class ")
+    line.starts_with("def ") || line.starts_with("async def ") || line.starts_with("class ")
 }
 
 fn is_typescript_boundary(line: &str) -> bool {

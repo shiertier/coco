@@ -2,7 +2,7 @@ use std::fs;
 
 use axum::http::HeaderMap;
 use axum::response::Response;
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 
 use coco_core::{build_search_intent, normalize_config_id, validate_search_intent};
 use coco_protocol::{
@@ -22,11 +22,12 @@ use super::super::state::AppState;
 use super::super::stream::stream_results;
 use super::super::types::{
     ApiResult, IndexRequest, IndexResponse, IngestBatchRequest, IngestBatchResponse,
-    MemoQueryRequest, MemoQueryResponseEnvelope, QueryRequest, QueryResponse, QueryResponseEnvelope,
+    MemoQueryRequest, MemoQueryResponseEnvelope, QueryRequest, QueryResponse,
+    QueryResponseEnvelope,
 };
-use super::super::vector_backend::{build_vector_backend, VectorBackendRequest};
-use super::super::worker::submit_ingest_ipc;
 use super::super::utils::generate_id;
+use super::super::vector_backend::{VectorBackendRequest, build_vector_backend};
+use super::super::worker::submit_ingest_ipc;
 use crate::storage::meta::NewIngestJob;
 
 #[utoipa::path(
@@ -250,7 +251,9 @@ pub(crate) async fn query_memos(
         meta: ResponseMeta {
             status: ResponseStatus::Fresh,
         },
-        data: QueryResponse { results: Vec::new() },
+        data: QueryResponse {
+            results: Vec::new(),
+        },
     }))
 }
 
@@ -308,7 +311,11 @@ pub(crate) async fn ingest_batch(
     };
     let job_payload = super::super::types::IngestJobPayload {
         api_version: env!("CARGO_PKG_VERSION").to_string(),
-        request: if blob_ref.is_some() { None } else { Some(payload) },
+        request: if blob_ref.is_some() {
+            None
+        } else {
+            Some(payload)
+        },
         blob_ref,
         plan: Some(IndexingPlan::default()),
         wasm_module_ref: state.ingest_wasm_module_ref.clone(),
@@ -361,9 +368,7 @@ pub(crate) async fn ingest_batch(
             tracing::warn!("failed to enqueue job {}: {err}", job_id);
         }
     }
-    if let (Some(worker_addr), Some(ipc_request)) =
-        (state.worker_addr.as_deref(), ipc_request)
-    {
+    if let (Some(worker_addr), Some(ipc_request)) = (state.worker_addr.as_deref(), ipc_request) {
         if let Err(err) = submit_ingest_ipc(worker_addr, ipc_request).await {
             tracing::warn!("failed to dispatch ingest job {} to IPC: {err}", job_id);
         }

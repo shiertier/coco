@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue};
-use axum::Json;
 use chrono::Utc;
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 use uuid::Uuid;
@@ -19,7 +19,7 @@ use crate::service::limiter::RateLimiter;
 use crate::service::state::AppState;
 use crate::service::types::{PublicSearchIntent, QueryRequest, RegisterProjectRequest};
 use crate::storage::meta::{
-    NewIndexingConfig, NewOrganization, ServerMetaStore, DEFAULT_CONFIG_ID,
+    DEFAULT_CONFIG_ID, NewIndexingConfig, NewOrganization, ServerMetaStore,
 };
 
 fn env_db_url() -> Option<String> {

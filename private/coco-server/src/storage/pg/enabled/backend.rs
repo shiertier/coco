@@ -8,17 +8,17 @@ use sea_orm::{
 };
 
 use super::helpers::{
-    map_storage_err, push_value, validate_tenant, DEFAULT_CONNECT_TIMEOUT_SECS,
-    DEFAULT_MAX_CONNECTIONS, DEFAULT_MIN_CONNECTIONS, DEFAULT_RRF_K, TABLE_PROJECTS,
+    COL_CONFIG_ID, COL_CONTENT, COL_DOC_ID, COL_END_LINE, COL_ID, COL_ORG_ID, COL_PROJECT_ID,
+    COL_QUALITY_SCORE, COL_START_LINE, COL_USER_ID, COL_VERIFIED, COL_VERSION_ID, TABLE_CHUNKS,
+    chunk_from_row,
+};
+use super::helpers::{
+    DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_MAX_CONNECTIONS, DEFAULT_MIN_CONNECTIONS, DEFAULT_RRF_K,
+    TABLE_PROJECTS, map_storage_err, push_value, validate_tenant,
 };
 use super::index::{
     build_fts_index_sql, build_vector_index_sql, fts_index_name, index_kind_from_params,
     vector_index_name,
-};
-use super::helpers::{
-    chunk_from_row, COL_CONFIG_ID, COL_CONTENT, COL_DOC_ID, COL_END_LINE, COL_ID, COL_ORG_ID,
-    COL_PROJECT_ID, COL_QUALITY_SCORE, COL_START_LINE, COL_USER_ID, COL_VERIFIED, COL_VERSION_ID,
-    TABLE_CHUNKS,
 };
 
 /// Distance metric for pgvector.
@@ -242,7 +242,10 @@ impl PgBackend {
         );
         let fts_sql = build_fts_index_sql(&fts_index, config_id);
         self.db
-            .execute(Statement::from_string(DatabaseBackend::Postgres, vector_sql))
+            .execute(Statement::from_string(
+                DatabaseBackend::Postgres,
+                vector_sql,
+            ))
             .await
             .map_err(map_storage_err)?;
         self.db
@@ -370,7 +373,10 @@ impl PgBackend {
     }
 
     /// Fetches chunks in batch by id for the current tenant scope.
-    pub async fn get_chunks_by_ids(&self, ids: &[String]) -> CocoResult<HashMap<String, coco_protocol::Chunk>> {
+    pub async fn get_chunks_by_ids(
+        &self,
+        ids: &[String],
+    ) -> CocoResult<HashMap<String, coco_protocol::Chunk>> {
         if ids.is_empty() {
             return Ok(HashMap::new());
         }

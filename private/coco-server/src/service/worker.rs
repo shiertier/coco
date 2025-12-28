@@ -9,7 +9,9 @@ fn worker_endpoint(worker_addr: &str) -> CocoResult<Endpoint> {
     let addr = format!("http://{worker_addr}");
     Endpoint::from_shared(addr)
         .map_err(|_| CocoError::user("COCO_WORKER_ADDR must be host:port"))
-        .map(|endpoint| endpoint.connect_timeout(std::time::Duration::from_secs(WORKER_IPC_TIMEOUT_SECS)))
+        .map(|endpoint| {
+            endpoint.connect_timeout(std::time::Duration::from_secs(WORKER_IPC_TIMEOUT_SECS))
+        })
 }
 
 pub(crate) async fn worker_client(

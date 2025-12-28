@@ -90,13 +90,13 @@ impl WasmGrammar {
             (Some(expected), _) => {
                 return Err(CocoError::compute(format!(
                     "wasm grammar missing expected export: {expected}"
-                )))
+                )));
             }
             (None, Some(found)) => found,
             (None, None) => {
                 return Err(CocoError::compute(
                     "wasm grammar missing tree_sitter_* export",
-                ))
+                ));
             }
         };
 

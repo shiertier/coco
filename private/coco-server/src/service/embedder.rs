@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use coco_protocol::{CocoResult};
+use coco_protocol::CocoResult;
 
 use crate::embedder::HttpEmbedder;
 

@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use chrono::Utc;
 use coco_local::metrics::LocalMetrics;
 use coco_local::service::LocalServiceConfig;
-use coco_local::storage::meta::{NewIndexingConfig, DEFAULT_CONFIG_ID};
+use coco_local::storage::meta::{DEFAULT_CONFIG_ID, NewIndexingConfig};
 use coco_protocol::{ChunkingStrategy, EmbeddingConfig, VectorMetric};
 
 pub fn env_lock() -> &'static Mutex<()> {

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tokio::time::Sleep;
 use tracing::{info, warn};
 
@@ -15,9 +15,7 @@ use coco_protocol::{CocoError, CocoResult};
 
 use crate::fs::{collect_files, path_to_string, should_ignore_path};
 use crate::ids::sha256_hex;
-use crate::ingest::{
-    file_type_for_path, normalize_path, title_for_path, IngestRequest, Ingestor,
-};
+use crate::ingest::{IngestRequest, Ingestor, file_type_for_path, normalize_path, title_for_path};
 use crate::metrics::LocalMetrics;
 use crate::storage::meta::ProjectRecord;
 
@@ -318,13 +316,11 @@ async fn upsert_path(
             return Err(CocoError::system(format!(
                 "failed to read file {}: {err}",
                 normalized.display()
-            )))
+            )));
         }
     };
     let content_hash = sha256_hex(content.as_bytes());
-    let existing = ingestor
-        .document_by_path(&project.id, &path_str)
-        .await?;
+    let existing = ingestor.document_by_path(&project.id, &path_str).await?;
     if let Some(existing) = &existing {
         if existing.content_hash == content_hash {
             return Ok(());
@@ -354,11 +350,7 @@ async fn upsert_path(
     Ok(())
 }
 
-async fn remove_path(
-    ingestor: &Ingestor,
-    project: &WatchProject,
-    path: &Path,
-) -> CocoResult<()> {
+async fn remove_path(ingestor: &Ingestor, project: &WatchProject, path: &Path) -> CocoResult<()> {
     let normalized = normalize_path(path)?;
     let path_str = path_to_string(&normalized)?;
     ingestor.delete_by_path(&project.id, &path_str).await?;
@@ -435,7 +427,6 @@ fn find_project_for_path<'a>(
     best
 }
 
-
 fn env_u64(key: &str, default: u64) -> CocoResult<u64> {
     match std::env::var(key) {
         Ok(value) => value
@@ -450,9 +441,7 @@ fn env_bool(key: &str, default: bool) -> CocoResult<bool> {
         Ok(value) => match value.to_ascii_lowercase().as_str() {
             "1" | "true" | "yes" => Ok(true),
             "0" | "false" | "no" => Ok(false),
-            _ => Err(CocoError::user(format!(
-                "{key} must be a boolean value"
-            ))),
+            _ => Err(CocoError::user(format!("{key} must be a boolean value"))),
         },
         Err(_) => Ok(default),
     }

@@ -27,14 +27,7 @@ pub(crate) async fn access_log(mut request: Request, next: Next) -> Response {
     let status = response.status().as_u16();
     let latency_ms = start.elapsed().as_millis();
     let ts = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-    let log = build_access_log_entry(
-        &method,
-        &path,
-        status,
-        latency_ms,
-        &trace_id.0,
-        &ts,
-    );
+    let log = build_access_log_entry(&method, &path, status, latency_ms, &trace_id.0, &ts);
     info!("{log}");
     response
 }
@@ -88,16 +81,15 @@ mod tests {
 
     #[test]
     fn access_log_schema() {
-        let ts = chrono::Utc::now()
-            .to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        let ts = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
         let trace_id = generate_trace_id();
         let entry = build_access_log_entry("GET", "/v1/sys/health", 200, 5, &trace_id, &ts);
 
-        assert_eq!(entry.get("schema_version").and_then(|v| v.as_u64()), Some(1));
         assert_eq!(
-            entry.get("method").and_then(|v| v.as_str()),
-            Some("GET")
+            entry.get("schema_version").and_then(|v| v.as_u64()),
+            Some(1)
         );
+        assert_eq!(entry.get("method").and_then(|v| v.as_str()), Some("GET"));
         assert_eq!(
             entry.get("path").and_then(|v| v.as_str()),
             Some("/v1/sys/health")
@@ -109,10 +101,7 @@ mod tests {
         let ts_value = entry.get("ts").and_then(|v| v.as_str()).unwrap_or("");
         assert!(is_rfc3339_millis(ts_value));
 
-        let trace_value = entry
-            .get("trace_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let trace_value = entry.get("trace_id").and_then(|v| v.as_str()).unwrap_or("");
         let parsed = Uuid::parse_str(trace_value).expect("trace_id uuid");
         assert_eq!(parsed.get_version(), Some(uuid::Version::SortRand));
     }
@@ -189,8 +178,7 @@ fn header_value(headers: &HeaderMap, name: &str) -> CocoResult<Option<String>> {
 }
 
 pub(crate) fn header_required(headers: &HeaderMap, name: &str) -> CocoResult<String> {
-    header_value(headers, name)?
-        .ok_or_else(|| CocoError::user(format!("{name} header required")))
+    header_value(headers, name)?.ok_or_else(|| CocoError::user(format!("{name} header required")))
 }
 
 pub(crate) fn header_optional(headers: &HeaderMap, name: &str) -> CocoResult<Option<String>> {

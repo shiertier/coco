@@ -2,9 +2,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::Router;
 use axum::middleware::from_fn;
 use axum::routing::{get, post};
-use axum::Router;
 use chrono::Utc;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
@@ -23,8 +23,8 @@ use super::state::{LiveGrepConfig, ServiceState};
 use crate::ingest::Ingestor;
 use crate::metrics::LocalMetrics;
 use crate::storage::lance::LanceStore;
-use crate::storage::meta::{LocalMetaStore, NewIndexingConfig, DEFAULT_CONFIG_ID};
-use crate::watcher::{start_watch_service, WatchConfig};
+use crate::storage::meta::{DEFAULT_CONFIG_ID, LocalMetaStore, NewIndexingConfig};
+use crate::watcher::{WatchConfig, start_watch_service};
 
 /// Starts the local HTTP service.
 pub async fn run(config: LocalServiceConfig, metrics: Arc<LocalMetrics>) -> CocoResult<()> {

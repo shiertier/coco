@@ -176,9 +176,7 @@ impl LocalMetaStore {
         config: NewIndexingConfig,
     ) -> CocoResult<IndexingConfigRecord> {
         if config.config_id == DEFAULT_CONFIG_ID {
-            return Err(CocoError::user(
-                "default indexing config cannot be updated",
-            ));
+            return Err(CocoError::user("default indexing config cannot be updated"));
         }
         let protocol_config = config.to_protocol();
         validate_indexing_config(&protocol_config, &ValidationContext::default())?;
@@ -401,7 +399,10 @@ impl LocalMetaStore {
     }
 
     /// Creates a new project version in BUILDING status.
-    pub async fn create_project_version(&self, project_id: &str) -> CocoResult<ProjectVersionRecord> {
+    pub async fn create_project_version(
+        &self,
+        project_id: &str,
+    ) -> CocoResult<ProjectVersionRecord> {
         if project_id.trim().is_empty() {
             return Err(CocoError::user("project_id must not be empty"));
         }
@@ -486,10 +487,7 @@ impl LocalMetaStore {
                 project_versions::Column::Status,
                 Expr::value(STATUS_ACTIVE.to_string()),
             )
-            .col_expr(
-                project_versions::Column::ItemCount,
-                Expr::value(item_count),
-            )
+            .col_expr(project_versions::Column::ItemCount, Expr::value(item_count))
             .exec(&txn)
             .await
             .map_err(map_storage_err)?;
@@ -708,8 +706,7 @@ impl LocalMetaStore {
         let mut seen = HashSet::new();
         for chunk in &chunks {
             if seen.insert(chunk.config_id.clone()) {
-                self.ensure_indexing_config_exists(&chunk.config_id)
-                    .await?;
+                self.ensure_indexing_config_exists(&chunk.config_id).await?;
             }
         }
         let mut models = Vec::with_capacity(chunks.len());
@@ -1253,10 +1250,7 @@ fn optional_json<T: serde::Serialize>(
         .transpose()
 }
 
-fn deserialize_json<T: serde::de::DeserializeOwned>(
-    value: &str,
-    field: &str,
-) -> CocoResult<T> {
+fn deserialize_json<T: serde::de::DeserializeOwned>(value: &str, field: &str) -> CocoResult<T> {
     serde_json::from_str(value)
         .map_err(|err| CocoError::storage(format!("invalid {field} value: {err}")))
 }
@@ -1323,9 +1317,7 @@ mod tests {
             .ensure_default_indexing_config(sample_config("custom"))
             .await
             .expect_err("default config must use config_id=default");
-        assert!(err
-            .public_message()
-            .contains("config_id=default"));
+        assert!(err.public_message().contains("config_id=default"));
     }
 
     #[tokio::test]

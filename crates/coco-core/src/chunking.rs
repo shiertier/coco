@@ -24,7 +24,9 @@ impl Chunker for FixedTokenSplitter {
 
         let overlap = config.chunk_overlap as usize;
         if overlap >= chunk_size {
-            return Err(CocoError::user("chunk_overlap must be smaller than chunk_size"));
+            return Err(CocoError::user(
+                "chunk_overlap must be smaller than chunk_size",
+            ));
         }
 
         let tokens = token_spans(&doc.content);
@@ -96,6 +98,9 @@ mod tests {
             .iter()
             .map(|span| &doc.content[span.start()..span.end()])
             .collect();
-        assert_eq!(texts, vec!["one two", "two three", "three four", "four five"]);
+        assert_eq!(
+            texts,
+            vec!["one two", "two three", "three four", "four five"]
+        );
     }
 }

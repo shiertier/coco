@@ -6,10 +6,10 @@ use sea_orm::{QueryResult, Value};
 
 use super::backend::TenantContext;
 use super::helpers::{
-    chunk_from_row, map_storage_err, push_value, to_i64, vector_literal, COL_CONFIG_ID,
-    COL_CONTENT, COL_DISTANCE, COL_DOC_ID, COL_EMBEDDING, COL_END_LINE, COL_ID, COL_ORG_ID,
-    COL_PROJECT_ID, COL_QUALITY_SCORE, COL_SCORE, COL_START_LINE, COL_USER_ID, COL_VERIFIED,
-    COL_VERSION_ID, TABLE_CHUNKS,
+    COL_CONFIG_ID, COL_CONTENT, COL_DISTANCE, COL_DOC_ID, COL_EMBEDDING, COL_END_LINE, COL_ID,
+    COL_ORG_ID, COL_PROJECT_ID, COL_QUALITY_SCORE, COL_SCORE, COL_START_LINE, COL_USER_ID,
+    COL_VERIFIED, COL_VERSION_ID, TABLE_CHUNKS, chunk_from_row, map_storage_err, push_value,
+    to_i64, vector_literal,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -29,8 +29,7 @@ pub(super) fn build_vector_query(
 ) -> CocoResult<(String, Vec<Value>)> {
     let mut values = Vec::new();
     let embed_ph = push_value(&mut values, vector_literal(embedding));
-    let (filter_sql, _) =
-        build_filter_clause(filters, tenant, version_id, config_id, &mut values)?;
+    let (filter_sql, _) = build_filter_clause(filters, tenant, version_id, config_id, &mut values)?;
     let top_ph = push_value(&mut values, to_i64(top_k)?);
     let sql = format!(
         "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT}, \
@@ -54,8 +53,7 @@ pub(super) fn build_fts_query(
 ) -> CocoResult<(String, Vec<Value>)> {
     let mut values = Vec::new();
     let query_ph = push_value(&mut values, query_text.to_string());
-    let (filter_sql, _) =
-        build_filter_clause(filters, tenant, version_id, config_id, &mut values)?;
+    let (filter_sql, _) = build_filter_clause(filters, tenant, version_id, config_id, &mut values)?;
     let top_ph = push_value(&mut values, to_i64(top_k)?);
     let sql = format!(
         "SELECT {COL_ID}, {COL_DOC_ID}, {COL_CONTENT}, \
@@ -202,14 +200,14 @@ fn apply_text_filter(
 ) -> CocoResult<()> {
     match filter.op {
         FilterOp::Eq | FilterOp::Neq => {
-            let op = if matches!(filter.op, FilterOp::Eq) { "=" } else { "!=" };
+            let op = if matches!(filter.op, FilterOp::Eq) {
+                "="
+            } else {
+                "!="
+            };
             let value = match &filter.value {
                 FilterValue::String(value) => value,
-                _ => {
-                    return Err(CocoError::user(
-                        "text filter requires a string value",
-                    ))
-                }
+                _ => return Err(CocoError::user("text filter requires a string value")),
             };
             let value_ph = push_value(values, value.clone());
             clauses.push(format!("{column} {op} {value_ph}"));
@@ -218,11 +216,7 @@ fn apply_text_filter(
         FilterOp::Contains => {
             let value = match &filter.value {
                 FilterValue::String(value) => value,
-                _ => {
-                    return Err(CocoError::user(
-                        "text filter requires a string value",
-                    ))
-                }
+                _ => return Err(CocoError::user("text filter requires a string value")),
             };
             let value_ph = push_value(values, format!("%{}%", value));
             clauses.push(format!("{column} ILIKE {value_ph}"));
@@ -234,16 +228,10 @@ fn apply_text_filter(
                     .iter()
                     .map(|item| match item {
                         FilterValueScalar::String(value) => Ok(value.clone()),
-                        _ => Err(CocoError::user(
-                            "text filter list requires string values",
-                        )),
+                        _ => Err(CocoError::user("text filter list requires string values")),
                     })
                     .collect::<CocoResult<Vec<_>>>()?,
-                _ => {
-                    return Err(CocoError::user(
-                        "text filter requires a list value",
-                    ))
-                }
+                _ => return Err(CocoError::user("text filter requires a list value")),
             };
             if items.is_empty() {
                 return Err(CocoError::user("filter list must not be empty"));
@@ -286,11 +274,7 @@ fn apply_number_filter(
                 FilterValue::String(value) => value
                     .parse::<i64>()
                     .map_err(|_| CocoError::user("numeric filter requires integer value"))?,
-                _ => {
-                    return Err(CocoError::user(
-                        "numeric filter requires integer value",
-                    ))
-                }
+                _ => return Err(CocoError::user("numeric filter requires integer value")),
             };
             let value_ph = push_value(values, value);
             clauses.push(format!("{column} {op} {value_ph}"));
@@ -310,11 +294,7 @@ fn apply_number_filter(
                         )),
                     })
                     .collect::<CocoResult<Vec<_>>>()?,
-                _ => {
-                    return Err(CocoError::user(
-                        "numeric filter requires list value",
-                    ))
-                }
+                _ => return Err(CocoError::user("numeric filter requires list value")),
             };
             if items.is_empty() {
                 return Err(CocoError::user("filter list must not be empty"));

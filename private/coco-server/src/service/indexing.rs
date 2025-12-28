@@ -5,7 +5,7 @@ use coco_protocol::{
 
 use super::constants::{DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_STRATEGY};
 use super::state::AppState;
-use crate::storage::meta::{IndexingConfigRecord, NewIndexingConfig, DEFAULT_CONFIG_ID};
+use crate::storage::meta::{DEFAULT_CONFIG_ID, IndexingConfigRecord, NewIndexingConfig};
 
 pub(crate) fn default_indexing_config(state: &AppState, org_id: &str) -> NewIndexingConfig {
     let model_name = match state.embedder.as_ref() {
@@ -47,9 +47,7 @@ pub(crate) fn ensure_vector_backend(
                 "vector_backend does not match server configuration",
             ));
         }
-        if backend.url.is_some()
-            || backend.api_key.is_some()
-            || backend.collection_prefix.is_some()
+        if backend.url.is_some() || backend.api_key.is_some() || backend.collection_prefix.is_some()
         {
             return Err(CocoError::user(
                 "vector_backend overrides are not supported",

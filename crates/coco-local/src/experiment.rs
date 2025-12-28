@@ -41,12 +41,10 @@ pub struct ExperimentSpec {
 impl ExperimentSpec {
     /// Loads an experiment specification from a YAML file.
     pub fn from_path(path: &Path) -> CocoResult<Self> {
-        let content = std::fs::read_to_string(path).map_err(|err| {
-            CocoError::system(format!("failed to read experiment file: {err}"))
-        })?;
-        let spec = serde_yaml::from_str::<Self>(&content).map_err(|err| {
-            CocoError::user(format!("invalid experiment yaml: {err}"))
-        })?;
+        let content = std::fs::read_to_string(path)
+            .map_err(|err| CocoError::system(format!("failed to read experiment file: {err}")))?;
+        let spec = serde_yaml::from_str::<Self>(&content)
+            .map_err(|err| CocoError::user(format!("invalid experiment yaml: {err}")))?;
         spec.validate()?;
         Ok(spec)
     }
@@ -60,14 +58,10 @@ impl ExperimentSpec {
             return Err(CocoError::user("project_id must not be empty"));
         }
         if self.indexing_strategies.is_empty() {
-            return Err(CocoError::user(
-                "indexing_strategies must not be empty",
-            ));
+            return Err(CocoError::user("indexing_strategies must not be empty"));
         }
         if self.query_strategies.is_empty() {
-            return Err(CocoError::user(
-                "query_strategies must not be empty",
-            ));
+            return Err(CocoError::user("query_strategies must not be empty"));
         }
         if self.evaluation_set.is_empty() {
             return Err(CocoError::user("evaluation_set must not be empty"));
@@ -100,10 +94,7 @@ impl ExperimentSpec {
                     "query_strategies retrieval_config.vector_backend is not supported in local mode",
                 ));
             }
-            validate_retrieval_config(
-                &strategy.retrieval_config,
-                &ValidationContext::default(),
-            )?;
+            validate_retrieval_config(&strategy.retrieval_config, &ValidationContext::default())?;
         }
 
         for case in &self.evaluation_set {
@@ -153,9 +144,7 @@ impl EvaluationCase {
             return Err(CocoError::user("query must not be empty"));
         }
         if self.expected_doc_ids.is_empty() {
-            return Err(CocoError::user(
-                "expected_doc_ids must not be empty",
-            ));
+            return Err(CocoError::user("expected_doc_ids must not be empty"));
         }
         Ok(())
     }

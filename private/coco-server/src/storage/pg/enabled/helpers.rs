@@ -32,7 +32,9 @@ pub(super) fn chunk_from_row(row: &QueryResult) -> CocoResult<Chunk> {
     let content: String = row.try_get("", COL_CONTENT).map_err(map_storage_err)?;
     let start_line: i64 = row.try_get("", COL_START_LINE).map_err(map_storage_err)?;
     let end_line: i64 = row.try_get("", COL_END_LINE).map_err(map_storage_err)?;
-    let quality_score: Option<f32> = row.try_get("", COL_QUALITY_SCORE).map_err(map_storage_err)?;
+    let quality_score: Option<f32> = row
+        .try_get("", COL_QUALITY_SCORE)
+        .map_err(map_storage_err)?;
     let verified: bool = row.try_get("", COL_VERIFIED).map_err(map_storage_err)?;
     let start = usize::try_from(start_line)
         .map_err(|_| CocoError::storage("start_line out of range for TextSpan"))?;

@@ -10,18 +10,20 @@ use coco_protocol::{
 };
 use coco_server::queue::RedisQueue;
 use coco_server::storage::meta::{
-    IngestJobRecord, NewDocument, ServerMetaStore, JOB_STATUS_COMPLETED, JOB_STATUS_FAILED,
-    JOB_STATUS_QUEUED,
+    IngestJobRecord, JOB_STATUS_COMPLETED, JOB_STATUS_FAILED, JOB_STATUS_QUEUED, NewDocument,
+    ServerMetaStore,
 };
 use coco_server::storage::pg::{PgBackend, PgBackendConfig, PgVectorMetric};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::task::JoinError;
 use tokio::time::sleep;
-use tonic::{Request, Response, Status};
 use tonic::transport::Server;
+use tonic::{Request, Response, Status};
 use tracing::{error, info, warn};
-use wasmtime::{Config as WasmConfig, Engine, Linker, Module, Store, StoreLimitsBuilder, TypedFunc};
+use wasmtime::{
+    Config as WasmConfig, Engine, Linker, Module, Store, StoreLimitsBuilder, TypedFunc,
+};
 
 mod worker_ipc {
     tonic::include_proto!("coco.worker.v1");
@@ -125,9 +127,7 @@ async fn run_worker(config: WorkerConfig) -> CocoResult<()> {
                 result = ipc_task => result.map_err(|err| join_error("ipc", err))?,
             }
         }
-        None => queue_task
-            .await
-            .map_err(|err| join_error("queue", err))?,
+        None => queue_task.await.map_err(|err| join_error("queue", err))?,
     };
     result?;
     Ok(())
@@ -273,14 +273,8 @@ impl worker_ipc::worker_service_server::WorkerService for WorkerIpcService {
         tokio::spawn(async move {
             if let Err(err) = process_payload(&state.config, &state.meta, context).await {
                 error!("job {} failed: {err}", job_id);
-                if let Err(err) = handle_job_failure(
-                    &state.config,
-                    &state.meta,
-                    &job_id,
-                    attempts,
-                    err,
-                )
-                .await
+                if let Err(err) =
+                    handle_job_failure(&state.config, &state.meta, &job_id, attempts, err).await
                 {
                     warn!("failed to update job {}: {err}", job_id);
                 }
@@ -404,10 +398,7 @@ async fn process_payload(
     config_backend.metric = PgVectorMetric::from(indexing_config.vector_metric);
     let backend = PgBackend::connect(config_backend).await?;
     backend
-        .ensure_indexes(
-            Some(&config_id),
-            indexing_config.index_params.as_ref(),
-        )
+        .ensure_indexes(Some(&config_id), indexing_config.index_params.as_ref())
         .await?;
     let backend = backend
         .with_version(Some(version.id.clone()))
@@ -544,8 +535,7 @@ async fn apply_wasm_rule(
             .instantiate(&mut store, &module)
             .map_err(CocoError::compute)?;
 
-        let decision = match instance.get_typed_func::<(i32, i32), i32>(&mut store, "coco_rule")
-        {
+        let decision = match instance.get_typed_func::<(i32, i32), i32>(&mut store, "coco_rule") {
             Ok(func) => call_rule(&mut store, func, total_docs, total_chunks)?,
             Err(_) => {
                 let func = instance
@@ -593,10 +583,7 @@ fn handle_wasm_error(error: CocoError, mode: WasmFailureMode) -> CocoResult<Wasm
     }
 }
 
-fn resolve_wasm_module_path(
-    module_ref: &str,
-    base_dir: Option<&Path>,
-) -> CocoResult<PathBuf> {
+fn resolve_wasm_module_path(module_ref: &str, base_dir: Option<&Path>) -> CocoResult<PathBuf> {
     let base_dir = match base_dir {
         Some(dir) => Some(std::fs::canonicalize(dir).map_err(CocoError::storage)?),
         None => None,
@@ -611,7 +598,9 @@ fn resolve_wasm_module_path(
     let canonical_path = std::fs::canonicalize(&path).map_err(CocoError::storage)?;
     if let Some(base_dir) = base_dir {
         if !canonical_path.starts_with(&base_dir) {
-            return Err(CocoError::user("wasm_module_ref is outside COCO_INGEST_WASM_DIR"));
+            return Err(CocoError::user(
+                "wasm_module_ref is outside COCO_INGEST_WASM_DIR",
+            ));
         }
     }
     Ok(canonical_path)
@@ -1136,8 +1125,8 @@ fn pg_pool_config_from_env(prefix: &str) -> CocoResult<PgPoolConfig> {
             )));
         }
     }
-    let connect_timeout = env_u64_optional(&format!("{prefix}_PG_CONNECT_TIMEOUT_SECS"))?
-        .map(Duration::from_secs);
+    let connect_timeout =
+        env_u64_optional(&format!("{prefix}_PG_CONNECT_TIMEOUT_SECS"))?.map(Duration::from_secs);
     Ok(PgPoolConfig {
         max_connections,
         min_connections,
@@ -1152,11 +1141,11 @@ fn default_true() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use coco_server::storage::meta::{
-        NewIndexingConfig, NewIngestJob, NewOrganization, NewProject, DEFAULT_CONFIG_ID,
-        JOB_STATUS_COMPLETED,
-    };
     use coco_protocol::{ChunkingStrategy, EmbeddingConfig, VectorMetric};
+    use coco_server::storage::meta::{
+        DEFAULT_CONFIG_ID, JOB_STATUS_COMPLETED, NewIndexingConfig, NewIngestJob, NewOrganization,
+        NewProject,
+    };
     use tokio::time::Duration as TokioDuration;
 
     const EMBEDDING_DIM: usize = 1536;
@@ -1173,10 +1162,7 @@ mod tests {
         embedding
     }
 
-    async fn ensure_default_config(
-        meta: &ServerMetaStore,
-        org_id: &str,
-    ) -> CocoResult<()> {
+    async fn ensure_default_config(meta: &ServerMetaStore, org_id: &str) -> CocoResult<()> {
         meta.ensure_default_indexing_config(NewIndexingConfig {
             org_id: org_id.to_string(),
             config_id: DEFAULT_CONFIG_ID.to_string(),

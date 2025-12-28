@@ -4,9 +4,8 @@ use sha2::{Digest, Sha256};
 use std::path::{Component, Path, PathBuf};
 use url::Url;
 
-pub static LANG_SEGMENT_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)^[a-z]{2}(?:-[a-z0-9]{2,8})?$").expect("valid language regex")
-});
+pub static LANG_SEGMENT_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)^[a-z]{2}(?:-[a-z0-9]{2,8})?$").expect("valid language regex"));
 
 pub fn iso_now() -> String {
     chrono::Utc::now().to_rfc3339()
@@ -95,10 +94,7 @@ pub fn split_language_from_path(
         return (hint, path.to_path_buf());
     }
 
-    (
-        default_language.trim().to_lowercase(),
-        path.to_path_buf(),
-    )
+    (default_language.trim().to_lowercase(), path.to_path_buf())
 }
 
 pub fn safe_relative_path(url: &str) -> PathBuf {
@@ -159,7 +155,10 @@ pub fn ensure_within_dir(root: &Path, path: &Path) -> Result<PathBuf, String> {
     let root_clean = clean_path(&root_abs);
     let candidate_clean = clean_path(&candidate);
     if !candidate_clean.starts_with(&root_clean) {
-        return Err(format!("Refusing to write outside root: {}", path.display()));
+        return Err(format!(
+            "Refusing to write outside root: {}",
+            path.display()
+        ));
     }
     Ok(candidate_clean)
 }

@@ -47,7 +47,9 @@ impl RedisQueue {
             .await
             .map_err(|err| CocoError::network(format!("redis ping error: {err}")))?;
         if !pong.eq_ignore_ascii_case("PONG") {
-            return Err(CocoError::network("redis ping returned unexpected response"));
+            return Err(CocoError::network(
+                "redis ping returned unexpected response",
+            ));
         }
         Ok(())
     }

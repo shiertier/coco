@@ -1,6 +1,6 @@
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use futures::stream;
 
 use coco_protocol::CocoError;
@@ -86,7 +86,7 @@ pub(crate) async fn job_events(
     let stream = stream::once(async move {
         Ok::<_, std::convert::Infallible>(axum::response::sse::Event::default().data(payload))
     });
-    let response = axum::response::sse::Sse::new(stream)
-        .keep_alive(axum::response::sse::KeepAlive::default());
+    let response =
+        axum::response::sse::Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default());
     Ok(response.into_response())
 }

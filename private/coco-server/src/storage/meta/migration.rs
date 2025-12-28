@@ -40,7 +40,11 @@ impl MigrationTrait for CreateServerMetaTables {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Organizations::Name).string().not_null())
-                    .col(ColumnDef::new(Organizations::CreatedAt).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(Organizations::CreatedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Organizations::MaxDocuments).big_integer())
                     .col(ColumnDef::new(Organizations::MaxChunks).big_integer())
                     .col(ColumnDef::new(Organizations::MaxStorageBytes).big_integer())
@@ -62,7 +66,11 @@ impl MigrationTrait for CreateServerMetaTables {
                             .big_integer()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(OrgDailyUsage::UpdatedAt).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(OrgDailyUsage::UpdatedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
                     .primary_key(
                         Index::create()
                             .col(OrgDailyUsage::OrgId)
@@ -118,8 +126,16 @@ impl MigrationTrait for CreateServerMetaTables {
                     )
                     .col(ColumnDef::new(ProjectVersions::OrgId).string().not_null())
                     .col(ColumnDef::new(ProjectVersions::UserId).string().not_null())
-                    .col(ColumnDef::new(ProjectVersions::ProjectId).string().not_null())
-                    .col(ColumnDef::new(ProjectVersions::CreatedAt).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(ProjectVersions::ProjectId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(ProjectVersions::CreatedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(ProjectVersions::Status).string().not_null())
                     .foreign_key(
                         ForeignKey::create()
@@ -171,12 +187,7 @@ impl MigrationTrait for CreateServerMetaTables {
                 Table::create()
                     .table(Chunks::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Chunks::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Chunks::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Chunks::OrgId).string().not_null())
                     .col(ColumnDef::new(Chunks::UserId).string().not_null())
                     .col(ColumnDef::new(Chunks::ProjectId).string().not_null())
@@ -194,9 +205,7 @@ impl MigrationTrait for CreateServerMetaTables {
                     )
                     .col(
                         ColumnDef::new(Chunks::Embedding)
-                            .custom(Alias::new(format!(
-                                "vector({DEFAULT_EMBEDDING_DIM})"
-                            )))
+                            .custom(Alias::new(format!("vector({DEFAULT_EMBEDDING_DIM})")))
                             .null(),
                     )
                     .foreign_key(
@@ -312,22 +321,42 @@ impl MigrationTrait for CreateServerMetaTables {
             .drop_table(Table::drop().table(Chunks::Table).if_exists().to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(IngestJobs::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(IngestJobs::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
         manager
-            .drop_table(Table::drop().table(OrgDailyUsage::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(OrgDailyUsage::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
         manager
             .drop_table(Table::drop().table(Documents::Table).if_exists().to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(ProjectVersions::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(ProjectVersions::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
         manager
             .drop_table(Table::drop().table(Projects::Table).if_exists().to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(Organizations::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Organizations::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
         Ok(())
     }
@@ -411,7 +440,11 @@ impl MigrationTrait for AddWorkerStatusTable {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(WorkerStatus::Version).string().not_null())
-                    .col(ColumnDef::new(WorkerStatus::UpdatedAt).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(WorkerStatus::UpdatedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -438,10 +471,7 @@ pub(crate) struct AddServerConfigIdColumn;
 impl MigrationTrait for AddServerConfigIdColumn {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let mut column = ColumnDef::new(Projects::ActiveConfigId);
-        column
-            .string()
-            .not_null()
-            .default(DEFAULT_CONFIG_ID);
+        column.string().not_null().default(DEFAULT_CONFIG_ID);
         manager
             .alter_table(
                 Table::alter()
@@ -486,10 +516,7 @@ pub(crate) struct AddServerConfigIdColumns;
 impl MigrationTrait for AddServerConfigIdColumns {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let mut doc_column = ColumnDef::new(Documents::ConfigId);
-        doc_column
-            .string()
-            .not_null()
-            .default(DEFAULT_CONFIG_ID);
+        doc_column.string().not_null().default(DEFAULT_CONFIG_ID);
         manager
             .alter_table(
                 Table::alter()
@@ -500,10 +527,7 @@ impl MigrationTrait for AddServerConfigIdColumns {
             .await?;
 
         let mut chunk_column = ColumnDef::new(Chunks::ConfigId);
-        chunk_column
-            .string()
-            .not_null()
-            .default(DEFAULT_CONFIG_ID);
+        chunk_column.string().not_null().default(DEFAULT_CONFIG_ID);
         manager
             .alter_table(
                 Table::alter()
@@ -649,26 +673,14 @@ impl MigrationTrait for CreateServerIndexingConfigs {
                 Table::create()
                     .table(IndexingConfigs::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(IndexingConfigs::OrgId)
-                            .string()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(IndexingConfigs::OrgId).string().not_null())
                     .col(
                         ColumnDef::new(IndexingConfigs::ConfigId)
                             .string()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(IndexingConfigs::Chunking)
-                            .text()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(IndexingConfigs::Embedding)
-                            .text()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(IndexingConfigs::Chunking).text().not_null())
+                    .col(ColumnDef::new(IndexingConfigs::Embedding).text().not_null())
                     .col(ColumnDef::new(IndexingConfigs::VectorBackend).text())
                     .col(
                         ColumnDef::new(IndexingConfigs::VectorMetric)
@@ -790,7 +802,8 @@ impl MigrationTrait for AddUserIdColumns {
         let backend = manager.get_database_backend();
         let conn = manager.get_connection();
         let table_name = OrgDailyUsage::Table.to_string();
-        let drop_pk = format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
+        let drop_pk =
+            format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
         conn.execute(Statement::from_string(backend, drop_pk))
             .await?;
         let add_pk = format!(
@@ -809,7 +822,8 @@ impl MigrationTrait for AddUserIdColumns {
         let backend = manager.get_database_backend();
         let conn = manager.get_connection();
         let table_name = OrgDailyUsage::Table.to_string();
-        let drop_pk = format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
+        let drop_pk =
+            format!("ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS org_daily_usage_pkey");
         conn.execute(Statement::from_string(backend, drop_pk))
             .await?;
         let add_pk = format!(

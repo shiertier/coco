@@ -83,11 +83,7 @@ pub mod meta {
         }
 
         /// Returns an error because server-storage is disabled.
-        pub async fn ensure_indexing_config_exists(
-            &self,
-            _: &str,
-            _: &str,
-        ) -> CocoResult<()> {
+        pub async fn ensure_indexing_config_exists(&self, _: &str, _: &str) -> CocoResult<()> {
             Err(CocoError::storage(
                 "server-storage feature disabled for ServerMetaStore",
             ))
@@ -104,10 +100,7 @@ pub mod meta {
         }
 
         /// Returns an error because server-storage is disabled.
-        pub async fn get_organization(
-            &self,
-            _: &str,
-        ) -> CocoResult<Option<OrganizationRecord>> {
+        pub async fn get_organization(&self, _: &str) -> CocoResult<Option<OrganizationRecord>> {
             Err(CocoError::storage(
                 "server-storage feature disabled for ServerMetaStore",
             ))
@@ -255,10 +248,7 @@ pub mod meta {
         }
 
         /// Returns an error because server-storage is disabled.
-        pub async fn get_worker_status(
-            &self,
-            _: &str,
-        ) -> CocoResult<Option<WorkerStatusRecord>> {
+        pub async fn get_worker_status(&self, _: &str) -> CocoResult<Option<WorkerStatusRecord>> {
             Err(CocoError::storage(
                 "server-storage feature disabled for ServerMetaStore",
             ))

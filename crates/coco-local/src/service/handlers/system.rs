@@ -1,22 +1,24 @@
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
 use axum::Json;
+use axum::extract::{Query, State};
 use chrono::Utc;
 use tracing::warn;
 
 use coco_protocol::CocoError;
 
 use super::super::constants::DEFAULT_PRUNE_KEEP;
-use super::super::query::{ensure_active_config_id, indexing_config_from_record, normalize_and_check};
+use super::super::query::{
+    ensure_active_config_id, indexing_config_from_record, normalize_and_check,
+};
 use super::super::state::ServiceState;
 use super::super::types::{
-    ActivateConfigRequest, ActivateConfigResponse, ApiResult, HealthResponse, IndexingConfigResponse,
-    ListConfigsQuery, ListConfigsResponse, PruneRequest, PruneResponse, RegisterProjectRequest,
-    RegisterProjectResponse, UpsertConfigRequest, response_envelope,
+    ActivateConfigRequest, ActivateConfigResponse, ApiResult, HealthResponse,
+    IndexingConfigResponse, ListConfigsQuery, ListConfigsResponse, PruneRequest, PruneResponse,
+    RegisterProjectRequest, RegisterProjectResponse, UpsertConfigRequest, response_envelope,
 };
 use crate::ids::generate_id;
-use crate::storage::meta::{NewProject, ProjectUpdate, DEFAULT_CONFIG_ID};
+use crate::storage::meta::{DEFAULT_CONFIG_ID, NewProject, ProjectUpdate};
 
 pub(crate) async fn health() -> Json<coco_protocol::ResponseEnvelope<HealthResponse>> {
     Json(response_envelope(HealthResponse {
@@ -139,7 +141,9 @@ pub(crate) async fn register_project(
     }
 
     if let Some(existing) = state.meta.get_project(&project_id).await? {
-        return Ok(Json(response_envelope(RegisterProjectResponse::from(existing))));
+        return Ok(Json(response_envelope(RegisterProjectResponse::from(
+            existing,
+        ))));
     }
 
     let record = state
@@ -160,7 +164,9 @@ pub(crate) async fn register_project(
         }
     }
 
-    Ok(Json(response_envelope(RegisterProjectResponse::from(record))))
+    Ok(Json(response_envelope(RegisterProjectResponse::from(
+        record,
+    ))))
 }
 
 pub(crate) async fn prune_project(

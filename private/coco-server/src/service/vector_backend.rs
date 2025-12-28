@@ -1,4 +1,4 @@
-use coco_protocol::{CocoResult, VectorMetric, VectorIndexParams};
+use coco_protocol::{CocoResult, VectorIndexParams, VectorMetric};
 
 use super::state::AppState;
 use crate::storage::pg::{PgBackendConfig, PgVectorMetric};

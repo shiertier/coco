@@ -89,9 +89,7 @@ impl Ingestor {
 
         let project = self.meta.get_project(&request.project_id).await?;
         if project.is_none() {
-            return Err(CocoError::user(
-                "project must be registered before import",
-            ));
+            return Err(CocoError::user("project must be registered before import"));
         }
 
         let version_id = match request.version_id.as_deref() {
@@ -101,7 +99,11 @@ impl Ingestor {
                     .await?;
                 value.to_string()
             }
-            None => self.meta.ensure_active_version_id(&request.project_id).await?,
+            None => {
+                self.meta
+                    .ensure_active_version_id(&request.project_id)
+                    .await?
+            }
         };
 
         let indexing_config = load_indexing_config(&self.meta, &request.indexing_config_id).await?;
@@ -112,14 +114,14 @@ impl Ingestor {
             .unwrap_or_else(|| sha256_hex(request.content.as_bytes()));
         let doc_id = match request.document_id {
             Some(value) if !value.trim().is_empty() => value,
-            _ => match request.path.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
-                Some(path) => {
-                    doc_id_for_path(&request.project_id, &version_id, Path::new(path))?
-                }
-                None => generate_id(
-                    "doc",
-                    format!("{version_id}:{content_hash}").as_bytes(),
-                ),
+            _ => match request
+                .path
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                Some(path) => doc_id_for_path(&request.project_id, &version_id, Path::new(path))?,
+                None => generate_id("doc", format!("{version_id}:{content_hash}").as_bytes()),
             },
         };
         let indexed_at = Utc::now();
@@ -129,8 +131,7 @@ impl Ingestor {
         let config_id = request.indexing_config_id;
 
         if let Some(existing) = self.meta.get_document(&doc_id).await? {
-            let existing_config =
-                load_indexing_config(&self.meta, &existing.config_id).await?;
+            let existing_config = load_indexing_config(&self.meta, &existing.config_id).await?;
             let backend = self
                 .vector
                 .backend_for_config(
@@ -253,11 +254,7 @@ pub fn file_type_for_path(path: &Path) -> FileType {
 }
 
 /// Generates a stable document id for a project version and path.
-pub fn doc_id_for_path(
-    project_id: &str,
-    version_id: &str,
-    path: &Path,
-) -> CocoResult<String> {
+pub fn doc_id_for_path(project_id: &str, version_id: &str, path: &Path) -> CocoResult<String> {
     let path_str = path_string(path)?;
     Ok(generate_id(
         "doc",

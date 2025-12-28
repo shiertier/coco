@@ -64,7 +64,10 @@ impl Drop for ServiceLock {
 }
 
 /// Ensures only a single local instance is running.
-pub fn ensure_single_instance(host: &str, port: u16) -> CocoResult<(InstanceStatus, Option<ServiceLock>)> {
+pub fn ensure_single_instance(
+    host: &str,
+    port: u16,
+) -> CocoResult<(InstanceStatus, Option<ServiceLock>)> {
     let lock_path = paths::lock_path()?;
 
     if let Some(record) = read_lock(&lock_path)? {
@@ -72,9 +75,7 @@ pub fn ensure_single_instance(host: &str, port: u16) -> CocoResult<(InstanceStat
             match check_health(host, port)? {
                 InstanceStatus::Running => return Ok((InstanceStatus::Running, None)),
                 InstanceStatus::PortInUse => {
-                    return Err(CocoError::system(
-                        "port already in use by another process",
-                    ))
+                    return Err(CocoError::system("port already in use by another process"));
                 }
                 InstanceStatus::NotRunning => {
                     let _ = std::fs::remove_file(&lock_path);
@@ -88,9 +89,7 @@ pub fn ensure_single_instance(host: &str, port: u16) -> CocoResult<(InstanceStat
     match check_health(host, port)? {
         InstanceStatus::Running => return Ok((InstanceStatus::Running, None)),
         InstanceStatus::PortInUse => {
-            return Err(CocoError::system(
-                "port already in use by another process",
-            ))
+            return Err(CocoError::system("port already in use by another process"));
         }
         InstanceStatus::NotRunning => {}
     }
@@ -127,22 +126,22 @@ fn check_health(host: &str, port: u16) -> CocoResult<InstanceStatus> {
         .set_write_timeout(Some(Duration::from_millis(IO_TIMEOUT_MS)))
         .map_err(CocoError::system)?;
 
-    let request = format!(
-        "GET /v1/sys/health HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
-    );
-    stream.write_all(request.as_bytes()).map_err(CocoError::system)?;
+    let request =
+        format!("GET /v1/sys/health HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .map_err(CocoError::system)?;
     let mut response = Vec::new();
-    stream.read_to_end(&mut response).map_err(CocoError::system)?;
+    stream
+        .read_to_end(&mut response)
+        .map_err(CocoError::system)?;
     let response_text = String::from_utf8_lossy(&response);
 
     if !response_text.contains("HTTP/1.1 200") && !response_text.contains("HTTP/1.0 200") {
         return Ok(InstanceStatus::PortInUse);
     }
 
-    let body = response_text
-        .split("\r\n\r\n")
-        .nth(1)
-        .unwrap_or_default();
+    let body = response_text.split("\r\n\r\n").nth(1).unwrap_or_default();
     if is_coco_health(body) {
         Ok(InstanceStatus::Running)
     } else {

@@ -7,10 +7,10 @@ use coco_protocol::{
     VectorBackendConfig, VectorIndexParams, VectorMetric,
 };
 use sea_orm::{
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, Database, DatabaseBackend, DatabaseConnection,
+    DatabaseTransaction, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter, QueryOrder,
+    Set, Statement, TransactionTrait, Value,
     sea_query::{Expr, OnConflict},
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, Database, DatabaseBackend,
-    DatabaseConnection, DatabaseTransaction, EntityTrait, IntoActiveModel, QueryFilter, QueryOrder,
-    PaginatorTrait, Set, Statement, TransactionTrait, Value,
 };
 use sea_orm_migration::MigratorTrait;
 
@@ -177,9 +177,7 @@ impl ServerMetaStore {
         config: NewIndexingConfig,
     ) -> CocoResult<IndexingConfigRecord> {
         if config.config_id == DEFAULT_CONFIG_ID {
-            return Err(CocoError::user(
-                "default indexing config cannot be updated",
-            ));
+            return Err(CocoError::user("default indexing config cannot be updated"));
         }
         let protocol_config = config.to_protocol();
         validate_indexing_config(&protocol_config, &ValidationContext::default())?;
@@ -263,10 +261,7 @@ impl ServerMetaStore {
     }
 
     /// Fetches an organization by id.
-    pub async fn get_organization(
-        &self,
-        org_id: &str,
-    ) -> CocoResult<Option<OrganizationRecord>> {
+    pub async fn get_organization(&self, org_id: &str) -> CocoResult<Option<OrganizationRecord>> {
         let model = organizations::Entity::find_by_id(org_id)
             .one(&self.db)
             .await
@@ -287,11 +282,7 @@ impl ServerMetaStore {
     }
 
     /// Upserts worker status by id.
-    pub async fn upsert_worker_status(
-        &self,
-        worker_id: &str,
-        version: &str,
-    ) -> CocoResult<()> {
+    pub async fn upsert_worker_status(&self, worker_id: &str, version: &str) -> CocoResult<()> {
         let updated_at = now();
         let active_model = worker_status::ActiveModel {
             id: Set(worker_id.to_string()),
@@ -301,7 +292,10 @@ impl ServerMetaStore {
         worker_status::Entity::insert(active_model)
             .on_conflict(
                 OnConflict::column(worker_status::Column::Id)
-                    .update_columns([worker_status::Column::Version, worker_status::Column::UpdatedAt])
+                    .update_columns([
+                        worker_status::Column::Version,
+                        worker_status::Column::UpdatedAt,
+                    ])
                     .to_owned(),
             )
             .exec(&self.db)
@@ -606,19 +600,14 @@ impl ServerMetaStore {
     }
 
     /// Counts documents for an organization.
-    pub async fn count_documents_by_org(
-        &self,
-        org_id: &str,
-        user_id: &str,
-    ) -> CocoResult<i64> {
+    pub async fn count_documents_by_org(&self, org_id: &str, user_id: &str) -> CocoResult<i64> {
         let count = documents::Entity::find()
             .filter(documents::Column::OrgId.eq(org_id))
             .filter(documents::Column::UserId.eq(user_id))
             .count(&self.db)
             .await
             .map_err(map_storage_err)?;
-        i64::try_from(count)
-            .map_err(|_| CocoError::storage("document count exceeds i64 range"))
+        i64::try_from(count).map_err(|_| CocoError::storage("document count exceeds i64 range"))
     }
 
     /// Counts chunks for an organization.
@@ -629,29 +618,26 @@ impl ServerMetaStore {
             .count(&self.db)
             .await
             .map_err(map_storage_err)?;
-        i64::try_from(count)
-            .map_err(|_| CocoError::storage("chunk count exceeds i64 range"))
+        i64::try_from(count).map_err(|_| CocoError::storage("chunk count exceeds i64 range"))
     }
 
     /// Sums chunk content sizes for an organization.
-    pub async fn sum_chunk_bytes_by_org(
-        &self,
-        org_id: &str,
-        user_id: &str,
-    ) -> CocoResult<i64> {
+    pub async fn sum_chunk_bytes_by_org(&self, org_id: &str, user_id: &str) -> CocoResult<i64> {
         let sql = "SELECT COALESCE(SUM(LENGTH(content)), 0) AS total \
                    FROM chunks WHERE org_id = $1 AND user_id = $2";
         let stmt = Statement::from_sql_and_values(
             DatabaseBackend::Postgres,
             sql.to_string(),
-            vec![Value::from(org_id.to_string()), Value::from(user_id.to_string())],
+            vec![
+                Value::from(org_id.to_string()),
+                Value::from(user_id.to_string()),
+            ],
         );
         let row = self.db.query_one(stmt).await.map_err(map_storage_err)?;
         let Some(row) = row else {
             return Ok(0);
         };
-        row.try_get("", "total")
-            .map_err(map_storage_err)
+        row.try_get("", "total").map_err(map_storage_err)
     }
 
     /// Returns embedding usage for a day.
@@ -676,8 +662,7 @@ impl ServerMetaStore {
         let Some(row) = row else {
             return Ok(0);
         };
-        row.try_get("", "embedding_calls")
-            .map_err(map_storage_err)
+        row.try_get("", "embedding_calls").map_err(map_storage_err)
     }
 
     /// Increments embedding usage for a day.
@@ -1334,10 +1319,7 @@ fn optional_json<T: serde::Serialize>(
         .transpose()
 }
 
-fn deserialize_json<T: serde::de::DeserializeOwned>(
-    value: &str,
-    field: &str,
-) -> CocoResult<T> {
+fn deserialize_json<T: serde::de::DeserializeOwned>(value: &str, field: &str) -> CocoResult<T> {
     serde_json::from_str(value)
         .map_err(|err| CocoError::storage(format!("invalid {field} value: {err}")))
 }

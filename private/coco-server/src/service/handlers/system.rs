@@ -1,11 +1,13 @@
-use axum::extract::{Query, State};
 use axum::Json;
+use axum::extract::{Query, State};
 
 use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{CocoError, ValidationContext};
 
-use super::super::constants::{WORKER_STATUS_ID, WORKER_STALE_SECS};
-use super::super::indexing::{default_indexing_config, ensure_vector_backend, indexing_config_from_record};
+use super::super::constants::{WORKER_STALE_SECS, WORKER_STATUS_ID};
+use super::super::indexing::{
+    default_indexing_config, ensure_vector_backend, indexing_config_from_record,
+};
 use super::super::openapi::openapi_document;
 use super::super::state::AppState;
 use super::super::status::{queue_status, vector_backend_status};
@@ -16,7 +18,7 @@ use super::super::types::{
 };
 use super::super::utils::generate_id;
 use crate::storage::meta::{
-    NewIndexingConfig, NewOrganization, NewProject, ProjectUpdate, DEFAULT_CONFIG_ID,
+    DEFAULT_CONFIG_ID, NewIndexingConfig, NewOrganization, NewProject, ProjectUpdate,
 };
 
 #[utoipa::path(
@@ -29,10 +31,12 @@ pub(crate) async fn health(State(state): State<AppState>) -> Json<HealthResponse
     let worker = match state.meta.get_worker_status(WORKER_STATUS_ID).await {
         Ok(Some(record)) => {
             let now = chrono::Utc::now();
-            let age = now
-                .signed_duration_since(record.updated_at)
-                .num_seconds();
-            let status = if age <= WORKER_STALE_SECS { "ok" } else { "stale" };
+            let age = now.signed_duration_since(record.updated_at).num_seconds();
+            let status = if age <= WORKER_STALE_SECS {
+                "ok"
+            } else {
+                "stale"
+            };
             WorkerStatusResponse {
                 status: status.to_string(),
                 version: record.version,
@@ -145,13 +149,10 @@ pub(crate) async fn register_project(
         return Err(CocoError::user("default indexing config missing").into());
     }
 
-    let project_id = payload
-        .project_id
-        .clone()
-        .unwrap_or_else(|| {
-            let seed = format!("{org_id}:{user_id}:{}", payload.source_ref);
-            generate_id("proj", seed.as_bytes())
-        });
+    let project_id = payload.project_id.clone().unwrap_or_else(|| {
+        let seed = format!("{org_id}:{user_id}:{}", payload.source_ref);
+        generate_id("proj", seed.as_bytes())
+    });
     if let Some(existing) = state
         .meta
         .get_project(&org_id, &user_id, &project_id)

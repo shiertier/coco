@@ -5,7 +5,7 @@ use coco_protocol::{
 };
 
 use crate::embedder::LocalEmbedder;
-use crate::storage::meta::{IndexingConfigRecord, LocalMetaStore, DEFAULT_CONFIG_ID};
+use crate::storage::meta::{DEFAULT_CONFIG_ID, IndexingConfigRecord, LocalMetaStore};
 
 pub(crate) async fn resolve_import_config_id(
     meta: &LocalMetaStore,

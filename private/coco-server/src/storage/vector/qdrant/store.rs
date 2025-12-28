@@ -5,18 +5,18 @@ use coco_protocol::{
     CocoError, CocoResult, Filter, FilterOp, SearchHit, SearchHitMeta, VectorBackendConfig,
     VectorIndexParams, VectorMetric, VectorRecord,
 };
+use qdrant_client::Qdrant;
 use qdrant_client::qdrant::{
     Condition, CreateAliasBuilder, CreateCollectionBuilder, Distance, Filter as QdrantFilter,
     HnswConfigDiff, Value,
 };
-use qdrant_client::Qdrant;
 use sha2::{Digest, Sha256};
 use tracing::warn;
 
 use super::util::{
-    join_name, map_qdrant_err, payload_string, safe_collection_name, PAYLOAD_ALIAS_ACTIVE,
-    PAYLOAD_CHUNK_ID, PAYLOAD_CONFIG_ID, PAYLOAD_DOC_ID, PAYLOAD_ORG_ID, PAYLOAD_PROJECT_ID,
-    PAYLOAD_USER_ID, PAYLOAD_VERSION_ID,
+    PAYLOAD_ALIAS_ACTIVE, PAYLOAD_CHUNK_ID, PAYLOAD_CONFIG_ID, PAYLOAD_DOC_ID, PAYLOAD_ORG_ID,
+    PAYLOAD_PROJECT_ID, PAYLOAD_USER_ID, PAYLOAD_VERSION_ID, join_name, map_qdrant_err,
+    payload_string, safe_collection_name,
 };
 use crate::storage::pg::PgBackend;
 use crate::storage::vector::rrf::normalize_scores;
@@ -71,8 +71,9 @@ impl QdrantStore {
         if let Some(api_key) = config.api_key.as_ref() {
             builder = builder.api_key(api_key.clone());
         }
-        let client =
-            builder.build().map_err(|err| CocoError::storage(format!("qdrant error: {err}")))?;
+        let client = builder
+            .build()
+            .map_err(|err| CocoError::storage(format!("qdrant error: {err}")))?;
         let version_id = tenant
             .version_id
             .ok_or_else(|| CocoError::user("version_id must be set for qdrant backend"))?;
@@ -209,7 +210,11 @@ impl QdrantStore {
         u64::from_be_bytes(bytes)
     }
 
-    pub(super) fn payload_for(&self, config_id: &str, record: &VectorRecord) -> HashMap<String, Value> {
+    pub(super) fn payload_for(
+        &self,
+        config_id: &str,
+        record: &VectorRecord,
+    ) -> HashMap<String, Value> {
         let mut payload = HashMap::with_capacity(7);
         payload.insert(PAYLOAD_ORG_ID.to_string(), self.org_id.clone().into());
         payload.insert(PAYLOAD_USER_ID.to_string(), self.user_id.clone().into());
@@ -261,7 +266,11 @@ impl QdrantStore {
         })
     }
 
-    pub(super) async fn ensure_collection(&self, collection: &str, vector_len: usize) -> CocoResult<()> {
+    pub(super) async fn ensure_collection(
+        &self,
+        collection: &str,
+        vector_len: usize,
+    ) -> CocoResult<()> {
         if vector_len == 0 {
             return Err(CocoError::user(
                 "embedding dimensions must be greater than zero",
@@ -276,11 +285,12 @@ impl QdrantStore {
             self.validate_collection(collection, vector_len).await?;
             return Ok(());
         }
-        let mut builder = CreateCollectionBuilder::new(collection)
-            .vectors_config(qdrant_client::qdrant::VectorParamsBuilder::new(
+        let mut builder = CreateCollectionBuilder::new(collection).vectors_config(
+            qdrant_client::qdrant::VectorParamsBuilder::new(
                 vector_len as u64,
                 self.distance_for_metric(),
-            ));
+            ),
+        );
         if let Some(hnsw) = self.hnsw_config() {
             builder = builder.hnsw_config(hnsw);
         }
@@ -344,9 +354,7 @@ impl QdrantStore {
         }
         let expected = self.distance_for_metric() as i32;
         if params.distance != expected {
-            return Err(CocoError::user(
-                "qdrant collection vector metric mismatch",
-            ));
+            return Err(CocoError::user("qdrant collection vector metric mismatch"));
         }
         Ok(())
     }
@@ -428,5 +436,4 @@ impl QdrantStore {
         }
         Ok(normalize_scores(results))
     }
-
 }

@@ -10,7 +10,7 @@ use crate::ids::generate_id;
 use crate::ingest::doc_id_for_path;
 use crate::storage::meta::LocalMetaStore;
 
-use super::refresh::{non_empty_path, RefreshSummary};
+use super::refresh::{RefreshSummary, non_empty_path};
 use crate::service::state::LiveGrepConfig;
 
 struct LiveGrepMatch {
@@ -63,7 +63,10 @@ pub(crate) async fn maybe_apply_live_grep(
     let version_id = match meta.ensure_active_version_id(project_id).await {
         Ok(version_id) => version_id,
         Err(err) => {
-            warn!("failed to resolve version for project {}: {err}", project_id);
+            warn!(
+                "failed to resolve version for project {}: {err}",
+                project_id
+            );
             return results;
         }
     };

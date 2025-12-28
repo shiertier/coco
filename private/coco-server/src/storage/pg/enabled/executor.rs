@@ -2,10 +2,10 @@ use coco_protocol::{CocoError, CocoResult, RetrievalMode, SearchHit, SearchInten
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 
 use super::backend::PgBackend;
-use super::helpers::{map_storage_err, validate_tenant, COL_DISTANCE, COL_SCORE};
+use super::helpers::{COL_DISTANCE, COL_SCORE, map_storage_err, validate_tenant};
 use super::queries::{
-    build_fts_query, build_hybrid_query, build_vector_query, collect_results, HybridQueryArgs,
-    ScoreMode,
+    HybridQueryArgs, ScoreMode, build_fts_query, build_hybrid_query, build_vector_query,
+    collect_results,
 };
 
 /// Query executor that maps SearchIntent into Postgres queries.
