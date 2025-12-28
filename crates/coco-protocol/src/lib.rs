@@ -104,21 +104,38 @@ pub const MAX_CONFIG_ID_LEN: usize = 63;
 
 /// Metadata attached to a document.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
-pub struct DocumentMeta {
-    /// Human-readable title of the document.
-    pub title: Option<String>,
-    /// Local path (Local Mode only).
-    pub path: Option<String>,
-    /// Logical source reference (Server Mode only).
-    pub source_ref: Option<String>,
-    /// Creation timestamp in ISO-8601 or epoch string form.
-    pub created_at: Option<String>,
-    /// Update timestamp in ISO-8601 or epoch string form.
-    pub updated_at: Option<String>,
-    /// Optional quality score for the document.
-    pub quality_score: Option<f32>,
-    /// Whether the document has been verified.
-    pub verified: Option<bool>,
+#[serde(tag = "origin", rename_all = "snake_case")]
+pub enum DocumentMeta {
+    /// Metadata for locally sourced documents.
+    Local {
+        /// Human-readable title of the document.
+        title: Option<String>,
+        /// Local path (Local Mode only).
+        path: Option<String>,
+        /// Creation timestamp in ISO-8601 or epoch string form.
+        created_at: Option<String>,
+        /// Update timestamp in ISO-8601 or epoch string form.
+        updated_at: Option<String>,
+        /// Optional quality score for the document.
+        quality_score: Option<f32>,
+        /// Whether the document has been verified.
+        verified: Option<bool>,
+    },
+    /// Metadata for server-sourced documents.
+    Server {
+        /// Human-readable title of the document.
+        title: Option<String>,
+        /// Logical source reference (Server Mode only).
+        source_ref: Option<String>,
+        /// Creation timestamp in ISO-8601 or epoch string form.
+        created_at: Option<String>,
+        /// Update timestamp in ISO-8601 or epoch string form.
+        updated_at: Option<String>,
+        /// Optional quality score for the document.
+        quality_score: Option<f32>,
+        /// Whether the document has been verified.
+        verified: Option<bool>,
+    },
 }
 
 /// A raw document stored in the system.
@@ -132,7 +149,7 @@ pub struct Document {
     pub project_id: ProjectId,
     /// Full document content.
     pub content: String,
-    /// Optional metadata.
+    /// Metadata for the document.
     pub metadata: DocumentMeta,
 }
 
@@ -350,25 +367,377 @@ pub struct Filter {
     pub value: FilterValue,
 }
 
+/// Hybrid weight for vector vs. keyword scoring.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, ToSchema)]
+#[serde(transparent)]
+#[schema(value_type = f32)]
+pub struct HybridAlpha(f32);
+
+impl HybridAlpha {
+    pub fn new(value: f32) -> CocoResult<Self> {
+        if !(0.0..=1.0).contains(&value) {
+            return Err(validation_error("hybrid_alpha must be between 0 and 1"));
+        }
+        Ok(Self(value))
+    }
+
+    pub fn get(self) -> f32 {
+        self.0
+    }
+}
+
+impl TryFrom<f32> for HybridAlpha {
+    type Error = CocoError;
+
+    fn try_from(value: f32) -> CocoResult<Self> {
+        HybridAlpha::new(value)
+    }
+}
+
+impl From<HybridAlpha> for f32 {
+    fn from(value: HybridAlpha) -> Self {
+        value.0
+    }
+}
+
+impl<'de> Deserialize<'de> for HybridAlpha {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = f32::deserialize(deserializer)?;
+        HybridAlpha::new(value).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Query payload accepted over the wire.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[serde(tag = "retrieval_mode", rename_all = "snake_case")]
+pub enum SearchQueryInput {
+    /// Vector similarity search with embedding or text input.
+    Vector(VectorQueryInput),
+    /// Full-text search with query text.
+    Fts(FtsQueryInput),
+    /// Hybrid search with query text and optional embedding.
+    Hybrid(HybridQueryInput),
+}
+
+impl SearchQueryInput {
+    pub fn vector(query_text: Option<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
+        Ok(Self::Vector(VectorQueryInput::new(query_text, query_embedding)?))
+    }
+
+    pub fn fts(query_text: impl Into<String>) -> CocoResult<Self> {
+        Ok(Self::Fts(FtsQueryInput::new(query_text.into())?))
+    }
+
+    pub fn hybrid(query_text: impl Into<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
+        Ok(Self::Hybrid(HybridQueryInput::new(query_text.into(), query_embedding)?))
+    }
+
+    pub fn retrieval_mode(&self) -> RetrievalMode {
+        match self {
+            SearchQueryInput::Vector(_) => RetrievalMode::Vector,
+            SearchQueryInput::Fts(_) => RetrievalMode::Fts,
+            SearchQueryInput::Hybrid(_) => RetrievalMode::Hybrid,
+        }
+    }
+
+    pub fn query_text(&self) -> Option<&str> {
+        match self {
+            SearchQueryInput::Vector(query) => query.query_text(),
+            SearchQueryInput::Fts(query) => query.query_text(),
+            SearchQueryInput::Hybrid(query) => query.query_text(),
+        }
+    }
+
+    pub fn query_embedding(&self) -> Option<&[f32]> {
+        match self {
+            SearchQueryInput::Vector(query) => query.query_embedding(),
+            SearchQueryInput::Fts(_) => None,
+            SearchQueryInput::Hybrid(query) => query.query_embedding(),
+        }
+    }
+
+    pub fn set_query_embedding(&mut self, embedding: Vec<f32>) -> CocoResult<()> {
+        match self {
+            SearchQueryInput::Vector(query) => query.set_query_embedding(embedding),
+            SearchQueryInput::Hybrid(query) => query.set_query_embedding(embedding),
+            SearchQueryInput::Fts(_) => Err(validation_error(
+                "query_embedding is not supported for fts search",
+            )),
+        }
+    }
+
+    pub fn into_retrieval_mode(self, mode: RetrievalMode) -> CocoResult<Self> {
+        let (query_text, query_embedding) = match self {
+            SearchQueryInput::Vector(query) => (query.query_text, query.query_embedding),
+            SearchQueryInput::Fts(query) => (query.query_text, None),
+            SearchQueryInput::Hybrid(query) => (query.query_text, query.query_embedding),
+        };
+        match mode {
+            RetrievalMode::Vector => SearchQueryInput::vector(query_text, query_embedding),
+            RetrievalMode::Fts => {
+                let query_text = query_text.ok_or_else(|| {
+                    validation_error("query_text required for fts search")
+                })?;
+                SearchQueryInput::fts(query_text)
+            }
+            RetrievalMode::Hybrid => {
+                let query_text = query_text.ok_or_else(|| {
+                    validation_error("query_text required for hybrid search")
+                })?;
+                SearchQueryInput::hybrid(query_text, query_embedding)
+            }
+        }
+    }
+}
+
+/// Vector query input, providing text or embedding.
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
+pub struct VectorQueryInput {
+    /// Optional text used to build embeddings.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    query_text: Option<String>,
+    /// Optional query embedding for vector search.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    query_embedding: Option<Vec<f32>>,
+}
+
+impl VectorQueryInput {
+    pub fn new(query_text: Option<String>, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
+        let query_text = query_text
+            .map(normalize_query_text)
+            .transpose()?;
+        if let Some(embedding) = query_embedding.as_ref() {
+            ensure_non_empty_embedding(embedding)?;
+        }
+        if query_text.is_none() && query_embedding.is_none() {
+            return Err(validation_error(
+                "query_text or query_embedding required for vector search",
+            ));
+        }
+        Ok(Self {
+            query_text,
+            query_embedding,
+        })
+    }
+
+    pub fn query_text(&self) -> Option<&str> {
+        self.query_text.as_deref()
+    }
+
+    pub fn query_embedding(&self) -> Option<&[f32]> {
+        self.query_embedding.as_deref()
+    }
+
+    pub fn set_query_embedding(&mut self, embedding: Vec<f32>) -> CocoResult<()> {
+        ensure_non_empty_embedding(&embedding)?;
+        self.query_embedding = Some(embedding);
+        Ok(())
+    }
+
+    pub fn into_parts(self) -> (Option<String>, Option<Vec<f32>>) {
+        (self.query_text, self.query_embedding)
+    }
+}
+
+impl<'de> Deserialize<'de> for VectorQueryInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct VectorQueryInputDef {
+            query_text: Option<String>,
+            query_embedding: Option<Vec<f32>>,
+        }
+
+        let def = VectorQueryInputDef::deserialize(deserializer)?;
+        Ok(Self {
+            query_text: def.query_text,
+            query_embedding: def.query_embedding,
+        })
+    }
+}
+
+/// Full-text query input.
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
+pub struct FtsQueryInput {
+    /// Query text for full-text search.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    query_text: Option<String>,
+}
+
+impl FtsQueryInput {
+    pub fn new(query_text: String) -> CocoResult<Self> {
+        let query_text = normalize_query_text(query_text)?;
+        Ok(Self {
+            query_text: Some(query_text),
+        })
+    }
+
+    pub fn query_text(&self) -> Option<&str> {
+        self.query_text.as_deref()
+    }
+
+    pub fn into_text(self) -> Option<String> {
+        self.query_text
+    }
+}
+
+impl<'de> Deserialize<'de> for FtsQueryInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct FtsQueryInputDef {
+            query_text: Option<String>,
+        }
+
+        let def = FtsQueryInputDef::deserialize(deserializer)?;
+        Ok(Self {
+            query_text: def.query_text,
+        })
+    }
+}
+
+/// Hybrid query input.
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
+pub struct HybridQueryInput {
+    /// Query text for hybrid search.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    query_text: Option<String>,
+    /// Optional query embedding for hybrid search.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    query_embedding: Option<Vec<f32>>,
+}
+
+impl HybridQueryInput {
+    pub fn new(query_text: String, query_embedding: Option<Vec<f32>>) -> CocoResult<Self> {
+        let query_text = normalize_query_text(query_text)?;
+        if let Some(embedding) = query_embedding.as_ref() {
+            ensure_non_empty_embedding(embedding)?;
+        }
+        Ok(Self {
+            query_text: Some(query_text),
+            query_embedding,
+        })
+    }
+
+    pub fn query_text(&self) -> Option<&str> {
+        self.query_text.as_deref()
+    }
+
+    pub fn query_embedding(&self) -> Option<&[f32]> {
+        self.query_embedding.as_deref()
+    }
+
+    pub fn set_query_embedding(&mut self, embedding: Vec<f32>) -> CocoResult<()> {
+        ensure_non_empty_embedding(&embedding)?;
+        self.query_embedding = Some(embedding);
+        Ok(())
+    }
+
+    pub fn into_parts(self) -> (Option<String>, Option<Vec<f32>>) {
+        (self.query_text, self.query_embedding)
+    }
+}
+
+impl<'de> Deserialize<'de> for HybridQueryInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct HybridQueryInputDef {
+            query_text: Option<String>,
+            query_embedding: Option<Vec<f32>>,
+        }
+
+        let def = HybridQueryInputDef::deserialize(deserializer)?;
+        Ok(Self {
+            query_text: def.query_text,
+            query_embedding: def.query_embedding,
+        })
+    }
+}
+
 /// Search intent payload accepted over the wire.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct SearchIntentInput {
-    /// Optional user query text for keyword or hybrid search.
-    pub query_text: Option<String>,
-    /// Optional query embedding for vector search.
-    pub query_embedding: Option<Vec<f32>>,
-    /// Retrieval mode to apply.
-    pub retrieval_mode: RetrievalMode,
+    /// Query payload for the request.
+    #[serde(flatten)]
+    pub query: SearchQueryInput,
     /// Optional indexing configuration selection (defaults to the project's default config).
     pub indexing_config_id: Option<String>,
     /// Number of candidates to return.
-    pub top_k: u32,
+    #[schema(value_type = u32)]
+    pub top_k: NonZeroU32,
     /// Hybrid weight for vector vs. keyword scoring.
-    pub hybrid_alpha: f32,
+    pub hybrid_alpha: HybridAlpha,
     /// Optional filter list.
+    #[serde(default)]
     pub filters: Vec<Filter>,
     /// Optional reranker configuration.
+    #[serde(default)]
     pub reranker: Option<RerankerConfig>,
+}
+
+impl SearchIntentInput {
+    pub fn new(
+        query: SearchQueryInput,
+        indexing_config_id: Option<String>,
+        top_k: u32,
+        hybrid_alpha: f32,
+        filters: Vec<Filter>,
+        reranker: Option<RerankerConfig>,
+    ) -> CocoResult<Self> {
+        let top_k = NonZeroU32::new(top_k)
+            .ok_or_else(|| validation_error("top_k must be greater than zero"))?;
+        let hybrid_alpha = HybridAlpha::new(hybrid_alpha)?;
+        Ok(Self {
+            query,
+            indexing_config_id,
+            top_k,
+            hybrid_alpha,
+            filters,
+            reranker,
+        })
+    }
+
+    pub fn query_text(&self) -> Option<&str> {
+        self.query.query_text()
+    }
+
+    pub fn query_embedding(&self) -> Option<&[f32]> {
+        self.query.query_embedding()
+    }
+
+    pub fn retrieval_mode(&self) -> RetrievalMode {
+        self.query.retrieval_mode()
+    }
+
+    pub fn set_query_embedding(&mut self, embedding: Vec<f32>) -> CocoResult<()> {
+        self.query.set_query_embedding(embedding)
+    }
+
+    pub fn set_retrieval_mode(&mut self, mode: RetrievalMode) -> CocoResult<()> {
+        self.query = self.query.clone().into_retrieval_mode(mode)?;
+        Ok(())
+    }
+
+    pub fn set_top_k(&mut self, top_k: u32) -> CocoResult<()> {
+        self.top_k = NonZeroU32::new(top_k)
+            .ok_or_else(|| validation_error("top_k must be greater than zero"))?;
+        Ok(())
+    }
+
+    pub fn set_hybrid_alpha(&mut self, hybrid_alpha: f32) -> CocoResult<()> {
+        self.hybrid_alpha = HybridAlpha::new(hybrid_alpha)?;
+        Ok(())
+    }
 }
 
 /// Validated search query variants.
@@ -832,16 +1201,6 @@ impl CocoError {
         }
     }
 
-    /// Maps the error to an HTTP status code.
-    pub fn http_status(&self) -> u16 {
-        match self {
-            CocoError::User { .. } => 400,
-            CocoError::Network { .. } => 502,
-            CocoError::Storage { .. } => 503,
-            CocoError::System { .. } | CocoError::Compute { .. } => 500,
-        }
-    }
-
     /// Returns a stable, public-facing error message.
     pub fn public_message(&self) -> &str {
         match self {
@@ -899,6 +1258,24 @@ pub struct ValidationContext {
     pub allowed_filter_ops: Option<Vec<FilterOp>>,
     /// Active config identifier for validating implicit config selection.
     pub active_config_id: Option<String>,
+}
+
+fn normalize_query_text(value: String) -> CocoResult<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(validation_error("query_text must not be empty"));
+    }
+    if trimmed != value {
+        return Err(validation_error("query_text must be normalized"));
+    }
+    Ok(value)
+}
+
+fn ensure_non_empty_embedding(value: &[f32]) -> CocoResult<()> {
+    if value.is_empty() {
+        return Err(validation_error("query_embedding must not be empty"));
+    }
+    Ok(())
 }
 
 fn validation_error(message: &str) -> CocoError {
@@ -1006,23 +1383,22 @@ mod tests {
 
     #[test]
     fn search_intent_roundtrip() {
-        let intent = SearchIntentInput {
-            query_text: Some("hello".to_string()),
-            query_embedding: Some(vec![0.5, -1.0]),
-            retrieval_mode: RetrievalMode::Hybrid,
-            indexing_config_id: Some("default".to_string()),
-            top_k: 8,
-            hybrid_alpha: 0.7,
-            filters: vec![Filter {
+        let intent = SearchIntentInput::new(
+            SearchQueryInput::hybrid("hello", Some(vec![0.5, -1.0])).expect("query"),
+            Some("default".to_string()),
+            8,
+            0.7,
+            vec![Filter {
                 field: FilterField::new("path").expect("filter field"),
                 op: FilterOp::Contains,
                 value: FilterValue::String("src/".to_string()),
             }],
-            reranker: Some(RerankerConfig {
+            Some(RerankerConfig {
                 model_name: "bge".to_string(),
                 rerank_top_n: 5,
             }),
-        };
+        )
+        .expect("intent");
 
         let json = serde_json::to_string(&intent).expect("serialize intent");
         let decoded: SearchIntentInput = serde_json::from_str(&json).expect("deserialize intent");
@@ -1052,10 +1428,9 @@ mod tests {
 
     #[test]
     fn document_meta_roundtrip() {
-        let meta = DocumentMeta {
+        let meta = DocumentMeta::Local {
             title: Some("Title".to_string()),
             path: Some("/tmp/file.md".to_string()),
-            source_ref: None,
             created_at: Some("2024-01-01T00:00:00Z".to_string()),
             updated_at: None,
             quality_score: Some(0.8),

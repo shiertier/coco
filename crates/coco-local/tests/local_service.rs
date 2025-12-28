@@ -14,7 +14,7 @@ use coco_local::storage::meta::{
     LocalMetaStore, NewIndexingConfig, NewProject, DEFAULT_CONFIG_ID,
 };
 use coco_protocol::{
-    EmbeddingModel, RetrievalMode, SearchHit, SearchIntentInput, StorageBackend,
+    EmbeddingModel, SearchHit, SearchIntentInput, SearchQueryInput, StorageBackend,
 };
 use serde::Deserialize;
 
@@ -121,16 +121,15 @@ async fn file_change_ingest_and_query() -> coco_protocol::CocoResult<()> {
     let query_text = first_chunk.content.as_str();
     let embedding = embedder.embed(&[query_text])?.remove(0);
 
-    let intent = SearchIntentInput {
-        query_text: None,
-        query_embedding: Some(embedding),
-        retrieval_mode: RetrievalMode::Vector,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    };
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(None, Some(embedding)).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     let intent = build_search_intent(intent)?;
     let results = backend.search_similar(intent).await?;
     assert!(results

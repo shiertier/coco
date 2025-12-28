@@ -6,7 +6,7 @@ use coco_protocol::{
 };
 use tree_sitter::Node;
 
-/// Parses Markdown content using tree-sitter.
+/// Validates Markdown file type and returns the raw document.
 #[derive(Debug, Default)]
 pub struct MarkdownParser;
 
@@ -23,20 +23,6 @@ impl DocumentParser for MarkdownParser {
     fn parse(&self, content: &str, file_type: FileType) -> CocoResult<ParsedDocument> {
         if file_type != FileType::Markdown {
             return Err(CocoError::user("unsupported file type for MarkdownParser"));
-        }
-
-        let mut parser = tree_sitter::Parser::new();
-        let language = tree_sitter_markdown::language();
-        parser
-            .set_language(language)
-            .map_err(|_| CocoError::compute("failed to load markdown grammar"))?;
-
-        let tree = parser
-            .parse(content, None)
-            .ok_or_else(|| CocoError::compute("failed to parse markdown content"))?;
-
-        if tree.root_node().has_error() {
-            return Err(CocoError::compute("markdown parse error"));
         }
 
         Ok(ParsedDocument {
@@ -62,9 +48,19 @@ impl MarkdownSplitter {
 }
 
 impl Chunker for MarkdownSplitter {
-    fn chunk(&self, doc: &ParsedDocument, _config: &ChunkingStrategy) -> CocoResult<Vec<TextSpan>> {
+    fn chunk(&self, doc: &ParsedDocument, config: &ChunkingStrategy) -> CocoResult<Vec<TextSpan>> {
         if doc.file_type != FileType::Markdown {
             return Err(CocoError::user("unsupported file type for MarkdownSplitter"));
+        }
+
+        let chunk_size = config.chunk_size as usize;
+        if chunk_size == 0 {
+            return Err(CocoError::user("chunk_size must be greater than zero"));
+        }
+
+        let overlap = config.chunk_overlap as usize;
+        if overlap >= chunk_size {
+            return Err(CocoError::user("chunk_overlap must be smaller than chunk_size"));
         }
 
         let content = doc.content.as_str();
@@ -248,5 +244,23 @@ mod tests {
         assert!(first.contains("# Title"));
         assert!(!first.contains("## Section"));
         assert!(second.contains("## Section"));
+    }
+
+    #[test]
+    fn markdown_splitter_rejects_invalid_config() {
+        let parser = MarkdownParser::new();
+        let doc = parser
+            .parse("# Title\n\nBody\n", FileType::Markdown)
+            .expect("parse markdown");
+        let splitter = MarkdownSplitter::new();
+        let config = ChunkingStrategy {
+            strategy_name: "markdown_header".to_string(),
+            chunk_size: 0,
+            chunk_overlap: 0,
+        };
+        assert!(matches!(
+            splitter.chunk(&doc, &config),
+            Err(CocoError::User { .. })
+        ));
     }
 }

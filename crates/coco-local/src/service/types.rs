@@ -189,8 +189,7 @@ impl From<CocoError> for ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let error = self.0;
-        let status = StatusCode::from_u16(error.http_status())
-            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status = status_code_for_error(&error);
         let kind = error.kind();
         if kind != CocoErrorKind::User {
             warn!("internal error: {}", error);
@@ -202,6 +201,15 @@ impl IntoResponse for ApiError {
 }
 
 pub(crate) type ApiResult<T> = Result<T, ApiError>;
+
+fn status_code_for_error(error: &CocoError) -> StatusCode {
+    match error.kind() {
+        CocoErrorKind::User => StatusCode::BAD_REQUEST,
+        CocoErrorKind::Network => StatusCode::BAD_GATEWAY,
+        CocoErrorKind::Storage => StatusCode::SERVICE_UNAVAILABLE,
+        CocoErrorKind::System | CocoErrorKind::Compute => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
 
 pub(crate) fn response_envelope<T>(data: T) -> ResponseEnvelope<T> {
     ResponseEnvelope {

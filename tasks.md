@@ -2,6 +2,7 @@
 
 > **基准文档:** `TASK.md` (v0.0.1 Physical Separation)
 > **核心原则:** Skeleton to Flesh (由骨架到血肉), Physical Separation (物理隔离), No-DI (静态分发)
+> **范围说明:** 上游 Pipeline (Crawler/Processor/QA) 由外部系统实现；本仓库仅提供接收产物的 API/Worker。`crates/docs-crawler` 仅为示例/工具，不代表完整 Pipeline。
 
 ---
 
@@ -480,12 +481,18 @@ flowchart LR
 
 - [x] **2.2.1** 实现 `CodeParser` 结构
   - [x] 支持 Rust, Python, TypeScript, Go
-  - [x] 提取函数/类/模块边界
-  - [x] 保留注释与文档字符串
+  - [ ] 基于 Tree-sitter Query 提取函数/类/模块边界
+  - [ ] 为每种语言提供 Query 文件 (functions/classes/modules/docs)
+  - [ ] Query 覆盖注释与文档字符串
 - [x] **2.2.2** 实现语义分块策略
-  - [x] 按函数/类切分代码
+  - [ ] 按 Tree-sitter Query 边界切分代码
   - [x] 保持上下文完整 (imports, type defs)
   - [x] 处理大型函数的二次切分
+  - [ ] 移除行首关键字/正则的启发式边界规则
+- [ ] **2.2.3** 复用社区 Tree-sitter Query
+  - [ ] 引入各语言仓库的 `tags.scm`/`locals.scm`
+  - [ ] Query 文件固定在 `crates/coco-core/queries/` 并用 `include_str!` 加载
+  - [ ] 无可用 Query 的语言回退到 `FixedTokenSplitter`
 
 ---
 
@@ -519,17 +526,16 @@ flowchart LR
 
 ---
 
-### 3.1 ONNX Embedding 推理引擎 (Local Mode)
+### 3.1 fastembed Embedding 推理引擎 (Local Mode)
 
-**目标:** 集成 ONNX Runtime 实现本地 Embedding
+**目标:** 基于 fastembed 实现本地 Embedding
 
 **依赖:** 1.2.2 EmbeddingModel Trait
 
 ```mermaid
 flowchart LR
-    Input[文本输入] --> Tokenizer[Tokenizer]
-    Tokenizer --> ONNX[ONNX Runtime]
-    ONNX --> Vector[向量输出]
+    Input[文本输入] --> FastEmbed[fastembed]
+    FastEmbed --> Vector[向量输出]
 
     subgraph "模型管理"
         Cache[~/.coco/models/]
@@ -538,23 +544,21 @@ flowchart LR
     end
 ```
 
-- [x] **3.1.1** 集成 ONNX Runtime
-  - [x] 添加 `ort` crate 依赖
-  - [x] 配置 CPU/GPU 后端选择
-  - [x] 实现 Session 初始化
-- [x] **3.1.2** 实现 `OrtEmbedder` 结构
-  - [x] 实现 `EmbeddingModel` Trait
-  - [x] 支持批量推理 (batch inference)
-  - [x] 实现输入预处理 (tokenization)
-- [x] **3.1.3** 实现模型文件管理
-  - [x] 检测 `~/.coco/models/` 目录
-  - [x] 实现自动下载机制 (HuggingFace Mirror)
-  - [x] 实现模型版本校验
-  - [x] 支持 `--model-url` 自定义镜像
-- [x] **3.1.4** 实现全局模型池
-  - [x] 使用 `once_cell` 或 `lazy_static` 实现单例
-  - [x] 多项目共享同一模型实例
-  - [x] 实现内存占用监控
+- [ ] **3.1.1** 集成 fastembed
+  - [ ] 添加 `fastembed` crate 依赖
+  - [ ] 使用 fastembed 的模型选择 API（内置模型）
+  - [ ] 确认并落地 fastembed 可配置项（如支持）
+- [ ] **3.1.2** Local Embedder 直接委托 fastembed
+  - [ ] `EmbeddingModel` 仅做委托，不做任何预处理/后处理
+  - [ ] 禁止自研 tokenizer/pooling/输出选择逻辑
+- [ ] **3.1.3** 模型文件管理交由 fastembed
+  - [ ] 使用 fastembed 的下载/缓存/校验能力
+  - [ ] 默认缓存根保持 `~/.coco/models/`（通过其配置/环境变量指向）
+  - [ ] 支持 `--model-url`/镜像源配置并透传给 fastembed
+- [ ] **3.1.4** 全局模型实例池
+  - [ ] 单例持有 fastembed 实例
+  - [ ] 多项目共享同一模型实例
+  - [ ] 统一暴露模型占用统计（如支持）
 
 ---
 
@@ -592,6 +596,76 @@ flowchart LR
 - [x] **3.3.2** 实现 API Key 管理
   - [x] 从环境变量读取
   - [x] 支持多 Provider 配置
+
+---
+
+## 🚚 Phase X: 上游 Pipeline (External)
+
+**目标:** 上游数据获取与清洗由外部系统完成，本仓库仅接收产物。
+
+**范围:** `llms.txt` 与 GitHub docs 的获取可以用成熟工具链简单实现；复杂网页清洗交给社区工具。
+
+- [ ] **X.1** `llms.txt` 解析
+  - [ ] 读取 `llms.txt` 并提取链接列表
+  - [ ] 过滤扩展名并去重
+- [ ] **X.2** GitHub docs 抓取
+  - [ ] `git clone --depth=1` 拉取仓库
+  - [ ] 过滤 `md/mdx` 等文档扩展名
+  - [ ] 产出标准化 artifacts（供 ingest）
+- [ ] **X.3** Artifacts 契约
+  - [ ] 统一输出格式（JSONL/Parquet）与字段映射（Document/Chunk/Embedding）
+  - [ ] 约束 `source_ref/doc_id`，禁止本地路径
+  - [ ] 规范 `chunk_id/span/embedding.dim` 与 `config_id/version_id`
+  - [ ] JSONL Schema（对外契约）
+    - [ ] Document 字段类型
+      - [ ] `doc_id` string
+      - [ ] `project_id` string
+      - [ ] `config_id` string
+      - [ ] `version_id` string
+      - [ ] `content` string
+      - [ ] `title` string|null
+      - [ ] `source_ref` string|null
+      - [ ] `created_at` string|null
+      - [ ] `updated_at` string|null
+      - [ ] `quality_score` float|null
+      - [ ] `verified` bool|null
+    - [ ] Chunk 字段类型
+      - [ ] `chunk_id` string
+      - [ ] `doc_id` string
+      - [ ] `content` string
+      - [ ] `span_start` int
+      - [ ] `span_end` int
+      - [ ] `embedding` list<float>
+      - [ ] `quality_score` float|null
+      - [ ] `verified` bool|null
+  - [ ] Parquet Schema（批量导入）
+    - [ ] 与 JSONL 字段一致，类型明确（string/int/float/bool/list<float>）
+  - [ ] 校验规则
+    - [ ] `doc_id/chunk_id/config_id` 规范化一致
+    - [ ] `span_start < span_end`
+    - [ ] `embedding.len` 与 config 维度一致
+  - [ ] 示例产物（JSONL/Parquet）用于端到端验证
+    - [ ] JSONL 样例（Document + Chunk）
+      - [ ] Document JSONL 示例
+        ```
+        {"doc_id":"doc-1","project_id":"proj-1","config_id":"default","version_id":"v1","content":"# Title\n\nBody","title":"Title","source_ref":"kb:docs","created_at":"2025-01-01T00:00:00Z","updated_at":null,"quality_score":0.9,"verified":true}
+        ```
+      - [ ] Chunk JSONL 示例
+        ```
+        {"chunk_id":"chunk-1","doc_id":"doc-1","content":"# Title\n\nBody","span_start":0,"span_end":14,"embedding":[0.1,0.2,0.3],"quality_score":0.9,"verified":true}
+        ```
+- [ ] **X.4** 清洗/去重/QA
+  - [ ] 文本清洗与去噪（交给社区工具）
+  - [ ] 质量分 `quality_score` 与 `verified` 产出
+- [ ] **X.5** 交付与导入
+  - [ ] 输出目录布局/打包规范
+  - [ ] 通过 `/v1/ingest/batch` 推送或写入可被 worker 读取的对象存储
+- [ ] **X.6** 社区工具链建议（外部实现）
+  - [ ] `llms.txt`: 简单解析器（Python/Rust 均可）
+  - [ ] GitHub docs: `git clone --depth=1` + 扩展名过滤
+  - [ ] 网页抓取: Scrapy（确定）
+  - [ ] 文本清洗: trafilatura（确定）
+  - [ ] 记录替代项（如 Crawlee/unstructured）的取舍理由
 
 ---
 

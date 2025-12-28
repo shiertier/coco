@@ -4,51 +4,51 @@ use std::num::NonZeroU32;
 use coco_protocol::{
     CocoError, CocoResult, Filter, FilterOp, FilterValue, HnswParams, IndexingConfig, IndexingPlan,
     IvfPqParams, QueryPlan, RetrievalConfig, RetrievalMode, RerankerConfig, SearchIntent,
-    SearchIntentInput, SearchQuery, ValidationContext, VectorBackendKind, VectorIndexParams,
-    VectorMetric, INDEXING_PLAN_DEFAULT_STEPS, INDEXING_PLAN_VERSION, MAX_CONFIG_ID_LEN,
-    QUERY_PLAN_DEFAULT_STEPS, QUERY_PLAN_VERSION,
+    SearchIntentInput, SearchQuery, SearchQueryInput, ValidationContext, VectorBackendKind,
+    VectorIndexParams, VectorMetric, INDEXING_PLAN_DEFAULT_STEPS, INDEXING_PLAN_VERSION,
+    MAX_CONFIG_ID_LEN, QUERY_PLAN_DEFAULT_STEPS, QUERY_PLAN_VERSION,
 };
 
 /// Builds a validated search intent from wire input.
 pub fn build_search_intent(input: SearchIntentInput) -> CocoResult<SearchIntent> {
     let SearchIntentInput {
-        query_text,
-        query_embedding,
-        retrieval_mode,
+        query,
         indexing_config_id,
         top_k,
         hybrid_alpha,
         filters,
         reranker,
     } = input;
-    let query = match retrieval_mode {
-        RetrievalMode::Vector => {
-            let embedding = query_embedding.ok_or_else(|| {
+    let query = match query {
+        SearchQueryInput::Vector(vector) => {
+            let (_, embedding) = vector.into_parts();
+            let embedding = embedding.ok_or_else(|| {
                 validation_error("query_embedding required for vector search")
             })?;
             SearchQuery::Vector { embedding }
         }
-        RetrievalMode::Fts => {
-            let text = normalize_query_text(query_text)
+        SearchQueryInput::Fts(fts) => {
+            let text = fts
+                .into_text()
                 .ok_or_else(|| validation_error("query_text required for fts search"))?;
             SearchQuery::Fts { text }
         }
-        RetrievalMode::Hybrid => {
-            let text = normalize_query_text(query_text)
-                .ok_or_else(|| validation_error("query_text required for hybrid search"))?;
-            let embedding = query_embedding.ok_or_else(|| {
+        SearchQueryInput::Hybrid(hybrid) => {
+            let (text, embedding) = hybrid.into_parts();
+            let text = text.ok_or_else(|| {
+                validation_error("query_text required for hybrid search")
+            })?;
+            let embedding = embedding.ok_or_else(|| {
                 validation_error("query_embedding required for hybrid search")
             })?;
             SearchQuery::Hybrid { text, embedding }
         }
     };
-    let top_k = NonZeroU32::new(top_k)
-        .ok_or_else(|| validation_error("top_k must be greater than zero"))?;
     build_search_intent_from_parts(
         query,
         indexing_config_id,
         top_k,
-        hybrid_alpha,
+        hybrid_alpha.into(),
         filters,
         reranker,
     )
@@ -389,17 +389,6 @@ fn ensure_non_empty_trimmed(value: &str, label: &str) -> CocoResult<()> {
         return Err(validation_error(&format!("{label} must be normalized")));
     }
     Ok(())
-}
-
-fn normalize_query_text(value: Option<String>) -> Option<String> {
-    value.and_then(|text| {
-        let trimmed = text.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    })
 }
 
 fn validation_error(message: &str) -> CocoError {

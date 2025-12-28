@@ -9,7 +9,7 @@ use coco_local::storage::meta::{
 };
 use coco_core::build_search_intent;
 use coco_protocol::{
-    Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, RetrievalMode, SearchIntentInput,
+    Chunk, ChunkId, ChunkingStrategy, EmbeddingConfig, SearchIntentInput, SearchQueryInput,
     StorageBackend, TextSpan, VectorMetric,
 };
 use support::temp_root;
@@ -91,16 +91,15 @@ async fn register_import_query_roundtrip() -> coco_protocol::CocoResult<()> {
     };
     vector.upsert_chunks(std::slice::from_ref(&chunk)).await?;
 
-    let intent = SearchIntentInput {
-        query_text: None,
-        query_embedding: Some(vec![1.0, 0.0, 0.0]),
-        retrieval_mode: RetrievalMode::Vector,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    };
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(None, Some(vec![1.0, 0.0, 0.0])).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     let intent = build_search_intent(intent)?;
     let results = vector.search_similar(intent).await?;
     assert_eq!(results.len(), 1);

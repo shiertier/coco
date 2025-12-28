@@ -27,7 +27,7 @@ use coco_core::{normalize_config_id, validate_indexing_config};
 use coco_protocol::{
     ChunkingStrategy, CocoError, CocoErrorKind, CocoResult, EmbeddingConfig, ErrorResponse,
     FileType, IndexingConfig, ResponseEnvelope, RetrievalConfig, RetrievalMode, SearchHit,
-    SearchIntentInput, ValidationContext, VectorIndexParams, VectorMetric,
+    SearchIntentInput, SearchQueryInput, ValidationContext, VectorIndexParams, VectorMetric,
 };
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
@@ -988,16 +988,24 @@ fn build_experiment_intent(
     strategy: &QueryStrategy,
     config_id: &str,
 ) -> SearchIntentInput {
-    SearchIntentInput {
-        query_text: Some(case.query.clone()),
-        query_embedding: None,
-        retrieval_mode: strategy.retrieval_config.retrieval_mode,
-        indexing_config_id: Some(config_id.to_string()),
-        top_k: strategy.retrieval_config.top_k,
-        hybrid_alpha: strategy.retrieval_config.hybrid_alpha,
-        filters: Vec::new(),
-        reranker: strategy.retrieval_config.reranker.clone(),
-    }
+    let query = match strategy.retrieval_config.retrieval_mode {
+        RetrievalMode::Vector => {
+            SearchQueryInput::vector(Some(case.query.clone()), None).expect("query")
+        }
+        RetrievalMode::Fts => SearchQueryInput::fts(case.query.clone()).expect("query"),
+        RetrievalMode::Hybrid => {
+            SearchQueryInput::hybrid(case.query.clone(), None).expect("query")
+        }
+    };
+    SearchIntentInput::new(
+        query,
+        Some(config_id.to_string()),
+        strategy.retrieval_config.top_k,
+        strategy.retrieval_config.hybrid_alpha,
+        Vec::new(),
+        strategy.retrieval_config.reranker.clone(),
+    )
+    .expect("intent")
 }
 
 fn metrics_for_strategy(spec: &ExperimentSpec, strategy: &QueryStrategy) -> Vec<MetricSpec> {

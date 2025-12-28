@@ -8,8 +8,8 @@ use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 use uuid::Uuid;
 
 use coco_protocol::{
-    ChunkingStrategy, CocoErrorKind, EmbeddingConfig, RetrievalMode, VectorBackendKind,
-    VectorMetric,
+    ChunkingStrategy, CocoErrorKind, EmbeddingConfig, HybridAlpha, SearchQueryInput,
+    VectorBackendKind, VectorMetric,
 };
 
 use super::register_project;
@@ -154,12 +154,10 @@ async fn query_fails_when_active_config_id_missing() -> Result<(), Box<dyn std::
     );
     let request = QueryRequest {
         intent: PublicSearchIntent {
-            query_text: None,
-            query_embedding: Some(make_embedding(1.0)),
-            retrieval_mode: RetrievalMode::Vector,
+            query: SearchQueryInput::vector(None, Some(make_embedding(1.0))).expect("query"),
             indexing_config_id: None,
-            top_k: 3,
-            hybrid_alpha: 0.2,
+            top_k: std::num::NonZeroU32::new(3).expect("top_k"),
+            hybrid_alpha: HybridAlpha::new(0.2).expect("hybrid_alpha"),
             filters: Vec::new(),
             reranker: None,
         },

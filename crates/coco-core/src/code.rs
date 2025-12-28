@@ -88,8 +88,13 @@ impl Chunker for CodeSplitter {
         for (index, boundary_line) in boundary_lines.iter().enumerate() {
             let start_line = include_comment_block(&lines, *boundary_line, doc.file_type);
             let mut start = lines[start_line].start;
-            if include_preamble && index == 0 && start > preamble_end {
+            if include_preamble && index == 0 && start > 0 {
                 start = 0;
+            }
+            if !include_preamble && index == 0 && start > 0 {
+                let mut preamble_spans =
+                    split_large_span(content, 0, start, chunk_size, overlap)?;
+                spans.append(&mut preamble_spans);
             }
 
             let end = if let Some(next_line) = boundary_lines.get(index + 1) {
@@ -319,4 +324,41 @@ fn is_go_boundary(line: &str) -> bool {
         || line.starts_with("type ")
         || line.starts_with("var ")
         || line.starts_with("const ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn doc(content: String) -> ParsedDocument {
+        ParsedDocument {
+            content,
+            file_type: FileType::Rust,
+        }
+    }
+
+    fn strategy() -> ChunkingStrategy {
+        ChunkingStrategy {
+            strategy_name: "code".to_string(),
+            chunk_size: 128,
+            chunk_overlap: 16,
+        }
+    }
+
+    #[test]
+    fn code_splitter_includes_large_preamble() {
+        let mut preamble = String::new();
+        while preamble.len() <= 8 * 1024 {
+            preamble.push_str("use std::fmt;\n");
+        }
+        let content = format!("{preamble}\nfn example() {{}}\n");
+        let splitter = CodeSplitter::new();
+        let spans = splitter
+            .chunk(&doc(content.clone()), &strategy())
+            .expect("split code");
+        assert!(!spans.is_empty());
+        let min_start = spans.iter().map(|span| span.start()).min().unwrap_or(0);
+        assert_eq!(min_start, 0);
+        assert!(spans.iter().any(|span| span.start() < preamble.len()));
+    }
 }

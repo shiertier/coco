@@ -1,8 +1,8 @@
 use chrono::Utc;
 use coco_core::build_search_intent;
 use coco_protocol::{
-    Chunk, ChunkId, ChunkingStrategy, DocumentId, EmbeddingConfig, RetrievalMode,
-    SearchIntentInput, StorageBackend, TextSpan, VectorMetric,
+    Chunk, ChunkId, ChunkingStrategy, DocumentId, EmbeddingConfig, SearchIntentInput,
+    SearchQueryInput, StorageBackend, TextSpan, VectorMetric,
 };
 use coco_server::storage::meta::{
     NewDocument, NewIndexingConfig, NewOrganization, NewProject, ServerMetaStore,
@@ -134,16 +134,15 @@ async fn ingest_and_query_roundtrip() -> coco_protocol::CocoResult<()> {
     };
     backend.upsert_chunks(std::slice::from_ref(&chunk)).await?;
 
-    let intent = SearchIntentInput {
-        query_text: None,
-        query_embedding: Some(make_embedding(1.0)),
-        retrieval_mode: RetrievalMode::Vector,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    };
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(None, Some(make_embedding(1.0))).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     let intent = build_search_intent(intent)?;
     let results = backend.search_similar(intent).await?;
     assert!(results.iter().any(|item| item.chunk.id == chunk.id));
@@ -302,31 +301,29 @@ async fn multi_tenant_isolation() -> coco_protocol::CocoResult<()> {
     backend_a.upsert_chunks(std::slice::from_ref(&chunk_a)).await?;
     backend_b.upsert_chunks(std::slice::from_ref(&chunk_b)).await?;
 
-    let intent = SearchIntentInput {
-        query_text: None,
-        query_embedding: Some(make_embedding(1.0)),
-        retrieval_mode: RetrievalMode::Vector,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    };
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(None, Some(make_embedding(1.0))).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     let intent = build_search_intent(intent)?;
     let results_a = backend_a.search_similar(intent).await?;
     assert!(results_a.iter().any(|item| item.chunk.id == chunk_a.id));
     assert!(!results_a.iter().any(|item| item.chunk.id == chunk_b.id));
 
-    let intent = SearchIntentInput {
-        query_text: None,
-        query_embedding: Some(make_embedding(2.0)),
-        retrieval_mode: RetrievalMode::Vector,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    };
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(None, Some(make_embedding(2.0))).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     let intent = build_search_intent(intent)?;
     let results_b = backend_b.search_similar(intent).await?;
     assert!(results_b.iter().any(|item| item.chunk.id == chunk_b.id));

@@ -6,8 +6,8 @@ use coco_core::{
 use coco_protocol::{
     ChunkId, ChunkingStrategy, CocoError, CocoErrorKind, DocumentId, EmbeddingConfig, ErrorResponse,
     Filter, FilterField, FilterOp, FilterValue, HnswParams, IndexingConfig, RetrievalMode,
-    RerankerConfig, SearchIntent, SearchIntentInput, SearchQuery, TextSpan, ValidationContext,
-    VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
+    RerankerConfig, SearchIntent, SearchIntentInput, SearchQuery, SearchQueryInput, TextSpan,
+    ValidationContext, VectorIndexParams, VectorMetadata, VectorMetric, VectorRecord,
 };
 
 fn sample_chunking() -> ChunkingStrategy {
@@ -37,16 +37,16 @@ fn sample_indexing_config(config_id: &str) -> IndexingConfig {
 }
 
 fn sample_intent(mode: RetrievalMode) -> SearchIntentInput {
-    SearchIntentInput {
-        query_text: Some("hello".to_string()),
-        query_embedding: Some(vec![0.1, 0.2]),
-        retrieval_mode: mode,
-        indexing_config_id: None,
-        top_k: 5,
-        hybrid_alpha: 0.5,
-        filters: Vec::new(),
-        reranker: None,
-    }
+    let query = match mode {
+        RetrievalMode::Vector => {
+            SearchQueryInput::vector(None, Some(vec![0.1, 0.2])).expect("query")
+        }
+        RetrievalMode::Fts => SearchQueryInput::fts("hello").expect("query"),
+        RetrievalMode::Hybrid => {
+            SearchQueryInput::hybrid("hello", Some(vec![0.1, 0.2])).expect("query")
+        }
+    };
+    SearchIntentInput::new(query, None, 5, 0.5, Vec::new(), None).expect("intent")
 }
 
 #[test]
@@ -93,58 +93,79 @@ fn vector_record_serializes_config_id() {
 
 #[test]
 fn validate_search_intent_rejects_missing_query_embedding_for_vector() {
-    let mut intent = sample_intent(RetrievalMode::Vector);
-    intent.query_embedding = None;
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::vector(Some("hello".to_string()), None).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_empty_query_embedding() {
-    let mut intent = sample_intent(RetrievalMode::Vector);
-    intent.query_embedding = Some(Vec::new());
-    assert!(build_search_intent(intent).is_err());
+    assert!(SearchQueryInput::vector(None, Some(Vec::new())).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_text_for_fts() {
-    let mut intent = sample_intent(RetrievalMode::Fts);
-    intent.query_text = None;
+    let json = serde_json::json!({
+        "retrieval_mode": "fts",
+        "top_k": 3,
+        "hybrid_alpha": 0.5,
+        "filters": [],
+        "reranker": null
+    });
+    let intent: SearchIntentInput = serde_json::from_value(json).expect("deserialize intent");
     assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_text_for_hybrid() {
-    let mut intent = sample_intent(RetrievalMode::Hybrid);
-    intent.query_text = None;
+    let json = serde_json::json!({
+        "retrieval_mode": "hybrid",
+        "query_embedding": [0.1, 0.2],
+        "top_k": 3,
+        "hybrid_alpha": 0.5,
+        "filters": [],
+        "reranker": null
+    });
+    let intent: SearchIntentInput = serde_json::from_value(json).expect("deserialize intent");
     assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_missing_query_embedding_for_hybrid() {
-    let mut intent = sample_intent(RetrievalMode::Hybrid);
-    intent.query_embedding = None;
+    let intent = SearchIntentInput::new(
+        SearchQueryInput::hybrid("hello", None).expect("query"),
+        None,
+        5,
+        0.5,
+        Vec::new(),
+        None,
+    )
+    .expect("intent");
     assert!(build_search_intent(intent).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_zero_top_k() {
-    let mut intent = sample_intent(RetrievalMode::Fts);
-    intent.top_k = 0;
-    assert!(build_search_intent(intent).is_err());
+    let query = SearchQueryInput::fts("hello").expect("query");
+    assert!(SearchIntentInput::new(query, None, 0, 0.5, Vec::new(), None).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_out_of_range_alpha() {
-    let mut intent = sample_intent(RetrievalMode::Fts);
-    intent.hybrid_alpha = 1.5;
-    assert!(build_search_intent(intent).is_err());
+    let query = SearchQueryInput::fts("hello").expect("query");
+    assert!(SearchIntentInput::new(query, None, 5, 1.5, Vec::new(), None).is_err());
 }
 
 #[test]
 fn validate_search_intent_rejects_blank_query_text() {
-    let mut intent = sample_intent(RetrievalMode::Fts);
-    intent.query_text = Some("   ".to_string());
-    assert!(build_search_intent(intent).is_err());
+    assert!(SearchQueryInput::fts("   ").is_err());
 }
 
 #[test]

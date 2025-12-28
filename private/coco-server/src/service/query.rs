@@ -54,14 +54,13 @@ pub(crate) async fn fill_query_embedding(
     intent: &mut SearchIntentInput,
     embedder: Option<&HttpEmbedder>,
 ) -> CocoResult<()> {
-    match intent.retrieval_mode {
+    match intent.retrieval_mode() {
         coco_protocol::RetrievalMode::Vector | coco_protocol::RetrievalMode::Hybrid => {
-            if intent.query_embedding.is_some() {
+            if intent.query_embedding().is_some() {
                 return Ok(());
             }
             let query_text = intent
-                .query_text
-                .as_deref()
+                .query_text()
                 .ok_or_else(|| CocoError::user("query_text required to build embedding"))?;
             let embedder =
                 embedder.ok_or_else(|| CocoError::user("embedding model not configured"))?;
@@ -74,12 +73,12 @@ pub(crate) async fn fill_query_embedding(
                     .next()
                     .ok_or_else(|| CocoError::compute("empty embedding output"))
             })
-            .await
-            .map_err(|err| CocoError::system(format!("embedding task failed: {err}")))??;
-            intent.query_embedding = Some(embedding);
+                .await
+                .map_err(|err| CocoError::system(format!("embedding task failed: {err}")))??;
+            intent.set_query_embedding(embedding)?;
         }
         coco_protocol::RetrievalMode::Fts => {
-            if intent.query_text.is_none() {
+            if intent.query_text().is_none() {
                 return Err(CocoError::user("query_text required for fts search"));
             }
         }
@@ -97,9 +96,9 @@ pub(crate) fn apply_retrieval_config(
         ..Default::default()
     };
     validate_retrieval_config(&retrieval, &context)?;
-    intent.retrieval_mode = retrieval.retrieval_mode;
-    intent.top_k = retrieval.top_k;
-    intent.hybrid_alpha = retrieval.hybrid_alpha;
+    intent.set_retrieval_mode(retrieval.retrieval_mode)?;
+    intent.set_top_k(retrieval.top_k)?;
+    intent.set_hybrid_alpha(retrieval.hybrid_alpha)?;
     intent.reranker = retrieval.reranker;
     Ok(())
 }

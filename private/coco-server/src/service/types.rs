@@ -2,8 +2,9 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use coco_protocol::{
-    CocoError, CocoErrorKind, CocoResult, ErrorResponse, FilterField, FilterValue, IndexingConfig,
-    IndexingPlan, ResponseMeta, SearchHit, SearchIntentInput, VectorBackendKind,
+    CocoError, CocoErrorKind, CocoResult, ErrorResponse, FilterField, FilterValue, HybridAlpha,
+    IndexingConfig, IndexingPlan, ResponseMeta, SearchHit, SearchIntentInput, SearchQueryInput,
+    VectorBackendKind,
 };
 use tracing::warn;
 use utoipa::ToSchema;
@@ -171,19 +172,18 @@ impl TryFrom<PublicFilter> for coco_protocol::Filter {
 /// Search intent describing how retrieval should run.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq, ToSchema)]
 pub(crate) struct PublicSearchIntent {
-    /// Optional user query text (required for `fts` and `hybrid` retrieval).
-    pub(crate) query_text: Option<String>,
-    /// Optional query embedding (required for `vector` and `hybrid` retrieval).
-    pub(crate) query_embedding: Option<Vec<f32>>,
-    /// Retrieval mode (controls required fields).
-    pub(crate) retrieval_mode: coco_protocol::RetrievalMode,
+    /// Query payload (controls required fields).
+    #[serde(flatten)]
+    pub(crate) query: SearchQueryInput,
     /// Optional indexing configuration selection (defaults to the project's default config).
     pub(crate) indexing_config_id: Option<String>,
     /// Number of candidates to return.
-    pub(crate) top_k: u32,
+    #[schema(value_type = u32)]
+    pub(crate) top_k: std::num::NonZeroU32,
     /// Hybrid weight for vector vs. keyword scoring.
-    pub(crate) hybrid_alpha: f32,
+    pub(crate) hybrid_alpha: HybridAlpha,
     /// Optional filter list (server allows `doc_id`/`chunk_id` with `eq`/`contains`).
+    #[serde(default)]
     pub(crate) filters: Vec<PublicFilter>,
     /// Optional reranker configuration.
     pub(crate) reranker: Option<coco_protocol::RerankerConfig>,
@@ -199,9 +199,7 @@ impl TryFrom<PublicSearchIntent> for SearchIntentInput {
             .map(TryInto::try_into)
             .collect::<Result<Vec<_>, _>>()?;
         Ok(SearchIntentInput {
-            query_text: value.query_text,
-            query_embedding: value.query_embedding,
-            retrieval_mode: value.retrieval_mode,
+            query: value.query,
             indexing_config_id: value.indexing_config_id,
             top_k: value.top_k,
             hybrid_alpha: value.hybrid_alpha,
@@ -410,8 +408,7 @@ impl std::error::Error for ApiError {}
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let error = self.0;
-        let status = StatusCode::from_u16(error.http_status())
-            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status = status_code_for_error(&error);
         let kind = error.kind();
         if kind != CocoErrorKind::User {
             warn!("internal error: {}", error);
@@ -425,6 +422,15 @@ impl IntoResponse for ApiError {
 }
 
 pub(crate) type ApiResult<T> = Result<T, ApiError>;
+
+fn status_code_for_error(error: &CocoError) -> StatusCode {
+    match error.kind() {
+        CocoErrorKind::User => StatusCode::BAD_REQUEST,
+        CocoErrorKind::Network => StatusCode::BAD_GATEWAY,
+        CocoErrorKind::Storage => StatusCode::SERVICE_UNAVAILABLE,
+        CocoErrorKind::System | CocoErrorKind::Compute => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
 
 fn default_true() -> bool {
     true
